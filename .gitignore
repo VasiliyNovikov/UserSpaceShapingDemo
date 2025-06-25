@@ -402,5 +402,10 @@ FodyWeavers.xsd
 *.msm
 *.msp
 
-# JetBrains Rider
+# JetBrains
 *.sln.iml
+.idea
+
+# This demo
+*.o
+shaper_user

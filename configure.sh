@@ -1,0 +1,1 @@
+sudo apt -y install clang libbpf-dev
