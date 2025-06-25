@@ -1,24 +1,21 @@
-// gcc -O2 -Wall shaper_user.c -o shaper_user -lbpf -lelf -pthread
 #include <errno.h>
 #include <fcntl.h>
+#include <poll.h>
 #include <stdio.h>
 #include <stdint.h>
 #include <stdlib.h>
 #include <string.h>
 #include <unistd.h>
-#include <net/if.h>          /* if_nametoindex            */
-#include <poll.h>            /* poll(), POLLIN            */
-#include <sys/socket.h>      /* sendto()                  */
+#include <net/if.h>
+#include <sys/mman.h>
+#include <sys/socket.h>
+#include <time.h>
 
-#include <sys/mman.h>          /* mmap / PROT_* / MAP_* */
-#include <time.h>              /* clock_gettime */
-
-#include <bpf/libbpf.h>        /* libbpf API */
-#include <bpf/bpf.h>           /* bpf_map_update_elem */
-#include <linux/if_xdp.h>      /* struct xdp_options, bind flags      */
-#include <linux/if_link.h>     /* XDP_FLAGS_SKB_MODE / _DRV / _HW     */
-#include <bpf/xsk.h>           /* xsk_ring_* helpers */
-
+#include <bpf/libbpf.h>
+#include <bpf/bpf.h>
+#include <linux/if_xdp.h>
+#include <linux/if_link.h>
+#include <bpf/xsk.h>
 #include "meta.h"
 
 #define NUM_FRAMES  4096
@@ -28,7 +25,6 @@
 static struct xsk_umem *umem;
 static struct xsk_ring_prod fq;
 static struct xsk_ring_cons cq;
-static struct xsk_socket *xsk;
 static struct xsk_ring_cons rx;
 static struct xsk_ring_prod tx;
 static void *umem_base;
@@ -79,49 +75,50 @@ static void shape_egress(uint8_t *pkt, uint32_t len)
 int main(int argc, char **argv)
 {
     const char *iface = (argc > 1) ? argv[1] : "veth0";
+    uint32_t    qid   = 0;
 
-    /* --- load BPF objects --- */
-    struct bpf_object *obj_xdp = NULL, *obj_tc = NULL;
-    int xsks_fd_xdp, xsks_fd_tc, prog_fd_xdp, prog_fd_tc;
+    /* ---- load ingress object ---------------------------------------- */
+    struct bpf_object *obj_in = NULL, *obj_out = NULL;
+    int prog_fd_in, prog_fd_out, map_fd_in, map_fd_out;
 
-    bpf_prog_load("xdp_ingress_kern.o", BPF_PROG_TYPE_XDP,
-                  &obj_xdp, &prog_fd_xdp);
-    xsks_fd_xdp = bpf_object__find_map_fd_by_name(obj_xdp, "xsks_map");
+    if (bpf_prog_load("xdp_ingress_kern.o", BPF_PROG_TYPE_XDP, &obj_in, &prog_fd_in)) {
+        perror("load ingress");
+        exit(1);
+    }
+    map_fd_in = bpf_object__find_map_fd_by_name(obj_in, "xsks_map");
 
-    bpf_prog_load("tc_egress_kern.o", BPF_PROG_TYPE_SCHED_CLS,
-                  &obj_tc, &prog_fd_tc);
-    xsks_fd_tc = bpf_object__find_map_fd_by_name(obj_tc, "xsks_map");
+    /* ---- load egress object ----------------------------------------- */
+    if (bpf_prog_load("xdp_egress_kern.o", BPF_PROG_TYPE_XDP,
+                      &obj_out, &prog_fd_out))
+        { perror("load egress"); exit(1); }
+    map_fd_out = bpf_object__find_map_fd_by_name(obj_out, "xsks_map");
 
-    /* attach */
-    if (bpf_set_link_xdp_fd(if_nametoindex(iface),
-                            prog_fd_xdp, XDP_FLAGS_SKB_MODE))
-        { perror("XDP attach"); exit(1); }
+    /* ---- attach: driver (in) + generic (out) ------------------------ */
+    if (bpf_set_link_xdp_fd(if_nametoindex(iface), prog_fd_in,
+                            XDP_FLAGS_DRV_MODE) &&
+        bpf_set_link_xdp_fd(if_nametoindex(iface), prog_fd_in,
+                            XDP_FLAGS_SKB_MODE))
+        { perror("attach ingress"); exit(1); }
 
-    char qc[128];
-    snprintf(qc, sizeof(qc), "tc qdisc add dev %s clsact 2>/dev/null", iface);
-    system(qc);
+    /* detach any old generic program then attach our egress */
+    bpf_set_link_xdp_fd(if_nametoindex(iface), -1, XDP_FLAGS_SKB_MODE);
+    if (bpf_set_link_xdp_fd(if_nametoindex(iface), prog_fd_out,
+                            XDP_FLAGS_SKB_MODE))
+        { perror("attach egress"); exit(1); }
 
-    char cmd[256];
-    snprintf(cmd, sizeof(cmd), "tc filter replace dev %s egress bpf da obj tc_egress_kern.o sec tc", iface);
-    if (system(cmd)) { fprintf(stderr, "tc filter failed\n"); exit(1); }
-
-    /* --- UMEM + single XSK (queue 0) --- */
+    /* ---- create UMEM + single XSK (queue-0) ------------------------- */
     setup_umem();
     struct xsk_socket_config scfg = {
-        .rx_size = NUM_FRAMES,
-        .tx_size = NUM_FRAMES,
-        .xdp_flags = XDP_FLAGS_SKB_MODE,
-        .bind_flags = 0      /* copy-mode; kernel ignores ZC flags on veth */
-    };
-    if (xsk_socket__create(&xsk, iface, 0, umem, &rx, &tx, &scfg))
-        { perror("xsk create"); exit(1); }
-
+        .rx_size = NUM_FRAMES, .tx_size = NUM_FRAMES,
+        .xdp_flags = XDP_FLAGS_SKB_MODE, .bind_flags = 0 };
+    struct xsk_socket *xsk;
+    if (xsk_socket__create(&xsk, iface, qid, umem, &rx, &tx, &scfg))
+        { perror("xsk_socket"); exit(1); }
     int xsk_fd = xsk_socket__fd(xsk);
 
-    /* insert fd into both maps (same queue id) */
-    __u32 key = 0;
-    bpf_map_update_elem(xsks_fd_xdp, &key, &xsk_fd, 0);
-    bpf_map_update_elem(xsks_fd_tc,  &key, &xsk_fd, 0);
+    /* ---- insert same fd into BOTH maps ------------------------------ */
+    bpf_map_update_elem(map_fd_in,  &qid, &xsk_fd, 0);
+    bpf_map_update_elem(map_fd_out, &qid, &xsk_fd, 0);
 
     printf("AF-XDP on %s queue 0 ready — polling …\n", iface);
 
