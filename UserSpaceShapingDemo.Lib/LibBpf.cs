@@ -1,6 +1,8 @@
 #pragma warning disable IDE1006
 using System;
+using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
+using System.Threading;
 
 namespace UserSpaceShapingDemo.Lib;
 
@@ -35,6 +37,66 @@ internal static unsafe partial class LibBpf
     // Returns 0 on success, -EBUSY if the UMEM is still in use (per xsk.h).
     [LibraryImport(Lib, EntryPoint = "xsk_umem__delete", SetLastError = true)]
     public static partial int xsk_umem__delete(IntPtr umem);
+
+    // C# port of:
+    // static inline __u32 xsk_cons_nb_avail(struct xsk_ring_cons *r, __u32 nb)
+    // and
+    // static inline __u32 xsk_ring_cons__peek(struct xsk_ring_cons *cons, __u32 nb, __u32 *idx)
+    //
+    // Source: tools/lib/bpf/xsk.h (libbpf)
+    // - xsk_cons_nb_avail(): entries = cached_prod - cached_cons; refresh cached_prod with load-acquire when 0
+    // - xsk_ring_cons__peek(): returns min(nb, avail), writes *idx = cached_cons, bumps cached_cons by entries
+
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    private static uint LoadAcquire(uint* p)
+    {
+        // Equivalent to libbpf_smp_load_acquire: do the load, then an acquire barrier
+        uint v = *p;
+        Thread.MemoryBarrier(); // acquire fence
+        return v;
+    }
+
+    // If you also want to port xsk_ring_cons__release():
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public static void xsk_ring_cons__release(ref xsk_ring_cons cons, uint nb)
+    {
+        // libbpf does store-release to *consumer += nb
+        Thread.MemoryBarrier(); // release fence
+        uint* consumer = cons.consumer;
+        *consumer = unchecked(*consumer + nb);
+    }
+
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    private static uint xsk_cons_nb_avail(ref xsk_ring_cons r, uint nb)
+    {
+        // entries = r.cached_prod - r.cached_cons; (mod 2^32 arithmetic)
+        uint entries = unchecked(r.cached_prod - r.cached_cons);
+        if (entries == 0)
+        {
+            // Refresh cached_prod with acquire semantics
+            r.cached_prod = LoadAcquire(r.producer);
+            entries = unchecked(r.cached_prod - r.cached_cons);
+        }
+        return entries > nb ? nb : entries;
+    }
+
+    // Port of libbpf's xsk_ring_cons__peek().
+    // Returns number of entries granted (<= nb). When > 0, idx is set to the starting ring index.
+    // NOTE: idx here is the absolute ring index (cached_cons). Masking to the ring is done by the
+    // address helpers (e.g., xsk_ring_cons__comp_addr / __rx_desc) just like libbpf.
+    public static uint xsk_ring_cons__peek(ref xsk_ring_cons cons, uint nb, out uint idx)
+    {
+        uint entries = xsk_cons_nb_avail(ref cons, nb);
+        if (entries > 0)
+        {
+            idx = cons.cached_cons;
+            cons.cached_cons = unchecked(cons.cached_cons + entries);
+            return entries;
+        }
+
+        idx = 0;
+        return 0;
+    }
 
     [StructLayout(LayoutKind.Sequential)]
     public struct xsk_umem_config
