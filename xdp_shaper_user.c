@@ -29,8 +29,8 @@
 #define NUM_FRAMES          4096u
 #define RX_RING_SIZE        1024u
 #define TX_RING_SIZE        1024u
-#define FILL_RING_SIZE      2048u
-#define COMPLETION_RING_SIZE 2048u
+#define FILL_RING_SIZE      4096u
+#define COMPLETION_RING_SIZE 4096u
 #define BATCH_RX            64u
 #define BATCH_TX            64u
 
@@ -39,7 +39,7 @@ static volatile bool exiting = false;
 static void on_sigint(int signo) { (void)signo; exiting = true; }
 
 // Simple logger
-static void die(const char* fmt, ...) {
+__attribute__ ((__noreturn__)) static void die(const char* fmt, ...) {
     va_list ap; va_start(ap, fmt);
     vfprintf(stderr, fmt, ap);
     va_end(ap);
@@ -62,7 +62,7 @@ struct pending_pkt {
 
 struct app_config {
     const char* ifname;
-    int ifindex;
+    uint32_t ifindex;
     uint32_t delay_ms;
     uint32_t drop_nth;   // drop every Nth packet
     bool skb_mode;       // prefer SKB mode if true
@@ -108,7 +108,7 @@ static uint64_t frame_addr_of(uint32_t idx) {
 }
 
 
-static int xsk_setup(struct app_config *cfg, struct xsk_ctx *ctx) {
+static void xsk_setup(struct app_config *cfg, struct xsk_ctx *ctx) {
     memset(ctx, 0, sizeof(*ctx));
 
     // Allocate UMEM area
@@ -120,7 +120,8 @@ static int xsk_setup(struct app_config *cfg, struct xsk_ctx *ctx) {
         .fill_size = FILL_RING_SIZE,
         .comp_size = COMPLETION_RING_SIZE,
         .frame_size = FRAME_SIZE,
-        .frame_headroom = 0
+        .frame_headroom = 0,
+        .flags = 0
     };
 
     int err = xsk_umem__create(&ctx->umem, ctx->umem_area, ctx->umem_area_len,
@@ -157,7 +158,8 @@ static int xsk_setup(struct app_config *cfg, struct xsk_ctx *ctx) {
     while (n) {
         uint32_t batch = n > BATCH_RX ? BATCH_RX : n;
         uint32_t reserved = xsk_ring_prod__reserve(&ctx->fill, batch, &idx);
-        if (reserved == 0) break;
+        if (reserved == 0)
+            break;
         for (uint32_t i = 0; i < reserved; i++) {
             *xsk_ring_prod__fill_addr(&ctx->fill, idx + i) = ctx->free_frames[--ctx->free_frames_cnt];
         }
@@ -168,9 +170,8 @@ static int xsk_setup(struct app_config *cfg, struct xsk_ctx *ctx) {
     // Pending buffer
     ctx->pending_cap = 8192;
     ctx->pending = calloc(ctx->pending_cap, sizeof(struct pending_pkt));
-    if (!ctx->pending) die("calloc pending failed");
-
-    return 0;
+    if (!ctx->pending)
+        die("calloc pending failed");
 }
 
 static void kick_tx_if_needed(struct xsk_ctx* ctx) {
@@ -252,6 +253,9 @@ static void ensure_pending_capacity(struct xsk_ctx* ctx, uint32_t extra) {
 
 int main(int argc, char **argv)
 {
+    if (geteuid() != 0)
+        die("Run as root");
+
     struct app_config cfg = {
         .ifname = NULL,
         .ifindex = 0,
@@ -283,21 +287,16 @@ int main(int argc, char **argv)
         return 1;
     }
     cfg.ifindex = if_nametoindex(cfg.ifname);
-    if (!cfg.ifindex) die("if_nametoindex(%s) failed", cfg.ifname);
-    if (geteuid() != 0) die("Run as root");
+    if (!cfg.ifindex)
+        die("if_nametoindex(%s) failed", cfg.ifname);
 
     set_memlock_rlimit();
 
     signal(SIGINT, on_sigint);
     signal(SIGTERM, on_sigint);
 
-    int modes[] = {XDP_FLAGS_SKB_MODE, XDP_FLAGS_DRV_MODE, XDP_FLAGS_HW_MODE, 0};
-    for (int i = 0; i < 4; ++i)
-        bpf_set_link_xdp_fd(cfg.ifindex, -1, modes[i]);
-
     struct xsk_ctx ctx;
-    if (xsk_setup(&cfg, &ctx) != 0)
-        die("xsk_setup failed");
+    xsk_setup(&cfg, &ctx);
 
     printf("Shaper up on %s delay=%ums, drop every %u-th packet%s\n",
            cfg.ifname, cfg.delay_ms, cfg.drop_nth, cfg.skb_mode ? " (SKB mode)" : "");
