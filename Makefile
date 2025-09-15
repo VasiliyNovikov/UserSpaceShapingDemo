@@ -1,19 +1,15 @@
-LIBS  := -lbpf -lelf -pthread
-ARCH  := $(shell uname -m)
-BPF_CFLAGS := -D_GNU_SOURCE -target bpf -O2 -g -Wall -I/usr/include/bpf -I/usr/include/$(ARCH)-linux-gnu
-CFLAGS := -D_GNU_SOURCE -O2 -g -Wall -I/usr/include/bpf -I/usr/include/$(ARCH)-linux-gnu
+# Build with: make
+# Clean with: make clean
 
-all: shaper_user
+USER_CC ?= gcc
 
-xdp_ingress_kern.o: xdp_ingress_kern.c
-	clang $(BPF_CFLAGS) -c $< -o $@
+CFLAGS  ?= -O2 -g -Wall -Wextra
+LDFLAGS ?= -lbpf -lelf -lz
 
-xdp_egress_kern.o: xdp_egress_kern.c
-	clang $(BPF_CFLAGS) -c $< -o $@
+all: xdp_shaper
 
-shaper_user: shaper_user.c xdp_ingress_kern.o xdp_egress_kern.o
-	clang $(CFLAGS) $< -o $@ $(LIBS)
+xdp_shaper: xdp_shaper_user.c
+	$(USER_CC) $(CFLAGS) -o $@ xdp_shaper_user.c $(LDFLAGS)
 
 clean:
-	rm -f *.o shaper_user
-.PHONY: clean
+	rm -f xdp_shaper

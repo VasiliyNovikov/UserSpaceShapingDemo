@@ -408,4 +408,4 @@ FodyWeavers.xsd
 
 # This demo
 *.o
-shaper_user
+xdp_shaper
