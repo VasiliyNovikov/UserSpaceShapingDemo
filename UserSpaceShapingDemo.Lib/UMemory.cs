@@ -1,5 +1,6 @@
 ﻿using System;
 using System.ComponentModel;
+using System.Runtime.CompilerServices;
 using System.Runtime.ConstrainedExecution;
 using System.Runtime.InteropServices;
 
@@ -8,7 +9,13 @@ namespace UserSpaceShapingDemo.Lib;
 public sealed unsafe class UMemory : CriticalFinalizerObject, IDisposable
 {
     private readonly void* _mem;
-    private readonly void* _umem;
+    private readonly LibBpf.xsk_umem* _umem;
+
+    internal LibBpf.xsk_umem* UMem
+    {
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        get => _umem;
+    }
 
     public UMemory(FillRingBuffer fillRing,
                    CompletionRingBuffer completionRing,
@@ -39,10 +46,20 @@ public sealed unsafe class UMemory : CriticalFinalizerObject, IDisposable
 
     private void ReleaseUnmanagedResources()
     {
-        if (_umem is not null)
-            LibBpf.xsk_umem__delete(_umem);
-        if (_mem is not null)
-            NativeMemory.AlignedFree(_mem);
+        try
+        {
+            if (_umem is not null)
+            {
+                var error = LibBpf.xsk_umem__delete(_umem);
+                if (error != 0)
+                    throw new Win32Exception(-error);
+            }
+        }
+        finally
+        {
+            if (_mem is not null)
+                NativeMemory.AlignedFree(_mem);
+        }
     }
 
     ~UMemory() => ReleaseUnmanagedResources();

@@ -1,3 +1,4 @@
+#pragma warning disable IDE0055
 #pragma warning disable IDE1006
 using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
@@ -9,32 +10,86 @@ internal static unsafe partial class LibBpf
 {
     private const string Lib = "libbpf";
 
-    // Defaults (from xsk.h)
+    public const ushort XDP_SHARED_UMEM = 0b0001;
+    public const ushort XDP_COPY        = 0b0010; // Force copy-mode
+    public const ushort XDP_ZEROCOPY    = 0b0100; // Force zero-copy mode
+    /* If this option is set, the driver might go sleep and in that case
+     * the XDP_RING_NEED_WAKEUP flag in the fill and/or Tx rings will be
+     * set. If it is set, the application need to explicitly wake up the
+     * driver with a poll() (Rx and Tx) or sendto() (Tx only). If you are
+     * running the driver and the application on the same core, you should
+     * use this option so that the kernel will yield to the user space
+     * application.
+     */
+    public const ushort XDP_USE_NEED_WAKEUP = 0b1000;
+
+    public const uint XDP_RING_NEED_WAKEUP = 1;
     public const uint XSK_RING_CONS__DEFAULT_NUM_DESCS = 2048;
     public const uint XSK_RING_PROD__DEFAULT_NUM_DESCS = 2048;
+
     public const uint XSK_UMEM__DEFAULT_FRAME_SIZE = 4096;
     public const uint XSK_UMEM__DEFAULT_FRAME_HEADROOM = 0;
     public const uint XSK_UMEM__DEFAULT_FLAGS = 0;
-    public const uint XDP_RING_NEED_WAKEUP = 1;
 
+    public const uint XDP_FLAGS_UPDATE_IF_NOEXIST = 0b0001;
+    public const uint XDP_FLAGS_SKB_MODE          = 0b0010;
+    public const uint XDP_FLAGS_DRV_MODE          = 0b0100;
+    public const uint XDP_FLAGS_HW_MODE           = 0b1000;
 
     // Raw P/Invoke where config may be NULL (defaults applied by libbpf)
     // int xsk_umem__create(struct xsk_umem **umem, void *area, __u64 size,
     //                      struct xsk_ring_prod *fill, struct xsk_ring_cons *comp,
     //                      const struct xsk_umem_config *config);
-    [LibraryImport(Lib, EntryPoint = "xsk_umem__create", SetLastError = true)]
-    public static partial int xsk_umem__create(
-        out void* umem,
-        void* umem_area,
-        ulong size,
-        out xsk_ring fill,
-        out xsk_ring comp,
-        in xsk_umem_config config);
+    [LibraryImport(Lib, EntryPoint = "xsk_umem__create")]
+    public static partial int xsk_umem__create(out xsk_umem* umem,
+                                               void* umem_area,
+                                               ulong size,
+                                               out xsk_ring fill,
+                                               out xsk_ring comp,
+                                               in xsk_umem_config config);
 
     // int xsk_umem__delete(struct xsk_umem *umem);
     // Returns 0 on success, -EBUSY if the UMEM is still in use (per xsk.h).
-    [LibraryImport(Lib, EntryPoint = "xsk_umem__delete", SetLastError = true)]
-    public static partial int xsk_umem__delete(void* umem);
+    [LibraryImport(Lib, EntryPoint = "xsk_umem__delete")]
+    public static partial int xsk_umem__delete(xsk_umem* umem);
+
+    // LIBBPF_API int xsk_socket__create(struct xsk_socket **xsk,
+    //                                   const char *ifname, __u32 queue_id,
+    //                                   struct xsk_umem *umem,
+    //                                   struct xsk_ring_cons *rx,
+    //                                   struct xsk_ring_prod *tx,
+    //                                   const struct xsk_socket_config *config);
+    [LibraryImport(Lib, EntryPoint = "xsk_socket__create", StringMarshalling = StringMarshalling.Utf8)]
+    public static partial int xsk_socket__create(out xsk_socket* xsk,
+                                                 string ifname,
+                                                 uint queue_id,
+                                                 xsk_umem* umem,
+                                                 ref xsk_ring rx,
+                                                 ref xsk_ring tx,
+                                                 in xsk_socket_config config);
+
+    // LIBBPF_API int xsk_socket__create_shared(struct xsk_socket **xsk,
+    //                                          const char *ifname, __u32 queue_id,
+    //                                          struct xsk_umem *umem,
+    //                                          struct xsk_ring_cons *rx,
+    //                                          struct xsk_ring_prod *tx,
+    //                                          struct xsk_ring_prod *fill,
+    //                                          struct xsk_ring_cons *comp,
+    //                                          const struct xsk_socket_config *config);
+    [LibraryImport(Lib, EntryPoint = "xsk_socket__create_shared", StringMarshalling = StringMarshalling.Utf8)]
+    public static partial int xsk_socket__create_shared(out xsk_socket* xsk,
+                                                        string ifname,
+                                                        uint queue_id,
+                                                        xsk_umem* umem,
+                                                        ref xsk_ring rx,
+                                                        ref xsk_ring tx,
+                                                        ref xsk_ring fill,
+                                                        ref xsk_ring comp,
+                                                        in xsk_socket_config config);
+
+    // LIBBPF_API void xsk_socket__delete(struct xsk_socket *xsk);
+    [LibraryImport(Lib, EntryPoint = "xsk_socket__delete")]
+    public static partial void xsk_socket__delete(xsk_socket* xsk);
 
     // C# ports of libbpf's smp_load_acquire() and smp_store_release()
     // Source: tools/lib/bpf/xsk.h
@@ -189,4 +244,20 @@ internal static unsafe partial class LibBpf
         public uint len;
         public uint options;
     }
+
+    [StructLayout(LayoutKind.Sequential)]
+    public struct xsk_umem;
+
+    [StructLayout(LayoutKind.Sequential)]
+    public struct xsk_socket_config
+    {
+        public uint rx_size;
+        public uint tx_size;
+        public uint libbpf_flags;
+        public uint xdp_flags;
+        public ushort bind_flags;
+    }
+
+    [StructLayout(LayoutKind.Sequential)]
+    public struct xsk_socket;
 }
