@@ -10,8 +10,8 @@ public sealed unsafe class UMemory : CriticalFinalizerObject, IDisposable
     private readonly void* _mem;
     private readonly void* _umem;
 
-    public UMemory(ProducerRingBuffer fillRing,
-                   ConsumerRingBuffer completionRing,
+    public UMemory(FillRingBuffer fillRing,
+                   CompletionRingBuffer completionRing,
                    uint frameCount,
                    uint frameSize = LibBpf.XSK_UMEM__DEFAULT_FRAME_SIZE,
                    uint fillRingSize = LibBpf.XSK_RING_CONS__DEFAULT_NUM_DESCS,

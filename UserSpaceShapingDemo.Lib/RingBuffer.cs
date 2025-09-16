@@ -34,5 +34,8 @@ public abstract unsafe class RingBuffer : CriticalFinalizerObject, IDisposable
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    protected ref ulong Address(uint idx) => ref LibBpf.xsk_ring_prod__fill_addr(ref Ring, idx);
+    protected ref ulong Address(uint idx) => ref LibBpf.xsk_ring__addr(ref Ring, idx);
+
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    protected ref XdpDescriptor Descriptor(uint idx) => ref Unsafe.As<LibBpf.xdp_desc, XdpDescriptor>(ref LibBpf.xsk_ring__desc(ref Ring, idx));
 }

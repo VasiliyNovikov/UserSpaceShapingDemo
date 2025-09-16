@@ -141,11 +141,20 @@ internal static unsafe partial class LibBpf
         libbpf_smp_store_release(ref *prod.producer, *prod.producer + nb);
     }
 
+    // Address helpers (ports of libbpf's xsk_ring_cons__comp_addr() and xsk_ring_prod__fill_addr())
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public static ref ulong xsk_ring_prod__fill_addr(ref xsk_ring fill, uint idx)
+    public static ref ulong xsk_ring__addr(ref xsk_ring ring, uint idx)
     {
-        ulong* addrs = (ulong*)fill.ring;
-        return ref addrs[idx & fill.mask];
+        ulong* addrs = (ulong*)ring.ring;
+        return ref addrs[idx & ring.mask];
+    }
+
+    // Port of libbpf's xsk_ring_cons__comp_desc() and xsk_ring_prod__fill_desc()
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public static ref xdp_desc xsk_ring__desc(ref xsk_ring ring, uint idx)
+    {
+        xdp_desc* descs = (xdp_desc*)ring.ring;
+        return ref descs[idx & ring.mask];
     }
 
     [StructLayout(LayoutKind.Sequential)]
@@ -171,5 +180,13 @@ internal static unsafe partial class LibBpf
         public uint* consumer;
         public void* ring;
         public uint* flags;
+    }
+
+    [StructLayout(LayoutKind.Sequential)]
+    public struct xdp_desc
+    {
+        public ulong addr;
+        public uint len;
+        public uint options;
     }
 }
