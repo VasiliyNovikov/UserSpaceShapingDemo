@@ -1,5 +1,4 @@
 #pragma warning disable IDE1006
-using System;
 using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 using System.Threading;
@@ -10,33 +9,40 @@ internal static unsafe partial class LibBpf
 {
     private const string Lib = "libbpf";
 
+    // Defaults (from xsk.h)
+    public const uint XSK_RING_CONS__DEFAULT_NUM_DESCS = 2048;
+    public const uint XSK_RING_PROD__DEFAULT_NUM_DESCS = 2048;
+    public const uint XSK_UMEM__DEFAULT_FRAME_SIZE = 4096;
+    public const uint XSK_UMEM__DEFAULT_FRAME_HEADROOM = 0;
+    public const uint XSK_UMEM__DEFAULT_FLAGS = 0;
+    public const uint XDP_RING_NEED_WAKEUP = 1;
+
+
     // Raw P/Invoke where config may be NULL (defaults applied by libbpf)
     // int xsk_umem__create(struct xsk_umem **umem, void *area, __u64 size,
     //                      struct xsk_ring_prod *fill, struct xsk_ring_cons *comp,
     //                      const struct xsk_umem_config *config);
     [LibraryImport(Lib, EntryPoint = "xsk_umem__create", SetLastError = true)]
     public static partial int xsk_umem__create(
-        out IntPtr umem,
-        IntPtr umem_area,
+        out void* umem,
+        void* umem_area,
         ulong size,
-        out xsk_ring_prod fill,
-        out xsk_ring_cons comp,
-        IntPtr config = 0 /* pass IntPtr.Zero to use libbpf defaults */);
-
-    // Overload that pins & passes a config by ref
-    [LibraryImport(Lib, EntryPoint = "xsk_umem__create", SetLastError = true)]
-    public static partial int xsk_umem__create(
-        out IntPtr umem,
-        IntPtr umem_area,
-        ulong size,
-        out xsk_ring_prod fill,
-        out xsk_ring_cons comp,
+        out xsk_ring fill,
+        out xsk_ring comp,
         in xsk_umem_config config);
 
     // int xsk_umem__delete(struct xsk_umem *umem);
     // Returns 0 on success, -EBUSY if the UMEM is still in use (per xsk.h).
     [LibraryImport(Lib, EntryPoint = "xsk_umem__delete", SetLastError = true)]
-    public static partial int xsk_umem__delete(IntPtr umem);
+    public static partial int xsk_umem__delete(void* umem);
+
+    // C# ports of libbpf's smp_load_acquire() and smp_store_release()
+    // Source: tools/lib/bpf/xsk.h
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    private static uint libbpf_smp_load_acquire(ref uint p) => Volatile.Read(ref p);
+
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    private static void libbpf_smp_store_release(ref uint p, uint v) => Volatile.Write(ref p, v);
 
     // C# port of:
     // static inline __u32 xsk_cons_nb_avail(struct xsk_ring_cons *r, __u32 nb)
@@ -47,35 +53,23 @@ internal static unsafe partial class LibBpf
     // - xsk_cons_nb_avail(): entries = cached_prod - cached_cons; refresh cached_prod with load-acquire when 0
     // - xsk_ring_cons__peek(): returns min(nb, avail), writes *idx = cached_cons, bumps cached_cons by entries
 
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    private static uint LoadAcquire(uint* p)
-    {
-        // Equivalent to libbpf_smp_load_acquire: do the load, then an acquire barrier
-        uint v = *p;
-        Thread.MemoryBarrier(); // acquire fence
-        return v;
-    }
-
     // If you also want to port xsk_ring_cons__release():
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public static void xsk_ring_cons__release(ref xsk_ring_cons cons, uint nb)
+    public static void xsk_ring_cons__release(ref xsk_ring cons, uint nb)
     {
-        // libbpf does store-release to *consumer += nb
-        Thread.MemoryBarrier(); // release fence
-        uint* consumer = cons.consumer;
-        *consumer = unchecked(*consumer + nb);
+        libbpf_smp_store_release(ref *cons.consumer, *cons.consumer + nb);
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    private static uint xsk_cons_nb_avail(ref xsk_ring_cons r, uint nb)
+    private static uint xsk_cons_nb_avail(ref xsk_ring r, uint nb)
     {
         // entries = r.cached_prod - r.cached_cons; (mod 2^32 arithmetic)
-        uint entries = unchecked(r.cached_prod - r.cached_cons);
+        var entries = r.cached_prod - r.cached_cons;
         if (entries == 0)
         {
             // Refresh cached_prod with acquire semantics
-            r.cached_prod = LoadAcquire(r.producer);
-            entries = unchecked(r.cached_prod - r.cached_cons);
+            r.cached_prod = libbpf_smp_load_acquire(ref *r.producer);
+            entries = r.cached_prod - r.cached_cons;
         }
         return entries > nb ? nb : entries;
     }
@@ -84,18 +78,74 @@ internal static unsafe partial class LibBpf
     // Returns number of entries granted (<= nb). When > 0, idx is set to the starting ring index.
     // NOTE: idx here is the absolute ring index (cached_cons). Masking to the ring is done by the
     // address helpers (e.g., xsk_ring_cons__comp_addr / __rx_desc) just like libbpf.
-    public static uint xsk_ring_cons__peek(ref xsk_ring_cons cons, uint nb, out uint idx)
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public static uint xsk_ring_cons__peek(ref xsk_ring cons, uint nb, out uint idx)
     {
         uint entries = xsk_cons_nb_avail(ref cons, nb);
         if (entries > 0)
         {
             idx = cons.cached_cons;
-            cons.cached_cons = unchecked(cons.cached_cons + entries);
-            return entries;
+            cons.cached_cons += entries;
+        }
+        else
+            Unsafe.SkipInit(out idx);
+
+        return entries;
+    }
+
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public static bool xsk_ring_prod__needs_wakeup(in xsk_ring r) => (*r.flags & XDP_RING_NEED_WAKEUP) != 0;
+
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    private static uint xsk_prod_nb_free(ref xsk_ring r, uint nb)
+    {
+        var free_entries = r.cached_cons - r.cached_prod;
+
+        if (free_entries >= nb)
+            return free_entries;
+
+        /* Refresh the local tail pointer.
+         * cached_cons is r->size bigger than the real consumer pointer so
+         * that this addition can be avoided in the more frequently
+         * executed code that computs free_entries in the beginning of
+         * this function. Without this optimization it whould have been
+         * free_entries = r->cached_prod - r->cached_cons + r->size.
+         */
+        r.cached_cons = libbpf_smp_load_acquire(ref *r.consumer);
+        r.cached_cons += r.size;
+
+        return r.cached_cons - r.cached_prod;
+    }
+
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public static uint xsk_ring_prod__reserve(ref xsk_ring prod, uint nb, out uint idx)
+    {
+        if (xsk_prod_nb_free(ref prod, nb) < nb)
+        {
+            Unsafe.SkipInit(out idx);
+            return 0;
         }
 
-        idx = 0;
-        return 0;
+        idx = prod.cached_prod;
+        prod.cached_prod += nb;
+
+        return nb;
+    }
+
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public static void xsk_ring_prod__submit(ref xsk_ring prod, uint nb)
+    {
+        /* Make sure everything has been written to the ring before indicating
+         * this to the kernel by writing the producer pointer.
+         */
+        libbpf_smp_store_release(ref *prod.producer, *prod.producer + nb);
+    }
+
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public static ref ulong xsk_ring_prod__fill_addr(ref xsk_ring fill, uint idx)
+    {
+        ulong* addrs = (ulong*)fill.ring;
+        return ref addrs[idx & fill.mask];
     }
 
     [StructLayout(LayoutKind.Sequential)]
@@ -106,50 +156,12 @@ internal static unsafe partial class LibBpf
         public uint frame_size;
         public uint frame_headroom;
         public uint flags;
-
-        // Handy factory using libbpf defaults from xsk.h
-        public static xsk_umem_config Default(
-            uint? fillSize = null,
-            uint? compSize = null,
-            uint? frameSize = null,
-            uint? frameHeadroom = null,
-            uint? flags = null)
-        {
-            return new xsk_umem_config
-            {
-                fill_size = fillSize ?? XSK_RING_CONS__DEFAULT_NUM_DESCS,
-                comp_size = compSize ?? XSK_RING_PROD__DEFAULT_NUM_DESCS,
-                frame_size = frameSize ?? XSK_UMEM__DEFAULT_FRAME_SIZE,
-                frame_headroom = frameHeadroom ?? XSK_UMEM__DEFAULT_FRAME_HEADROOM,
-                flags = flags ?? XSK_UMEM__DEFAULT_FLAGS
-            };
-        }
-
-        // Defaults (from xsk.h)
-        public const uint XSK_RING_CONS__DEFAULT_NUM_DESCS = 2048;
-        public const uint XSK_RING_PROD__DEFAULT_NUM_DESCS = 2048;
-        public const uint XSK_UMEM__DEFAULT_FRAME_SIZE = 4096;
-        public const uint XSK_UMEM__DEFAULT_FRAME_HEADROOM = 0;
-        public const uint XSK_UMEM__DEFAULT_FLAGS = 0;
     }
 
     // Mirrors: DEFINE_XSK_RING(xsk_ring_prod);
+    //          DEFINE_XSK_RING(xsk_ring_cons);
     [StructLayout(LayoutKind.Sequential)]
-    public struct xsk_ring_prod
-    {
-        public uint cached_prod;
-        public uint cached_cons;
-        public uint mask;
-        public uint size;
-        public uint* producer;
-        public uint* consumer;
-        public void* ring;
-        public uint* flags;
-    }
-
-    // Mirrors: DEFINE_XSK_RING(xsk_ring_cons);
-    [StructLayout(LayoutKind.Sequential)]
-    public struct xsk_ring_cons
+    public struct xsk_ring
     {
         public uint cached_prod;
         public uint cached_cons;
