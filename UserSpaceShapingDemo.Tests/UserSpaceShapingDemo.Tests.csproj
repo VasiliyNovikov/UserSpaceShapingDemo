@@ -1,0 +1,9 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+  <Import Project="../UserSpaceShapingDemo.props" />
+  <ItemGroup>
+    <PackageReference Include="MSTest" />
+  </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\UserSpaceShapingDemo.Lib\UserSpaceShapingDemo.Lib.csproj" />
+  </ItemGroup>
+</Project>

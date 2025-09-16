@@ -1,9 +1,4 @@
 <Solution>
-  <Folder Name="/Solution Items/">
-    <File Path="Directory.Packages.props" />
-    <File Path="UserSpaceShapingDemo.props" />
-    <File Path=".editorconfig" />
-  </Folder>
   <Folder Name="/native/">
     <File Path="native\xdp_shaper_user.c" />
     <File Path="native\run_with_veth.sh" />
@@ -12,5 +7,11 @@
     <File Path="native\CMakeLists.txt" />
     <File Path="native\build_and_run.sh" />
   </Folder>
+  <Folder Name="/Solution Items/">
+    <File Path="Directory.Packages.props" />
+    <File Path="UserSpaceShapingDemo.props" />
+    <File Path=".editorconfig" />
+  </Folder>
   <Project Path="UserSpaceShapingDemo.Lib\UserSpaceShapingDemo.Lib.csproj" />
+  <Project Path="UserSpaceShapingDemo.Tests\UserSpaceShapingDemo.Tests.csproj" Type="Classic C#" />
 </Solution>
