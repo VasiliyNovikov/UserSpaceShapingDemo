@@ -14,11 +14,19 @@ internal static unsafe partial class LibNlRoute3
 
     // void rtnl_link_set_name(struct rtnl_link *link, const char *name);
     [LibraryImport(Lib, EntryPoint = "rtnl_link_set_name", StringMarshalling = StringMarshalling.Utf8)]
-    public static partial void rtnl_link_set_name(rtnl_link* link, string name);
+    public static partial void rtnl_link_set_name(rtnl_link* link, string? name);
+
+    // char* rtnl_link_get_name(struct rtnl_link *link);
+    [LibraryImport(Lib, EntryPoint = "rtnl_link_get_name", StringMarshalling = StringMarshalling.Utf8)]
+    public static partial string? rtnl_link_get_name(rtnl_link* link);
 
     // int rtnl_link_add(struct nl_sock *sk, struct rtnl_link *link, int flags);
     [LibraryImport(Lib, EntryPoint = "rtnl_link_add")]
     public static partial int rtnl_link_add(LibNl3.nl_sock* sk, rtnl_link* link, int flags);
+
+    // int rtnl_link_delete(struct nl_sock *sk, const struct rtnl_link *link);
+    [LibraryImport(Lib, EntryPoint = "rtnl_link_delete")]
+    public static partial int rtnl_link_delete(LibNl3.nl_sock* sk, rtnl_link* link);
 
     // void rtnl_link_put(struct rtnl_link *link);
     [LibraryImport(Lib, EntryPoint = "rtnl_link_put")]

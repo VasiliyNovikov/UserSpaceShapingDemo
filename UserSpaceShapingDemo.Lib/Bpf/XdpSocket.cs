@@ -33,13 +33,13 @@ public sealed unsafe class XdpSocket : CriticalFinalizerObject, IDisposable
             throw new Win32Exception(-error);
     }
 
-    ~XdpSocket() => ReleaseUnmanagedResources();
-
     private void ReleaseUnmanagedResources()
     {
         if (_xsk is not null)
             LibBpf.xsk_socket__delete(_xsk);
     }
+
+    ~XdpSocket() => ReleaseUnmanagedResources();
 
     public void Dispose()
     {

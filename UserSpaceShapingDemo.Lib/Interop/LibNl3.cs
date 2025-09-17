@@ -11,6 +11,10 @@ internal static unsafe partial class LibNl3
     // const char *nl_geterror(int);
     [LibraryImport(Lib, EntryPoint = "nl_geterror", StringMarshalling = StringMarshalling.Utf8)]
     public static partial string nl_geterror(int error);
+    
+    // int nl_syserr2nlerr(int);
+    [LibraryImport(Lib, EntryPoint = "syserr2nlerr")]
+    public static partial int nl_syserr2nlerr(int error);
 
     // struct nl_sock *nl_socket_alloc(void);
     [LibraryImport(Lib, EntryPoint = "nl_socket_alloc", SetLastError = true)]
