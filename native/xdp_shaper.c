@@ -1,4 +1,4 @@
-// xdp_shaper_user.c
+// xdp_shaper.c
 // Build: see Makefile. Run as root.
 // Example: sudo ./xdp_shaper -i eth0 -q 0 --delay-ms 10 --drop-nth 10
 
@@ -25,14 +25,14 @@
 #include <bpf/xsk.h>
 #include <linux/if_link.h>
 
-#define FRAME_SIZE          4096u
-#define NUM_FRAMES          4096u
-#define RX_RING_SIZE        1024u
-#define TX_RING_SIZE        1024u
-#define FILL_RING_SIZE      4096u
+#define FRAME_SIZE           4096u
+#define NUM_FRAMES           4096u
+#define RX_RING_SIZE         1024u
+#define TX_RING_SIZE         1024u
+#define FILL_RING_SIZE       4096u
 #define COMPLETION_RING_SIZE 4096u
-#define BATCH_RX            64u
-#define BATCH_TX            64u
+#define BATCH_RX             64u
+#define BATCH_TX             64u
 
 static volatile bool exiting = false;
 

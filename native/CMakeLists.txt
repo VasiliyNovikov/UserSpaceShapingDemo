@@ -37,9 +37,7 @@ endif()
 include_directories(${LIBBPF_INCLUDE_DIRS})
 
 # ---- User-space executable ----
-add_executable(xdp_shaper
-        xdp_shaper_user.c
-)
+add_executable(xdp_shaper xdp_shaper.c)
 
 target_compile_options(xdp_shaper PRIVATE -O2 -g -Wall -Wextra)
 
