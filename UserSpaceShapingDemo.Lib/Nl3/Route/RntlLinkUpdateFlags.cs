@@ -5,8 +5,9 @@ using UserSpaceShapingDemo.Lib.Interop;
 namespace UserSpaceShapingDemo.Lib.Nl3.Route;
 
 [Flags]
-public enum RntlLinkAddFlags
+public enum RntlLinkUpdateFlags
 {
+    None = 0,
     Replace = LibNlRoute3.NLM_F_REPLACE,
     Exclusive = LibNlRoute3.NLM_F_EXCL,
     Create = LibNlRoute3.NLM_F_CREATE,

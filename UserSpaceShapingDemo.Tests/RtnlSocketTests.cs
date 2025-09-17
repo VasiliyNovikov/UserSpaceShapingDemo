@@ -13,4 +13,13 @@ public class RtnlSocketTests
         using var socket = new RtnlSocket();
         Assert.IsNotNull(socket);
     }
+
+    [TestMethod]
+    public void RtnlSocket_GetLink()
+    {
+        using var socket = new RtnlSocket();
+        using var link = socket.GetLink("lo");
+        Assert.IsGreaterThan(0, link.IfIndex);
+        Assert.AreEqual("lo", link.Name);
+    }
 }
