@@ -23,7 +23,7 @@ public unsafe class RtnlLink : CriticalFinalizerObject, IDisposable
         _owned = owned;
     }
 
-    private void ReleaseUnmanagedResources()
+    protected virtual void ReleaseUnmanagedResources()
     {
         if (Link is not null && _owned)
             LibNlRoute3.rtnl_link_put(Link);
@@ -35,19 +35,5 @@ public unsafe class RtnlLink : CriticalFinalizerObject, IDisposable
     {
         ReleaseUnmanagedResources();
         GC.SuppressFinalize(this);
-    }
-
-    public void Add(NlSocket socket)
-    {
-        var error = LibNlRoute3.rtnl_link_add(socket.Sock, Link, 0);
-        if (error < 0)
-            throw new NlException(error);
-    }
-
-    public void Delete(NlSocket socket)
-    {
-        var error = LibNlRoute3.rtnl_link_delete(socket.Sock, Link);
-        if (error < 0)
-            throw new NlException(error);
     }
 }
