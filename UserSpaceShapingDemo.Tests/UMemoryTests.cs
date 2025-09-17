@@ -2,7 +2,7 @@
 
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 
-using UserSpaceShapingDemo.Lib;
+using UserSpaceShapingDemo.Lib.Bpf;
 
 namespace UserSpaceShapingDemo.Tests;
 

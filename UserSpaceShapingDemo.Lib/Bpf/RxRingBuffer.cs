@@ -1,6 +1,6 @@
 using System.Runtime.CompilerServices;
 
-namespace UserSpaceShapingDemo.Lib;
+namespace UserSpaceShapingDemo.Lib.Bpf;
 
 public sealed class RxRingBuffer : ConsumerRingBuffer
 {

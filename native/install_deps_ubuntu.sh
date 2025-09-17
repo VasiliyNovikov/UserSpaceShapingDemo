@@ -13,6 +13,8 @@ apt-get install -y \
   libbpf-dev \
   libelf-dev \
   zlib1g-dev \
+  libnl-3-dev \
+  libnl-route-3-dev \
   pkg-config \
   linux-headers-$(uname -r) \
   linux-tools-$(uname -r) \
@@ -21,11 +23,6 @@ apt-get install -y \
 # Create asm symlink if it doesn't exist
 if [ ! -e /usr/include/asm ]; then
   ln -s /usr/include/$(uname -m)-linux-gnu/asm /usr/include/asm
-fi
-
-# bpftool is handy (usually in linux-tools-*), try to install generic if the exact package wasn't present
-if ! command -v bpftool >/dev/null 2>&1; then
-  apt-get install -y bpftool || true
 fi
 
 echo "Dependencies installed."

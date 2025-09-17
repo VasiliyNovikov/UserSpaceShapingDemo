@@ -2,7 +2,9 @@ using System;
 using System.ComponentModel;
 using System.Runtime.ConstrainedExecution;
 
-namespace UserSpaceShapingDemo.Lib;
+using UserSpaceShapingDemo.Lib.Interop;
+
+namespace UserSpaceShapingDemo.Lib.Bpf;
 
 public sealed unsafe class XdpSocket : CriticalFinalizerObject, IDisposable
 {

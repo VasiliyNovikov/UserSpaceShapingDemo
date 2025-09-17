@@ -25,6 +25,12 @@
 #include <bpf/xsk.h>
 #include <linux/if_link.h>
 
+#include <libnl3/netlink/netlink.h>
+#include <libnl3/netlink/errno.h>
+#include <libnl3/netlink/socket.h>
+#include <libnl3/netlink/route/link.h>
+#include <libnl3/netlink/route/link/veth.h>
+
 #define FRAME_SIZE           4096u
 #define NUM_FRAMES           4096u
 #define RX_RING_SIZE         1024u
@@ -35,6 +41,38 @@
 #define BATCH_TX             64u
 
 static volatile bool exiting = false;
+
+static int create_veth() {
+    struct nl_sock *sk = nl_socket_alloc();
+    if (!sk) { perror("nl_socket_alloc"); return 1; }
+
+    if (nl_connect(sk, NETLINK_ROUTE) < 0) {
+        perror("nl_connect");
+        nl_socket_free(sk);
+        return 1;
+    }
+
+    struct rtnl_link *veth = rtnl_link_veth_alloc(); // veth “kind”
+    if (!veth) { fprintf(stderr, "rtnl_link_veth_alloc failed\n"); return 1; }
+
+    rtnl_link_set_name(veth, "veth0");
+
+    // Configure the peer
+    struct rtnl_link *peer = rtnl_link_veth_get_peer(veth);
+    rtnl_link_set_name(peer, "veth1");
+    // Optional: move the peer to another netns:
+    // int fd = open("/proc/<pid>/ns/net", O_RDONLY);
+    // rtnl_link_set_ns_fd(peer, fd);
+
+    int err = rtnl_link_add(sk, veth, NLM_F_CREATE | NLM_F_EXCL);
+    if (err) {
+        fprintf(stderr, "rtnl_link_add: %s\n", nl_geterror(err));
+    }
+
+    rtnl_link_put(veth);
+    nl_socket_free(sk);
+    return err ? 1 : 0;
+}
 
 static void on_sigint(int signo) { (void)signo; exiting = true; }
 

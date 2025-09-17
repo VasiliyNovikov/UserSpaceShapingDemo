@@ -1,10 +1,8 @@
-#pragma warning disable IDE0055
-#pragma warning disable IDE1006
 using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 using System.Threading;
 
-namespace UserSpaceShapingDemo.Lib;
+namespace UserSpaceShapingDemo.Lib.Interop;
 
 internal static unsafe partial class LibBpf
 {

@@ -3,7 +3,9 @@ using System.Runtime.CompilerServices;
 using System.Runtime.ConstrainedExecution;
 using System.Runtime.InteropServices;
 
-namespace UserSpaceShapingDemo.Lib;
+using UserSpaceShapingDemo.Lib.Interop;
+
+namespace UserSpaceShapingDemo.Lib.Bpf;
 
 public abstract unsafe class RingBuffer : CriticalFinalizerObject, IDisposable
 {

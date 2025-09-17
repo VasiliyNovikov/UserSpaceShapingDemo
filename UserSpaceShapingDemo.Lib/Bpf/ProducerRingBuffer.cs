@@ -1,6 +1,8 @@
 using System.Runtime.CompilerServices;
 
-namespace UserSpaceShapingDemo.Lib;
+using UserSpaceShapingDemo.Lib.Interop;
+
+namespace UserSpaceShapingDemo.Lib.Bpf;
 
 public abstract class ProducerRingBuffer : RingBuffer
 {
