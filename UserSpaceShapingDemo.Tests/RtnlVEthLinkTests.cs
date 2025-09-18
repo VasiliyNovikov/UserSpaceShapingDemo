@@ -1,5 +1,8 @@
+using System.Threading;
+
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 
+using UserSpaceShapingDemo.Lib.Nl3;
 using UserSpaceShapingDemo.Lib.Nl3.Route;
 
 namespace UserSpaceShapingDemo.Tests;
@@ -17,7 +20,7 @@ public sealed class RtnlVEthLinkTests
         using var veth = RtnlVEthLink.Allocate();
         veth.Name = vethName;
         veth.Peer.Name = vethPeerName;
-        socket.Add(veth);
+        socket.AddLink(veth);
         try
         {
             using var veth2 = socket.GetLink(vethName);
@@ -32,17 +35,29 @@ public sealed class RtnlVEthLinkTests
             Script.Exec("ip", "link", "show", vethName);
             Script.Exec("ip", "link", "show", vethPeerName);
 
+            using var vethLinkAddr = new RtnlAddress();
+            using var vethAddr = NlAddress.Parse("10.0.10.1/30");
+            vethLinkAddr.IfIndex = veth2.IfIndex;
+            vethLinkAddr.Address = vethAddr;
+            socket.AddAddress(vethLinkAddr);
+
+            using var vethPeerLinkAddr = new RtnlAddress();
+            using var vethPeerAddr = NlAddress.Parse("10.0.10.2/30");
+            vethPeerLinkAddr.IfIndex = vethPeer2.IfIndex;
+            vethPeerLinkAddr.Address = vethPeerAddr;
+            socket.AddAddress(vethPeerLinkAddr);
+
             using var vethChange = RtnlLink.Allocate();
             vethChange.Up = true;
-            socket.Update(veth2, vethChange);
+            socket.UpdateLink(veth2, vethChange);
 
             using var vethPeerChange = RtnlLink.Allocate();
             vethPeerChange.Up = true;
-            socket.Update(vethPeer2, vethPeerChange);
+            socket.UpdateLink(vethPeer2, vethPeerChange);
 
-            //Thread.Sleep(5000);
+            Thread.Sleep(10000);
 
-            socket.Delete(veth);
+            socket.DeleteLink(veth);
 
             Assert.ThrowsExactly<AssertFailedException>(() => Script.Exec("ip", "link", "show", vethName));
             Assert.ThrowsExactly<AssertFailedException>(() => Script.Exec("ip", "link", "show", vethPeerName));

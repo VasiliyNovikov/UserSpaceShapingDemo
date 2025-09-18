@@ -10,6 +10,7 @@ namespace UserSpaceShapingDemo.Lib.Nl3;
 
 public sealed unsafe class NlAddress : NativeObject
 {
+    private readonly bool _owned = true;
     private const int MaxAddressStringLength = 128;
 
     internal LibNl3.nl_addr* Addr { get; }
@@ -41,8 +42,9 @@ public sealed unsafe class NlAddress : NativeObject
         }
     }
 
-    internal NlAddress(LibNl3.nl_addr* addr)
+    internal NlAddress(LibNl3.nl_addr* addr, bool owned)
     {
+        _owned = owned;
         ArgumentNullException.ThrowIfNull(addr);
         Addr = addr;
     }
@@ -72,7 +74,7 @@ public sealed unsafe class NlAddress : NativeObject
 
     protected override void ReleaseUnmanagedResources()
     {
-        if (Addr is not null)
+        if (Addr is not null && _owned)
             LibNl3.nl_addr_put(Addr);
     }
 
@@ -93,6 +95,6 @@ public sealed unsafe class NlAddress : NativeObject
         var error = LibNl3.nl_addr_parse(address, 0, out var addr);
         return error < 0
             ? throw new NlException(error)
-            : new(addr);
+            : new(addr, true);
     }
 }

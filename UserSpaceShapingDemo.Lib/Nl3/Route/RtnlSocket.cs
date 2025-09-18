@@ -19,23 +19,37 @@ public sealed unsafe class RtnlSocket() : NlSocket(NlProtocol.Route)
     public RtnlLink GetLink(int ifIndex) => GetLink(ifIndex, null);
     public RtnlLink GetLink(string name) => GetLink(0, name);
 
-    public void Add(RtnlLink link, RntlLinkUpdateMode mode = RntlLinkUpdateMode.Create | RntlLinkUpdateMode.Exclusive)
+    public void AddLink(RtnlLink link, RntlLinkUpdateMode mode = RntlLinkUpdateMode.Create | RntlLinkUpdateMode.Exclusive)
     {
         var error = LibNlRoute3.rtnl_link_add(Sock, link.Link, (int)mode);
         if (error < 0)
             throw new NlException(error);
     }
 
-    public void Update(RtnlLink? oldLink, RtnlLink link, RntlLinkUpdateMode mode = RntlLinkUpdateMode.None)
+    public void UpdateLink(RtnlLink? oldLink, RtnlLink link, RntlLinkUpdateMode mode = RntlLinkUpdateMode.None)
     {
         var error = LibNlRoute3.rtnl_link_change(Sock, oldLink is null ? null : oldLink.Link, link.Link, (int)mode);
         if (error < 0)
             throw new NlException(error);
     }
 
-    public void Delete(RtnlLink link)
+    public void DeleteLink(RtnlLink link)
     {
         var error = LibNlRoute3.rtnl_link_delete(Sock, link.Link);
+        if (error < 0)
+            throw new NlException(error);
+    }
+
+    public void AddAddress(RtnlAddress addr)
+    {
+        var error = LibNlRoute3.rtnl_addr_add(Sock, addr.Addr, 0);
+        if (error < 0)
+            throw new NlException(error);
+    }
+
+    public void DeleteAddress(RtnlAddress addr)
+    {
+        var error = LibNlRoute3.rtnl_addr_delete(Sock, addr.Addr, 0);
         if (error < 0)
             throw new NlException(error);
     }

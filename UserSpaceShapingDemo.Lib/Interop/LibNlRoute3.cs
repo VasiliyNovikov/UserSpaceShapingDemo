@@ -109,6 +109,34 @@ internal static unsafe partial class LibNlRoute3
     [LibraryImport(Lib, EntryPoint = "rtnl_addr_alloc", SetLastError = true)]
     public static partial rtnl_addr* rtnl_addr_alloc();
 
+    // void rtnl_addr_put(struct rtnl_addr *addr)
+    [LibraryImport(Lib, EntryPoint = "rtnl_addr_put")]
+    public static partial void rtnl_addr_put(rtnl_addr* addr);
+
+    // int rtnl_addr_get_ifindex(struct rtnl_addr *addr)
+    [LibraryImport(Lib, EntryPoint = "rtnl_addr_get_ifindex")]
+    public static partial int rtnl_addr_get_ifindex(rtnl_addr* addr);
+
+    // void rtnl_addr_set_ifindex(struct rtnl_addr *addr, int ifindex)
+    [LibraryImport(Lib, EntryPoint = "rtnl_addr_set_ifindex")]
+    public static partial void rtnl_addr_set_ifindex(rtnl_addr* addr, int ifindex);
+
+    // struct nl_addr *rtnl_addr_get_local(struct rtnl_addr *addr)
+    [LibraryImport(Lib, EntryPoint = "rtnl_addr_get_local")]
+    public static partial LibNl3.nl_addr* rtnl_addr_get_local(rtnl_addr* addr);
+
+    // int rtnl_addr_set_local(struct rtnl_addr *addr, struct nl_addr *local)
+    [LibraryImport(Lib, EntryPoint = "rtnl_addr_set_local")]
+    public static partial int rtnl_addr_set_local(rtnl_addr* addr, LibNl3.nl_addr* local);
+
+    // int rtnl_addr_add(struct nl_sock *sk, struct rtnl_addr *addr, int flags)
+    [LibraryImport(Lib, EntryPoint = "rtnl_addr_add")]
+    public static partial int rtnl_addr_add(LibNl3.nl_sock* sk, rtnl_addr* addr, int flags);
+
+    // int rtnl_addr_delete(struct nl_sock *sk, struct rtnl_addr *addr, int flags)
+    [LibraryImport(Lib, EntryPoint = "rtnl_addr_delete")]
+    public static partial int rtnl_addr_delete(LibNl3.nl_sock* sk, rtnl_addr* addr, int flags);
+
     [StructLayout(LayoutKind.Sequential)]
     public struct rtnl_link;
 
