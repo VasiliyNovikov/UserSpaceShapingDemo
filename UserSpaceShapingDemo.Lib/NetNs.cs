@@ -84,6 +84,8 @@ public static unsafe class NetNs
 
     private static SafeFileHandle OpenCurrent() => OpenPath(SelfThreadNsNetPath);
 
+    //private static SafeFileHandle Open(string name) => OpenPath(Path.Combine(NetNsBasePath, name));
+
     private static void Set(SafeFileHandle nsFd)
     {
         if (LibC.setns(nsFd.DangerousGetHandle().ToInt32(), LibC.CLONE_NEWNET) < 0)
