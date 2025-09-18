@@ -25,6 +25,11 @@
 #include <bpf/xsk.h>
 #include <linux/if_link.h>
 
+#include <sys/mount.h>
+#include <sys/stat.h>
+#include <fcntl.h>
+#include <unistd.h>
+
 #define FRAME_SIZE           4096u
 #define NUM_FRAMES           4096u
 #define RX_RING_SIZE         1024u
@@ -36,7 +41,98 @@
 
 static volatile bool exiting = false;
 
-static void create_netns() {
+#define NETNS_DIR "/run/netns"
+
+static int ensure_dir(const char *path, mode_t mode) {
+    if (mkdir(path, mode) == 0) return 0;
+    if (errno == EEXIST) return 0;
+    return -1;
+}
+
+int netns_add(const char *name) {
+    char target[PATH_MAX];
+    int rc = -1;
+    int old_ns = -1, nsfd = -1, targetfd = -1;
+
+    if (ensure_dir(NETNS_DIR, 0755) && errno != EEXIST) {
+        perror("mkdir(/run/netns)");
+        return -1;
+    }
+
+    // Path like /run/netns/<name>
+    if (snprintf(target, sizeof(target), "%s/%s", NETNS_DIR, name) >= (int)sizeof(target)) {
+        errno = ENAMETOOLONG;
+        perror("snprintf target");
+        return -1;
+    }
+
+    // Keep a handle to the original netns so we can switch back later.
+    old_ns = open("/proc/self/ns/net", O_RDONLY | O_CLOEXEC);
+    if (old_ns < 0) { perror("open old netns"); goto out; }
+
+    // Create the target file (regular file is fine) that we'll bind-mount onto.
+    targetfd = open(target, O_CREAT | O_EXCL | O_RDWR | O_CLOEXEC, 0644);
+    if (targetfd < 0) {
+        perror("open target");
+        goto out;
+    }
+    close(targetfd); // We only needed to ensure it exists.
+
+    // Create a new network namespace for *this thread*.
+    if (unshare(CLONE_NEWNET) < 0) {
+        perror("unshare(CLONE_NEWNET)");
+        goto cleanup_target;
+    }
+
+    // Open a handle to the *new* netns we just created.
+    nsfd = open("/proc/self/ns/net", O_RDONLY | O_CLOEXEC);
+    if (nsfd < 0) { perror("open new netns"); goto revert_old; }
+
+    // Bind-mount the new netns to /run/netns/<name> to persist it.
+    // Using the /proc/self/fd/<nsfd> path ensures we bind the FD we opened.
+    char src[64];
+    snprintf(src, sizeof(src), "/proc/self/fd/%d", nsfd);
+    if (mount(src, target, NULL, MS_BIND, NULL) < 0) {
+        perror("mount --bind netns");
+        goto revert_old;
+    }
+
+    // Optionally switch back to the original netns so our process doesn't stay inside the new one.
+revert_old:
+    if (setns(old_ns, CLONE_NEWNET) < 0) {
+        // If this fails, our thread remains in the new netns—caller may decide if that's OK.
+        perror("setns(back to old)");
+    }
+
+    if (errno && nsfd < 0) goto cleanup_target; // if we failed before mount
+    rc = 0;
+    goto out;
+
+cleanup_target:
+    // If we created the file but failed later, try to clean it up.
+    unlink(target);
+out:
+    if (nsfd >= 0) close(nsfd);
+    if (old_ns >= 0) close(old_ns);
+    return rc;
+}
+
+int netns_del(const char *name) {
+    char path[PATH_MAX];
+    if (snprintf(path, sizeof(path), "%s/%s", NETNS_DIR, name) >= (int)sizeof(path)) {
+        errno = ENAMETOOLONG;
+        return -1;
+    }
+    // Detach the bind-mount; if it's not mounted, EINVAL is fine—then just unlink.
+    if (umount2(path, MNT_DETACH) < 0 && errno != EINVAL && errno != ENOENT) {
+        perror("umount2");
+        // continue; we’ll still try to unlink
+    }
+    if (unlink(path) < 0 && errno != ENOENT) {
+        perror("unlink");
+        return -1;
+    }
+    return 0;
 }
 
 static void on_sigint(int signo) { (void)signo; exiting = true; }

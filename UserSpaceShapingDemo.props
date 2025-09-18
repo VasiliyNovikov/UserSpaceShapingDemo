@@ -8,4 +8,9 @@
     <Nullable>enable</Nullable>
     <LangVersion>preview</LangVersion>
   </PropertyGroup>
+  <ItemGroup>
+    <Compile Include="..\LinuxOnly.cs">
+      <Link>LinuxOnly.cs</Link>
+    </Compile>
+  </ItemGroup>
 </Project>
