@@ -1,6 +1,6 @@
 <Solution>
   <Folder Name="/native/">
-    <File Path="native\xdp_shaper_user.c" />
+    <File Path="native\xdp_shaper.c" />
     <File Path="native\run_with_veth.sh" />
     <File Path="native\Makefile" />
     <File Path="native\install_deps_ubuntu.sh" />
