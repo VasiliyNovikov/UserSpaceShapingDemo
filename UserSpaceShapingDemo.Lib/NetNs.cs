@@ -1,5 +1,6 @@
 using System;
 using System.ComponentModel;
+using System.Globalization;
 using System.IO;
 using System.Runtime.InteropServices;
 
@@ -13,8 +14,9 @@ public static unsafe class NetNs
 {
     private const string NetNsBasePath = "/run/netns";
     private const UnixFileMode NetNsBasePathMode = (UnixFileMode)0755;
-    private const string NetNsSelfPath = "/proc/self/ns/net";
     private const UnixFileMode NetNsFileMode = (UnixFileMode)0644;
+    private const string NetNsSelfThreadPath = "/proc/thread-self/ns/net";
+    private const string NetNsSelfThreadFdPath = "/proc/thread-self/fd";
 
     public static void Add(string name)
     {
@@ -22,7 +24,7 @@ public static unsafe class NetNs
         Directory.CreateDirectory(NetNsBasePath, NetNsBasePathMode);
 
         // Keep a handle to the original netns so we can switch back later
-        using var oldNsFd = File.OpenHandle(NetNsSelfPath, FileMode.Open, FileAccess.Read, FileShare.Read);
+        using var oldNsFd = OpenCurrent();
 
         var target = Path.Combine(NetNsBasePath, name);
         try
@@ -38,20 +40,17 @@ public static unsafe class NetNs
             try
             {
                 // Open a handle to the *new* netns we just created
-                using var nsFd = File.OpenHandle(NetNsSelfPath, FileMode.Open, FileAccess.Read, FileShare.Read);
+                using var nsFd = OpenCurrent();
 
                 // Bind-mount the new netns to /run/netns/<name> to persist it.
-                // Using the /proc/self/fd/<nsFd> path ensures we bind the FD we opened.
-                var srcPath = $"/proc/self/fd/{nsFd.DangerousGetHandle().ToInt32()}";
+                // Using the /proc/thread-self/fd/<nsFd> path ensures we bind the FD we opened.
+                var srcPath = Path.Combine(NetNsSelfThreadFdPath, nsFd.DangerousGetHandle().ToInt32().ToString(CultureInfo.InvariantCulture));
                 if (LibC.mount(srcPath, target, null, LibC.MS_BIND, null) < 0)
                     throw new Win32Exception(Marshal.GetLastPInvokeError());
             }
             finally
             {
-#pragma warning disable CA2219
-                if (LibC.setns(oldNsFd.DangerousGetHandle().ToInt32(), LibC.CLONE_NEWNET) < 0)
-                    throw new Win32Exception(Marshal.GetLastPInvokeError());
-#pragma warning restore CA2219
+                Set(oldNsFd);
             }
         }
         catch
@@ -78,6 +77,16 @@ public static unsafe class NetNs
 
     public static Scope Enter(string name) => new(name);
 
+    private static SafeFileHandle OpenPath(string path) => File.OpenHandle(path, FileMode.Open, FileAccess.Read, FileShare.Read);
+
+    private static SafeFileHandle OpenCurrent() => OpenPath(NetNsSelfThreadPath);
+
+    private static void Set(SafeFileHandle nsFd)
+    {
+        if (LibC.setns(nsFd.DangerousGetHandle().ToInt32(), LibC.CLONE_NEWNET) < 0)
+            throw new Win32Exception(Marshal.GetLastPInvokeError());
+    }
+
     public sealed class Scope : IDisposable
     {
         private readonly SafeFileHandle _oldNsFd;
@@ -85,21 +94,25 @@ public static unsafe class NetNs
         internal Scope(string name)
         {
             // Keep a handle to the original netns so we can switch back later
-            _oldNsFd = File.OpenHandle(NetNsSelfPath, FileMode.Open, FileAccess.Read, FileShare.Read);
+            _oldNsFd = OpenCurrent();
 
             // Open a handle to the target netns
-            using var targetFd = File.OpenHandle(Path.Combine(NetNsBasePath, name), FileMode.Open, FileAccess.Read, FileShare.Read);
+            using var targetFd = OpenPath(Path.Combine(NetNsBasePath, name));
 
             // Switch this thread to the target netns
-            if (LibC.setns(targetFd.DangerousGetHandle().ToInt32(), LibC.CLONE_NEWNET) < 0)
-                throw new Win32Exception(Marshal.GetLastPInvokeError());
+            Set(targetFd);
         }
 
         public void Dispose()
         {
-            if (LibC.setns(_oldNsFd.DangerousGetHandle().ToInt32(), LibC.CLONE_NEWNET) < 0)
-                throw new Win32Exception(Marshal.GetLastPInvokeError());
-            _oldNsFd.Dispose();
+            try
+            {
+                Set(_oldNsFd);
+            }
+            finally
+            {
+                _oldNsFd.Dispose();
+            }
         }
     }
 }

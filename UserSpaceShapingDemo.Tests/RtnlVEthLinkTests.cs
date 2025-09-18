@@ -1,5 +1,3 @@
-using System.Threading;
-
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 
 using UserSpaceShapingDemo.Lib.Nl3;
@@ -55,7 +53,7 @@ public sealed class RtnlVEthLinkTests
             vethPeerChange.Up = true;
             socket.UpdateLink(vethPeer2, vethPeerChange);
 
-            Thread.Sleep(10000);
+            //Thread.Sleep(10000);
 
             socket.DeleteLink(veth);
 
