@@ -59,8 +59,33 @@ public class NetNsTests
         }
     }
 
+    [TestMethod]
+    public void NetNs_Enter()
+    {
+        const string testNsName = "test_ns_4";
+        try
+        {
+            Assert.IsNull(GetCurrentNetNs());
+            NetNs.Add(testNsName);
+            Assert.IsNull(GetCurrentNetNs());
+            using (NetNs.Enter(testNsName))
+                Assert.AreEqual(testNsName, GetCurrentNetNs());
+            Assert.IsNull(GetCurrentNetNs());
+        }
+        finally
+        {
+            Script.ExecNoThrow("ip", "netns", "delete", testNsName);
+        }
+    }
+
     private static bool IsNetNsExists(string nsName)
     {
         return Script.ExecLines("ip", "netns", "list").Any(n => n.StartsWith(nsName, StringComparison.Ordinal));
+    }
+
+    private static string? GetCurrentNetNs()
+    {
+        var currentNs = Script.Exec("ip", "netns", "identify");
+        return currentNs == "" ? null : currentNs;
     }
 }

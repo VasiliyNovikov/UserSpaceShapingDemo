@@ -1,6 +1,9 @@
+using System;
 using System.ComponentModel;
 using System.IO;
 using System.Runtime.InteropServices;
+
+using Microsoft.Win32.SafeHandles;
 
 using UserSpaceShapingDemo.Lib.Interop;
 
@@ -72,4 +75,31 @@ public static unsafe class NetNs
     public static bool Exists(string name) => File.Exists(Path.Combine(NetNsBasePath, name));
 
     public static string[] List() => Directory.Exists(NetNsBasePath) ? Directory.GetFiles(NetNsBasePath) : [];
+
+    public static Scope Enter(string name) => new(name);
+
+    public sealed class Scope : IDisposable
+    {
+        private readonly SafeFileHandle _oldNsFd;
+
+        internal Scope(string name)
+        {
+            // Keep a handle to the original netns so we can switch back later
+            _oldNsFd = File.OpenHandle(NetNsSelfPath, FileMode.Open, FileAccess.Read, FileShare.Read);
+
+            // Open a handle to the target netns
+            using var targetFd = File.OpenHandle(Path.Combine(NetNsBasePath, name), FileMode.Open, FileAccess.Read, FileShare.Read);
+
+            // Switch this thread to the target netns
+            if (LibC.setns(targetFd.DangerousGetHandle().ToInt32(), LibC.CLONE_NEWNET) < 0)
+                throw new Win32Exception(Marshal.GetLastPInvokeError());
+        }
+
+        public void Dispose()
+        {
+            if (LibC.setns(_oldNsFd.DangerousGetHandle().ToInt32(), LibC.CLONE_NEWNET) < 0)
+                throw new Win32Exception(Marshal.GetLastPInvokeError());
+            _oldNsFd.Dispose();
+        }
+    }
 }

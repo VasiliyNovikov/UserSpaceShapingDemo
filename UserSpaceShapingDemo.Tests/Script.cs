@@ -36,8 +36,8 @@ internal static class Script
         process.WaitForExit();
 
         return throwOnError && process.ExitCode != 0
-            ? throw new AssertFailedException($"Command '{string.Join(" ", cmd)}' failed with exit code {process.ExitCode}: {error}")
-            : output.ToString();
+            ? throw new AssertFailedException($"Command '{string.Join(" ", cmd)}' failed with exit code {process.ExitCode}: {error.ToString().Trim()}")
+            : output.ToString().Trim();
 
         static void HandleDataReceived(StringBuilder target, DataReceivedEventArgs e)
         {
@@ -51,5 +51,5 @@ internal static class Script
 
     public static string Exec(params ReadOnlySpan<string> cmd) => Exec(cmd, true);
     public static string ExecNoThrow(params ReadOnlySpan<string> cmd) => Exec(cmd, false);
-    public static string[] ExecLines(params ReadOnlySpan<string> cmd) => Exec(cmd).Split('\n', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
+    public static string[] ExecLines(params ReadOnlySpan<string> cmd) => Exec(cmd).Split('\n');
 }
