@@ -15,8 +15,9 @@ public static unsafe class NetNs
     private const string NetNsBasePath = "/run/netns";
     private const UnixFileMode NetNsBasePathMode = (UnixFileMode)0755;
     private const UnixFileMode NetNsFileMode = (UnixFileMode)0644;
-    private const string NetNsSelfThreadPath = "/proc/thread-self/ns/net";
-    private const string NetNsSelfThreadFdPath = "/proc/thread-self/fd";
+    private const string SelfThreadNsNetPath = "/proc/thread-self/ns/net";
+    private const string SelfThreadFdPath = "/proc/thread-self/fd";
+    private const string RootNsNetPath = "/proc/1/ns/net";
 
     public static void Add(string name)
     {
@@ -44,7 +45,7 @@ public static unsafe class NetNs
 
                 // Bind-mount the new netns to /run/netns/<name> to persist it.
                 // Using the /proc/thread-self/fd/<nsFd> path ensures we bind the FD we opened.
-                var srcPath = Path.Combine(NetNsSelfThreadFdPath, nsFd.DangerousGetHandle().ToInt32().ToString(CultureInfo.InvariantCulture));
+                var srcPath = Path.Combine(SelfThreadFdPath, nsFd.DangerousGetHandle().ToInt32().ToString(CultureInfo.InvariantCulture));
                 if (LibC.mount(srcPath, target, null, LibC.MS_BIND, null) < 0)
                     throw new Win32Exception(Marshal.GetLastPInvokeError());
             }
@@ -75,11 +76,13 @@ public static unsafe class NetNs
 
     public static string[] List() => Directory.Exists(NetNsBasePath) ? Directory.GetFiles(NetNsBasePath) : [];
 
-    public static Scope Enter(string name) => new(name);
+    public static Scope Enter(string name) => new(Path.Combine(NetNsBasePath, name));
+
+    public static Scope EnterRoot() => new(RootNsNetPath);
 
     private static SafeFileHandle OpenPath(string path) => File.OpenHandle(path, FileMode.Open, FileAccess.Read, FileShare.Read);
 
-    private static SafeFileHandle OpenCurrent() => OpenPath(NetNsSelfThreadPath);
+    private static SafeFileHandle OpenCurrent() => OpenPath(SelfThreadNsNetPath);
 
     private static void Set(SafeFileHandle nsFd)
     {
@@ -91,13 +94,13 @@ public static unsafe class NetNs
     {
         private readonly SafeFileHandle _oldNsFd;
 
-        internal Scope(string name)
+        internal Scope(string path)
         {
             // Keep a handle to the original netns so we can switch back later
             _oldNsFd = OpenCurrent();
 
             // Open a handle to the target netns
-            using var targetFd = OpenPath(Path.Combine(NetNsBasePath, name));
+            using var targetFd = OpenPath(path);
 
             // Switch this thread to the target netns
             Set(targetFd);
