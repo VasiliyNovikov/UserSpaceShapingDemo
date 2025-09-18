@@ -8,11 +8,15 @@ namespace UserSpaceShapingDemo.Lib.Nl3.Route;
 
 public unsafe class RtnlLink : CriticalFinalizerObject, IDisposable
 {
-    private readonly bool _owned;
+    protected bool Owned { get; }
 
     internal LibNlRoute3.rtnl_link* Link { get; }
 
-    public int IfIndex => LibNlRoute3.rtnl_link_get_ifindex(Link);
+    public int IfIndex
+    {
+        get => LibNlRoute3.rtnl_link_get_ifindex(Link);
+        set => LibNlRoute3.rtnl_link_set_ifindex(Link, value);
+    }
 
     public string? Name
     {
@@ -24,10 +28,18 @@ public unsafe class RtnlLink : CriticalFinalizerObject, IDisposable
         set => LibNlRoute3.rtnl_link_set_name(Link, value);
     }
 
-    public int NsPid
+    public RtnlLinkFlags Flags => (RtnlLinkFlags)LibNlRoute3.rtnl_link_get_flags(Link);
+
+    public bool Up
     {
-        get => LibNlRoute3.rtnl_link_get_ns_pid(Link);
-        set => LibNlRoute3.rtnl_link_set_ns_pid(Link, value);
+        get => (Flags & RtnlLinkFlags.Up) != 0;
+        set
+        {
+            if (value)
+                LibNlRoute3.rtnl_link_set_flags(Link, (uint)RtnlLinkFlags.Up);
+            else
+                LibNlRoute3.rtnl_link_unset_flags(Link, (uint)RtnlLinkFlags.Up);
+        }
     }
 
     public int NsFd
@@ -39,12 +51,19 @@ public unsafe class RtnlLink : CriticalFinalizerObject, IDisposable
     internal RtnlLink(LibNlRoute3.rtnl_link* link, bool owned)
     {
         Link = link;
-        _owned = owned;
+        Owned = owned;
+    }
+
+    internal static RtnlLink Create(LibNlRoute3.rtnl_link* link, bool owned)
+    {
+        return LibNlRoute3.rtnl_link_is_veth(link) == 0
+            ? new RtnlLink(link, owned)
+            : new RtnlVEthLink(link, owned);
     }
 
     protected virtual void ReleaseUnmanagedResources()
     {
-        if (Link is not null && _owned)
+        if (Link is not null && Owned)
             LibNlRoute3.rtnl_link_put(Link);
     }
 
@@ -54,5 +73,13 @@ public unsafe class RtnlLink : CriticalFinalizerObject, IDisposable
     {
         ReleaseUnmanagedResources();
         GC.SuppressFinalize(this);
+    }
+
+    public static RtnlLink Allocate()
+    {
+        var link = LibNlRoute3.rtnl_link_alloc();
+        return link is null
+            ? throw NlException.FromLastPInvokeError()
+            : Create(link, true);
     }
 }

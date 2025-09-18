@@ -13,22 +13,22 @@ public sealed unsafe class RtnlSocket() : NlSocket(NlProtocol.Route)
             ? throw new NlException(error)
             : link == null
                 ? throw new InvalidOperationException("Link is null despite no error from rtnl_link_get_kernel")
-                : new RtnlLink(link, true);
+                : RtnlLink.Create(link, true);
     }
 
     public RtnlLink GetLink(int ifIndex) => GetLink(ifIndex, null);
     public RtnlLink GetLink(string name) => GetLink(0, name);
 
-    public void Add(RtnlLink link, RntlLinkUpdateFlags flags = RntlLinkUpdateFlags.Create | RntlLinkUpdateFlags.Exclusive)
+    public void Add(RtnlLink link, RntlLinkUpdateMode mode = RntlLinkUpdateMode.Create | RntlLinkUpdateMode.Exclusive)
     {
-        var error = LibNlRoute3.rtnl_link_add(Sock, link.Link, (int)flags);
+        var error = LibNlRoute3.rtnl_link_add(Sock, link.Link, (int)mode);
         if (error < 0)
             throw new NlException(error);
     }
 
-    public void Update(RtnlLink link, RntlLinkUpdateFlags flags = RntlLinkUpdateFlags.None)
+    public void Update(RtnlLink? oldLink, RtnlLink link, RntlLinkUpdateMode mode = RntlLinkUpdateMode.None)
     {
-        var error = LibNlRoute3.rtnl_link_change(Sock, link.Link, link.Link, (int)flags);
+        var error = LibNlRoute3.rtnl_link_change(Sock, oldLink is null ? null : oldLink.Link, link.Link, (int)mode);
         if (error < 0)
             throw new NlException(error);
     }

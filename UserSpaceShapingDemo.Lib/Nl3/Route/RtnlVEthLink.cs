@@ -20,20 +20,20 @@ public sealed unsafe class RtnlVEthLink : RtnlLink
     [field: AllowNull, MaybeNull]
     public RtnlLink Peer => field ??= new RtnlLink(PeerLink, false);
 
-    private RtnlVEthLink(LibNlRoute3.rtnl_link* link) : base(link, true) { }
+    internal RtnlVEthLink(LibNlRoute3.rtnl_link* link, bool owned) : base(link, owned) { }
 
     protected override void ReleaseUnmanagedResources()
     {
-        if (Link is not null)
+        if (Link is not null && Owned)
             LibNlRoute3.rtnl_link_put(PeerLink);
         base.ReleaseUnmanagedResources();
     }
 
-    public static RtnlVEthLink Allocate()
+    public static new RtnlVEthLink Allocate()
     {
         var link = LibNlRoute3.rtnl_link_veth_alloc();
         return link is null
             ? throw NlException.FromLastPInvokeError()
-            : new(link);
+            : new(link, true);
     }
 }
