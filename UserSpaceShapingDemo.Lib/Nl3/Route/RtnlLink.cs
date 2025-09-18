@@ -1,12 +1,10 @@
-using System;
-using System.Runtime.ConstrainedExecution;
 using System.Runtime.InteropServices.Marshalling;
 
 using UserSpaceShapingDemo.Lib.Interop;
 
 namespace UserSpaceShapingDemo.Lib.Nl3.Route;
 
-public unsafe class RtnlLink : CriticalFinalizerObject, IDisposable
+public unsafe class RtnlLink : NativeObject
 {
     protected bool Owned { get; }
 
@@ -61,18 +59,10 @@ public unsafe class RtnlLink : CriticalFinalizerObject, IDisposable
             : new RtnlVEthLink(link, owned);
     }
 
-    protected virtual void ReleaseUnmanagedResources()
+    protected override void ReleaseUnmanagedResources()
     {
         if (Link is not null && Owned)
             LibNlRoute3.rtnl_link_put(Link);
-    }
-
-    ~RtnlLink() => ReleaseUnmanagedResources();
-
-    public void Dispose()
-    {
-        ReleaseUnmanagedResources();
-        GC.SuppressFinalize(this);
     }
 
     public static RtnlLink Allocate()

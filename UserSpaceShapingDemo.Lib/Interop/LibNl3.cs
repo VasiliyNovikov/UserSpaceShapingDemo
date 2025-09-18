@@ -39,7 +39,31 @@ internal static unsafe partial class LibNl3
     // char *nl_addr2str(struct nl_addr *addr, char *buf, size_t size)
     [LibraryImport(Lib, EntryPoint = "nl_addr2str")]
     public static partial byte* nl_addr2str(nl_addr* addr, byte* buf, nuint size);
+
+    // unsigned int nl_addr_get_prefixlen(struct nl_addr *addr)
+    [LibraryImport(Lib, EntryPoint = "nl_addr_get_prefixlen")]
+    public static partial uint nl_addr_get_prefixlen(nl_addr* addr);
+
+    // void nl_addr_set_prefixlen(struct nl_addr *addr, int prefixlen)
+    [LibraryImport(Lib, EntryPoint = "nl_addr_set_prefixlen")]
+    public static partial void nl_addr_set_prefixlen(nl_addr* addr, int prefixlen);
+
+    // int nl_addr_get_family(struct nl_addr *addr)
+    [LibraryImport(Lib, EntryPoint = "nl_addr_get_family")]
+    public static partial int nl_addr_get_family(nl_addr* addr);
+
+    // void nl_addr_set_family(struct nl_addr *addr, int family)
+    [LibraryImport(Lib, EntryPoint = "nl_addr_set_family")]
+    public static partial void nl_addr_set_family(nl_addr* addr, int family);
+
+    // unsigned int nl_addr_get_len(struct nl_addr *addr)
+    [LibraryImport(Lib, EntryPoint = "nl_addr_get_len")]
+    public static partial uint nl_addr_get_len(nl_addr* addr);
     
+    // void* nl_addr_get_binary_addr(struct nl_addr *addr)
+    [LibraryImport(Lib, EntryPoint = "nl_addr_get_binary_addr")]
+    public static partial void* nl_addr_get_binary_addr(nl_addr* addr);
+
     // void nl_addr_put(struct nl_addr *addr)
     [LibraryImport(Lib, EntryPoint = "nl_addr_put")]
     public static partial void nl_addr_put(nl_addr* addr);

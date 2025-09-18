@@ -1,14 +1,13 @@
 ﻿using System;
 using System.ComponentModel;
 using System.Runtime.CompilerServices;
-using System.Runtime.ConstrainedExecution;
 using System.Runtime.InteropServices;
 
 using UserSpaceShapingDemo.Lib.Interop;
 
 namespace UserSpaceShapingDemo.Lib.Bpf;
 
-public sealed unsafe class UMemory : CriticalFinalizerObject, IDisposable
+public sealed unsafe class UMemory : NativeObject
 {
     private readonly void* _mem;
     private readonly LibBpf.xsk_umem* _umem;
@@ -46,7 +45,7 @@ public sealed unsafe class UMemory : CriticalFinalizerObject, IDisposable
         }
     }
 
-    private void ReleaseUnmanagedResources()
+    protected override void ReleaseUnmanagedResources()
     {
         try
         {
@@ -62,13 +61,5 @@ public sealed unsafe class UMemory : CriticalFinalizerObject, IDisposable
             if (_mem is not null)
                 NativeMemory.AlignedFree(_mem);
         }
-    }
-
-    ~UMemory() => ReleaseUnmanagedResources();
-
-    public void Dispose()
-    {
-        ReleaseUnmanagedResources();
-        GC.SuppressFinalize(this);
     }
 }

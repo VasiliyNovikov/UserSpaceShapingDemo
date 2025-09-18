@@ -1,13 +1,12 @@
 using System;
 using System.Runtime.CompilerServices;
-using System.Runtime.ConstrainedExecution;
 using System.Runtime.InteropServices;
 
 using UserSpaceShapingDemo.Lib.Interop;
 
 namespace UserSpaceShapingDemo.Lib.Bpf;
 
-public abstract unsafe class RingBuffer : CriticalFinalizerObject, IDisposable
+public abstract unsafe class RingBuffer : NativeObject
 {
     private static readonly nuint Size = (nuint)sizeof(LibBpf.xsk_ring);
 
@@ -25,15 +24,7 @@ public abstract unsafe class RingBuffer : CriticalFinalizerObject, IDisposable
         NativeMemory.Clear(_ring, Size);
     }
 
-    private void ReleaseUnmanagedResources() => NativeMemory.AlignedFree(_ring);
-
-    ~RingBuffer() => ReleaseUnmanagedResources();
-
-    public void Dispose()
-    {
-        ReleaseUnmanagedResources();
-        GC.SuppressFinalize(this);
-    }
+    protected override void ReleaseUnmanagedResources() => NativeMemory.AlignedFree(_ring);
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     protected ref ulong Address(uint idx) => ref LibBpf.xsk_ring__addr(ref Ring, idx);

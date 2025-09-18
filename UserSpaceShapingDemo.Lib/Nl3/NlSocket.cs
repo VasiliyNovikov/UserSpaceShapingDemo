@@ -1,11 +1,8 @@
-using System;
-using System.Runtime.ConstrainedExecution;
-
 using UserSpaceShapingDemo.Lib.Interop;
 
 namespace UserSpaceShapingDemo.Lib.Nl3;
 
-public unsafe class NlSocket : CriticalFinalizerObject, IDisposable
+public unsafe class NlSocket : NativeObject
 {
     internal LibNl3.nl_sock* Sock { get; }
 
@@ -23,17 +20,9 @@ public unsafe class NlSocket : CriticalFinalizerObject, IDisposable
         }
     }
 
-    private void ReleaseUnmanagedResources()
+    protected override void ReleaseUnmanagedResources()
     {
         if (Sock is not null)
             LibNl3.nl_socket_free(Sock);
-    }
-
-    ~NlSocket() => ReleaseUnmanagedResources();
-
-    public void Dispose()
-    {
-        ReleaseUnmanagedResources();
-        GC.SuppressFinalize(this);
     }
 }

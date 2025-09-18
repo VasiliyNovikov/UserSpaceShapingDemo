@@ -105,6 +105,13 @@ internal static unsafe partial class LibNlRoute3
     [LibraryImport(Lib, EntryPoint = "rtnl_link_get_kernel", StringMarshalling = StringMarshalling.Utf8)]
     public static partial int rtnl_link_get_kernel(LibNl3.nl_sock* sk, int ifindex, string? name, out rtnl_link* result);
 
+    // struct rtnl_addr *rtnl_addr_alloc(void)
+    [LibraryImport(Lib, EntryPoint = "rtnl_addr_alloc", SetLastError = true)]
+    public static partial rtnl_addr* rtnl_addr_alloc();
+
     [StructLayout(LayoutKind.Sequential)]
     public struct rtnl_link;
+
+    [StructLayout(LayoutKind.Sequential)]
+    public struct rtnl_addr;
 }

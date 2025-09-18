@@ -1,12 +1,10 @@
-using System;
 using System.ComponentModel;
-using System.Runtime.ConstrainedExecution;
 
 using UserSpaceShapingDemo.Lib.Interop;
 
 namespace UserSpaceShapingDemo.Lib.Bpf;
 
-public sealed unsafe class XdpSocket : CriticalFinalizerObject, IDisposable
+public sealed unsafe class XdpSocket : NativeObject
 {
     private readonly LibBpf.xsk_socket* _xsk;
 
@@ -33,17 +31,9 @@ public sealed unsafe class XdpSocket : CriticalFinalizerObject, IDisposable
             throw new Win32Exception(-error);
     }
 
-    private void ReleaseUnmanagedResources()
+    protected override void ReleaseUnmanagedResources()
     {
         if (_xsk is not null)
             LibBpf.xsk_socket__delete(_xsk);
-    }
-
-    ~XdpSocket() => ReleaseUnmanagedResources();
-
-    public void Dispose()
-    {
-        ReleaseUnmanagedResources();
-        GC.SuppressFinalize(this);
     }
 }
