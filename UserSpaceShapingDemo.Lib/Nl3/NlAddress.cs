@@ -58,4 +58,14 @@ public sealed unsafe class NlAddress : CriticalFinalizerObject, IDisposable
             ? throw NlException.FromLastPInvokeError()
             : Utf8StringMarshaller.ConvertToManaged(str)!;
     }
+
+    public static NlAddress Parse(string address)
+    {
+        ArgumentNullException.ThrowIfNull(address);
+
+        var error = LibNl3.nl_addr_parse(address, 0, out var addr);
+        return error < 0
+            ? throw new NlException(error)
+            : new(addr);
+    }
 }
