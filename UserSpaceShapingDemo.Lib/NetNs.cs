@@ -1,6 +1,5 @@
 using System;
 using System.ComponentModel;
-using System.Globalization;
 using System.IO;
 using System.Runtime.InteropServices;
 
@@ -45,7 +44,8 @@ public static unsafe class NetNs
 
                 // Bind-mount the new netns to /run/netns/<name> to persist it.
                 // Using the /proc/thread-self/fd/<nsFd> path ensures we bind the FD we opened.
-                var srcPath = Path.Combine(SelfThreadFdPath, nsFd.DangerousGetHandle().ToInt32().ToString(CultureInfo.InvariantCulture));
+                using var nsFdRef = nsFd.Ref();
+                var srcPath = Path.Combine(SelfThreadFdPath, nsFdRef.ToString());
                 if (LibC.mount(srcPath, target, null, LibC.MS_BIND, null) < 0)
                     throw new Win32Exception(Marshal.GetLastPInvokeError());
             }
@@ -88,7 +88,8 @@ public static unsafe class NetNs
 
     private static void Set(SafeFileHandle nsFd)
     {
-        if (LibC.setns(nsFd.DangerousGetHandle().ToInt32(), LibC.CLONE_NEWNET) < 0)
+        using var fdRef = nsFd.Ref();
+        if (LibC.setns(fdRef, LibC.CLONE_NEWNET) < 0)
             throw new Win32Exception(Marshal.GetLastPInvokeError());
     }
 

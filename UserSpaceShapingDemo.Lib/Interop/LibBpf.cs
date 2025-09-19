@@ -53,7 +53,7 @@ internal static unsafe partial class LibBpf
 
     // int xsk_umem__fd(const struct xsk_umem *umem)
     [LibraryImport(Lib, EntryPoint = "xsk_umem__fd")]
-    public static partial int xsk_umem__fd(xsk_umem* umem);
+    public static partial FileDescriptor xsk_umem__fd(xsk_umem* umem);
 
     // Port of libbpf's void *xsk_umem__get_data(void *umem_area, __u64 addr)
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -88,7 +88,7 @@ internal static unsafe partial class LibBpf
 
     // int xsk_socket__fd(const struct xsk_socket *xsk)
     [LibraryImport(Lib, EntryPoint = "xsk_socket__fd")]
-    public static partial int xsk_socket__fd(xsk_socket* xsk);
+    public static partial FileDescriptor xsk_socket__fd(xsk_socket* xsk);
 
     // C# ports of libbpf's smp_load_acquire() and smp_store_release()
     // Source: tools/lib/bpf/xsk.h

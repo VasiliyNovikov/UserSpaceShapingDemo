@@ -42,7 +42,7 @@ public sealed unsafe class RtnlLink : NativeObject
         }
     }
 
-    public int NsFd
+    public FileDescriptor NsFd
     {
         get => LibNlRoute3.rtnl_link_get_ns_fd(Link);
         set => LibNlRoute3.rtnl_link_set_ns_fd(Link, value);

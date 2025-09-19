@@ -71,11 +71,11 @@ internal static unsafe partial class LibNlRoute3
 
     // void rtnl_link_set_ns_fd(struct rtnl_link *link, int fd)
     [LibraryImport(Lib, EntryPoint = "rtnl_link_set_ns_fd")]
-    public static partial void rtnl_link_set_ns_fd(rtnl_link* link, int fd);
+    public static partial void rtnl_link_set_ns_fd(rtnl_link* link, FileDescriptor fd);
 
     // int rtnl_link_get_ns_fd(struct rtnl_link *link)
     [LibraryImport(Lib, EntryPoint = "rtnl_link_get_ns_fd")]
-    public static partial int rtnl_link_get_ns_fd(rtnl_link* link);
+    public static partial FileDescriptor rtnl_link_get_ns_fd(rtnl_link* link);
 
     // uint32_t rtnl_link_get_num_rx_queues(struct rtnl_link *link)
     [LibraryImport(Lib, EntryPoint = "rtnl_link_get_num_rx_queues")]

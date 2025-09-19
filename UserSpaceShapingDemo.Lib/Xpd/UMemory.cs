@@ -17,7 +17,7 @@ public sealed unsafe class UMemory : NativeObject
         get => _umem;
     }
 
-    public int Fd => LibBpf.xsk_umem__fd(_umem);
+    public FileDescriptor Fd => LibBpf.xsk_umem__fd(_umem);
 
     public UMemory(FillRingBuffer fillRing,
                    CompletionRingBuffer completionRing,

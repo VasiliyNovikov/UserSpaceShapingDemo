@@ -41,7 +41,8 @@ public sealed class TrafficSetup : IDisposable
             {
                 link.Name = name;
                 link.RxQueueCount = 1;
-                link.NsFd = ns.DangerousGetHandle().ToInt32();
+                using var nsRef = ns.Ref();
+                link.NsFd = nsRef;
             }
             using var socket = new RtnlSocket();
             socket.AddLink(vethPair.Link);

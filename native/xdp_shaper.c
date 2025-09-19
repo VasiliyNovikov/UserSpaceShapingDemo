@@ -356,6 +356,8 @@ int main(int argc, char **argv)
                 uint32_t len  = rxd->len;
                 pkt_counter++;
 
+                poll()
+
                 bool drop = (cfg.drop_nth > 0) && (pkt_counter % cfg.drop_nth == 0);
                 if (drop) {
                     // Drop: return frame to FILL immediately

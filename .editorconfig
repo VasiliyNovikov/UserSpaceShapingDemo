@@ -25,11 +25,13 @@ dotnet_diagnostic.IDE0008.severity = none
 dotnet_diagnostic.IDE0011.severity = none
 dotnet_diagnostic.IDE0021.severity = none
 dotnet_diagnostic.IDE0022.severity = none
+dotnet_diagnostic.IDE0023.severity = none
 
 [*{Tests,Benchmarks}.cs]
 dotnet_diagnostic.CA1707.severity = none
 dotnet_diagnostic.CA1822.severity = none
 
 [{Lib}*.cs]
+dotnet_diagnostic.CS8981.severity = none
 dotnet_diagnostic.IDE0055.severity = none
 dotnet_diagnostic.IDE1006.severity = none
