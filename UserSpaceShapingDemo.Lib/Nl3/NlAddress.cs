@@ -91,10 +91,7 @@ public sealed unsafe class NlAddress : NativeObject
     public static NlAddress Parse(string address)
     {
         ArgumentNullException.ThrowIfNull(address);
-
-        var error = LibNl3.nl_addr_parse(address, 0, out var addr);
-        return error < 0
-            ? throw new NlException(error)
-            : new(addr, true);
+        LibNl3.nl_addr_parse(address, 0, out var addr).ThrowIfError();
+        return new(addr, true);
     }
 }

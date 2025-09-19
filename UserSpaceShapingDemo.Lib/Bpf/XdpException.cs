@@ -10,7 +10,7 @@ internal static class XdpExceptionExtensions
 {
     public static void ThrowIfError(this LibBpf.xsk_api_result result)
     {
-        if (result.Error < 0)
-            throw new XdpException(result.Error);
+        if (result.error_code < 0)
+            throw new XdpException(result.error_code);
     }
 }

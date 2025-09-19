@@ -1,28 +1,38 @@
+using System;
+
 using UserSpaceShapingDemo.Lib.Interop;
 
 namespace UserSpaceShapingDemo.Lib.Nl3;
 
-public unsafe class NlSocket : NativeObject
+public abstract unsafe class NlSocket : NativeObject
 {
     internal LibNl3.nl_sock* Sock { get; }
 
-    public NlSocket(NlProtocol protocol)
+    protected NlSocket(NlProtocol protocol)
     {
-        Sock = LibNl3.nl_socket_alloc();
-        if (Sock is null)
-            throw NlException.FromLastPInvokeError();
-        var err = LibNl3.nl_connect(Sock, (int)protocol);
-        if (err < 0)
+        try
         {
-            LibNl3.nl_socket_free(Sock);
-            Sock = null;
-            throw new NlException(err);
+            Sock = LibNl3.nl_socket_alloc();
+            if (Sock is null)
+                throw NlException.FromLastPInvokeError();
+            try
+            {
+                LibNl3.nl_connect(Sock, (int)protocol).ThrowIfError();
+            }
+            catch
+            {
+                LibNl3.nl_socket_free(Sock);
+                throw;
+            }
+        }
+        catch
+        {
+#pragma warning disable CA1816
+            GC.SuppressFinalize(this);
+#pragma warning restore CA1816
+            throw;
         }
     }
 
-    protected override void ReleaseUnmanagedResources()
-    {
-        if (Sock is not null)
-            LibNl3.nl_socket_free(Sock);
-    }
+    protected override void ReleaseUnmanagedResources() => LibNl3.nl_socket_free(Sock);
 }

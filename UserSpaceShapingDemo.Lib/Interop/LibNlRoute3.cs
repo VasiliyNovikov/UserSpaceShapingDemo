@@ -103,19 +103,19 @@ internal static unsafe partial class LibNlRoute3
     
     // int rtnl_link_add(struct nl_sock *sk, struct rtnl_link *link, int flags)
     [LibraryImport(Lib, EntryPoint = "rtnl_link_add")]
-    public static partial int rtnl_link_add(LibNl3.nl_sock* sk, rtnl_link* link, int flags);
+    public static partial LibNl3.nl_api_result rtnl_link_add(LibNl3.nl_sock* sk, rtnl_link* link, int flags);
     
     // int rtnl_link_change(struct nl_sock *sk, struct rtnl_link *orig, struct rtnl_link *changes, int flags)
     [LibraryImport(Lib, EntryPoint = "rtnl_link_change")]
-    public static partial int rtnl_link_change(LibNl3.nl_sock* sk, rtnl_link* orig, rtnl_link* changes, int flags);
+    public static partial LibNl3.nl_api_result rtnl_link_change(LibNl3.nl_sock* sk, rtnl_link* orig, rtnl_link* changes, int flags);
 
     // int rtnl_link_delete(struct nl_sock *sk, const struct rtnl_link *link)
     [LibraryImport(Lib, EntryPoint = "rtnl_link_delete")]
-    public static partial int rtnl_link_delete(LibNl3.nl_sock* sk, rtnl_link* link);
+    public static partial LibNl3.nl_api_result rtnl_link_delete(LibNl3.nl_sock* sk, rtnl_link* link);
 
     // int rtnl_link_get_kernel(struct nl_sock *sk, int ifindex, const char *name, struct rtnl_link **result)
     [LibraryImport(Lib, EntryPoint = "rtnl_link_get_kernel", StringMarshalling = StringMarshalling.Utf8)]
-    public static partial int rtnl_link_get_kernel(LibNl3.nl_sock* sk, int ifindex, string? name, out rtnl_link* result);
+    public static partial LibNl3.nl_api_result rtnl_link_get_kernel(LibNl3.nl_sock* sk, int ifindex, string? name, out rtnl_link* result);
 
     // struct rtnl_addr *rtnl_addr_alloc(void)
     [LibraryImport(Lib, EntryPoint = "rtnl_addr_alloc", SetLastError = true)]
@@ -143,15 +143,15 @@ internal static unsafe partial class LibNlRoute3
 
     // int rtnl_addr_add(struct nl_sock *sk, struct rtnl_addr *addr, int flags)
     [LibraryImport(Lib, EntryPoint = "rtnl_addr_add")]
-    public static partial int rtnl_addr_add(LibNl3.nl_sock* sk, rtnl_addr* addr, int flags);
+    public static partial LibNl3.nl_api_result rtnl_addr_add(LibNl3.nl_sock* sk, rtnl_addr* addr, int flags);
 
     // int rtnl_addr_delete(struct nl_sock *sk, struct rtnl_addr *addr, int flags)
     [LibraryImport(Lib, EntryPoint = "rtnl_addr_delete")]
-    public static partial int rtnl_addr_delete(LibNl3.nl_sock* sk, rtnl_addr* addr, int flags);
+    public static partial LibNl3.nl_api_result rtnl_addr_delete(LibNl3.nl_sock* sk, rtnl_addr* addr, int flags);
 
     [StructLayout(LayoutKind.Sequential)]
-    public struct rtnl_link;
+    public readonly struct rtnl_link;
 
     [StructLayout(LayoutKind.Sequential)]
-    public struct rtnl_addr;
+    public readonly struct rtnl_addr;
 }

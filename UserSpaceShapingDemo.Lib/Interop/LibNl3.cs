@@ -10,7 +10,7 @@ internal static unsafe partial class LibNl3
 
     // const char *nl_geterror(int);
     [LibraryImport(Lib, EntryPoint = "nl_geterror", StringMarshalling = StringMarshalling.Utf8)]
-    public static partial string nl_geterror(int error);
+    public static partial byte* nl_geterror(int error);
     
     // int nl_syserr2nlerr(int);
     [LibraryImport(Lib, EntryPoint = "syserr2nlerr")]
@@ -26,11 +26,11 @@ internal static unsafe partial class LibNl3
 
     // int nl_connect(struct nl_sock *, int)
     [LibraryImport(Lib, EntryPoint = "nl_connect")]
-    public static partial int nl_connect(nl_sock* sock, int protocol);
+    public static partial nl_api_result nl_connect(nl_sock* sock, int protocol);
 
     // int nl_addr_parse(const char *addrstr, int hint, struct nl_addr **result)
     [LibraryImport(Lib, EntryPoint = "nl_addr_parse", StringMarshalling = StringMarshalling.Utf8)]
-    public static partial int nl_addr_parse(string addrstr, int hint, out nl_addr* result);
+    public static partial nl_api_result nl_addr_parse(string addrstr, int hint, out nl_addr* result);
 
     // struct nl_addr *nl_addr_build(int family, void *buf, size_t size)
     [LibraryImport(Lib, EntryPoint = "nl_addr_build", SetLastError = true)]
@@ -67,6 +67,9 @@ internal static unsafe partial class LibNl3
     // void nl_addr_put(struct nl_addr *addr)
     [LibraryImport(Lib, EntryPoint = "nl_addr_put")]
     public static partial void nl_addr_put(nl_addr* addr);
+
+    [StructLayout(LayoutKind.Sequential)]
+    public readonly struct nl_api_result { public readonly int error_code; }
 
     [StructLayout(LayoutKind.Sequential)]
     public struct nl_sock;

@@ -200,7 +200,7 @@ internal static unsafe partial class LibBpf
     }
 
     [StructLayout(LayoutKind.Sequential)]
-    public readonly struct xsk_api_result { public readonly int Error; }
+    public readonly struct xsk_api_result { public readonly int error_code; }
 
     [StructLayout(LayoutKind.Sequential)]
     public struct xsk_umem_config
@@ -236,7 +236,7 @@ internal static unsafe partial class LibBpf
     }
 
     [StructLayout(LayoutKind.Sequential)]
-    public struct xsk_umem;
+    public readonly struct xsk_umem;
 
     [StructLayout(LayoutKind.Sequential)]
     public struct xsk_socket_config
@@ -249,5 +249,5 @@ internal static unsafe partial class LibBpf
     }
 
     [StructLayout(LayoutKind.Sequential)]
-    public struct xsk_socket;
+    public readonly struct xsk_socket;
 }
