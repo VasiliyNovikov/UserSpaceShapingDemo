@@ -13,7 +13,7 @@ public sealed unsafe class RtnlSocket() : NlSocket(NlProtocol.Route)
             ? throw new NlException(error)
             : link == null
                 ? throw new InvalidOperationException("Link is null despite no error from rtnl_link_get_kernel")
-                : RtnlLink.Create(link, true);
+                : new(link, true);
     }
 
     public RtnlLink GetLink(int ifIndex) => GetLink(ifIndex, null);

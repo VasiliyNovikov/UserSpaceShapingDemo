@@ -4,9 +4,9 @@ using UserSpaceShapingDemo.Lib.Interop;
 
 namespace UserSpaceShapingDemo.Lib.Nl3.Route;
 
-public unsafe class RtnlLink : NativeObject
+public sealed unsafe class RtnlLink : NativeObject
 {
-    protected bool Owned { get; }
+    private readonly bool _owned;
 
     internal LibNlRoute3.rtnl_link* Link { get; }
 
@@ -27,6 +27,8 @@ public unsafe class RtnlLink : NativeObject
     }
 
     public RtnlLinkFlags Flags => (RtnlLinkFlags)LibNlRoute3.rtnl_link_get_flags(Link);
+
+    public bool IsVEth => LibNlRoute3.rtnl_link_is_veth(Link) != 0;
 
     public bool Up
     {
@@ -49,19 +51,12 @@ public unsafe class RtnlLink : NativeObject
     internal RtnlLink(LibNlRoute3.rtnl_link* link, bool owned)
     {
         Link = link;
-        Owned = owned;
-    }
-
-    internal static RtnlLink Create(LibNlRoute3.rtnl_link* link, bool owned)
-    {
-        return LibNlRoute3.rtnl_link_is_veth(link) == 0
-            ? new RtnlLink(link, owned)
-            : new RtnlVEthLink(link, owned);
+        _owned = owned;
     }
 
     protected override void ReleaseUnmanagedResources()
     {
-        if (Link is not null && Owned)
+        if (Link is not null && _owned)
             LibNlRoute3.rtnl_link_put(Link);
     }
 
@@ -70,6 +65,6 @@ public unsafe class RtnlLink : NativeObject
         var link = LibNlRoute3.rtnl_link_alloc();
         return link is null
             ? throw NlException.FromLastPInvokeError()
-            : Create(link, true);
+            : new(link, true);
     }
 }

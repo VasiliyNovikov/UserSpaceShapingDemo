@@ -81,6 +81,10 @@ internal static unsafe partial class LibNlRoute3
     [LibraryImport(Lib, EntryPoint = "rtnl_link_veth_alloc", SetLastError = true)]
     public static partial rtnl_link* rtnl_link_veth_alloc();
 
+    // void rtnl_link_veth_release(struct rtnl_link *link)
+    [LibraryImport(Lib, EntryPoint = "rtnl_link_veth_release")]
+    public static partial void rtnl_link_veth_release(rtnl_link* link);
+
     // struct rtnl_link* rtnl_link_veth_get_peer(struct rtnl_link *link)
     [LibraryImport(Lib, EntryPoint = "rtnl_link_veth_get_peer", SetLastError = true)]
     public static partial rtnl_link* rtnl_link_veth_get_peer(rtnl_link* link);

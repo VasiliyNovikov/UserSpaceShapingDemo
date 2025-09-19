@@ -9,51 +9,71 @@ namespace UserSpaceShapingDemo.Tests;
 public sealed class RtnlVEthLinkTests
 {
     [TestMethod]
-    public void RtnlVEthLink_Alloc_Add_Delete()
+    public void RtnlVEthLink_Alloc_Add_Add_Addr_Delete()
     {
         const string vethName = "test_veth0";
         const string vethPeerName = "test_veth1";
+        const string vethAddress = "10.0.10.1/30";
+        const string vethPeerAddress = "10.0.10.2/30";
 
         using var socket = new RtnlSocket();
-        using var veth = RtnlVEthLink.Allocate();
-        veth.Name = vethName;
-        veth.Peer.Name = vethPeerName;
-        socket.AddLink(veth);
+        using var vethPar = RtnlVEthPair.Allocate();
+        vethPar.Link.Name = vethName;
+        vethPar.Peer.Name = vethPeerName;
+
+        Assert.ThrowsExactly<AssertFailedException>(() => Script.Exec("ip", "link", "show", vethName));
+        Assert.ThrowsExactly<AssertFailedException>(() => Script.Exec("ip", "link", "show", vethPeerName));
+
+        socket.AddLink(vethPar.Link);
         try
         {
-            using var veth2 = socket.GetLink(vethName);
-            using var vethPeer2 = socket.GetLink(vethPeerName);
+            var linkInfo = Script.Exec("ip", "link", "show", vethName);
+            Assert.AreNotEqual("", linkInfo);
+            Assert.Contains(vethName, linkInfo);
+            Assert.Contains("veth", linkInfo);
+            Assert.Contains("DOWN", linkInfo);
 
-            Assert.IsGreaterThan(0, veth2.IfIndex);
-            Assert.IsGreaterThan(0, vethPeer2.IfIndex);
+            var peerInfo = Script.Exec("ip", "link", "show", vethPeerName);
+            Assert.AreNotEqual("", peerInfo);
+            Assert.Contains(vethPeerName, peerInfo);
+            Assert.Contains("veth", peerInfo);
+            Assert.Contains("DOWN", peerInfo);
 
-            Assert.AreEqual(vethName, veth2.Name);
-            Assert.AreEqual(vethPeerName, vethPeer2.Name);
+            using var veth = socket.GetLink(vethName);
+            using var vethPeer = socket.GetLink(vethPeerName);
 
-            Script.Exec("ip", "link", "show", vethName);
-            Script.Exec("ip", "link", "show", vethPeerName);
+            Assert.IsGreaterThan(0, veth.IfIndex);
+            Assert.IsGreaterThan(0, vethPeer.IfIndex);
+
+            Assert.AreEqual(vethName, veth.Name);
+            Assert.AreEqual(vethPeerName, vethPeer.Name);
 
             using var vethLinkAddr = new RtnlAddress();
             using var vethAddr = NlAddress.Parse("10.0.10.1/30");
-            vethLinkAddr.IfIndex = veth2.IfIndex;
+            vethLinkAddr.IfIndex = veth.IfIndex;
             vethLinkAddr.Address = vethAddr;
             socket.AddAddress(vethLinkAddr);
 
+            Assert.Contains(vethAddress, Script.Exec("ip", "address", "show", vethName));
+
             using var vethPeerLinkAddr = new RtnlAddress();
             using var vethPeerAddr = NlAddress.Parse("10.0.10.2/30");
-            vethPeerLinkAddr.IfIndex = vethPeer2.IfIndex;
+            vethPeerLinkAddr.IfIndex = vethPeer.IfIndex;
             vethPeerLinkAddr.Address = vethPeerAddr;
             socket.AddAddress(vethPeerLinkAddr);
 
+            Assert.Contains(vethPeerAddress, Script.Exec("ip", "address", "show", vethPeerName));
+
             using var vethChange = RtnlLink.Allocate();
             vethChange.Up = true;
-            socket.UpdateLink(veth2, vethChange);
+            socket.UpdateLink(veth, vethChange);
 
             using var vethPeerChange = RtnlLink.Allocate();
             vethPeerChange.Up = true;
-            socket.UpdateLink(vethPeer2, vethPeerChange);
+            socket.UpdateLink(vethPeer, vethPeerChange);
 
-            //Thread.Sleep(10000);
+            Assert.Contains("UP", Script.Exec("ip", "address", "show", vethName));
+            Assert.Contains("UP", Script.Exec("ip", "address", "show", vethPeerName));
 
             socket.DeleteLink(veth);
 
