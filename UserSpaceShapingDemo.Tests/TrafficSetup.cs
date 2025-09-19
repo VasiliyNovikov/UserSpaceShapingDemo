@@ -15,7 +15,7 @@ public sealed class TrafficSetup : IDisposable
     private const byte PrefixLength = 30;
     private const string SenderNetNsNamePrefix = "tst_snd_";
     private const string ReceiverNetNsNamePrefix = "tst_rcv_";
-    private static readonly ConcurrentBag<int> InstanceIds = [.. Enumerable.Range(0, 0x1000)];
+    private static readonly ConcurrentQueue<int> InstanceIds = new(Enumerable.Range(0, 0x1000));
 
     public static readonly IPAddress SenderAddress = IPAddress.Parse("10.11.22.1");
     public static readonly IPAddress ReceiverAddress = IPAddress.Parse("10.11.22.2");
@@ -26,7 +26,7 @@ public sealed class TrafficSetup : IDisposable
 
     public TrafficSetup()
     {
-        if (!InstanceIds.TryTake(out _id))
+        if (!InstanceIds.TryDequeue(out _id))
             throw new InvalidOperationException("Too many instances of TestTrafficSetup");
         _senderName = $"{SenderNetNsNamePrefix}{_id:X}";
         _receiverName = $"{ReceiverNetNsNamePrefix}{_id:X}";
@@ -40,6 +40,7 @@ public sealed class TrafficSetup : IDisposable
                                                      (_receiverName, vethPair.Peer, receiverNs) })
             {
                 link.Name = name;
+                link.RxQueueCount = 1;
                 link.NsFd = ns.DangerousGetHandle().ToInt32();
             }
             using var socket = new RtnlSocket();
@@ -83,7 +84,7 @@ public sealed class TrafficSetup : IDisposable
             NetNs.Delete(_senderName);
             NetNs.Delete(_receiverName);
         }
-        InstanceIds.Add(_id);
+        InstanceIds.Enqueue(_id);
     }
 
     public void Dispose()

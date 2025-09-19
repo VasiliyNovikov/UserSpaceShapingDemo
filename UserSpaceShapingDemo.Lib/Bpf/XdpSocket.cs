@@ -8,7 +8,7 @@ public sealed unsafe class XdpSocket : NativeObject
 {
     private readonly LibBpf.xsk_socket* _xsk;
 
-    public XdpSocket(string ifname,
+    public XdpSocket(string ifName,
                      uint queueId,
                      UMemory umem,
                      RxRingBuffer rxRing,
@@ -18,6 +18,7 @@ public sealed unsafe class XdpSocket : NativeObject
                      XdpSocketMode mode,
                      XdpSocketBindMode bindMode)
     {
+        var ifIndex = InterfaceNameHelper.GetIndex(ifName);
         var config = new LibBpf.xsk_socket_config
         {
             rx_size = rxSize,
@@ -26,7 +27,11 @@ public sealed unsafe class XdpSocket : NativeObject
             xdp_flags = (uint)mode,
             bind_flags = (ushort)bindMode,
         };
-        var error = LibBpf.xsk_socket__create(out _xsk, ifname, queueId, umem.UMem, ref rxRing.Ring, ref txRing.Ring, config);
+        var error = LibBpf.xsk_socket__create(out _xsk, ifName, queueId, umem.UMem, ref rxRing.Ring, ref txRing.Ring, config);
+        if (error != 0)
+            throw new Win32Exception(-error);
+        XdpProgram.GetMap(ifIndex, out var mapFd);
+        error = LibBpf.xsk_socket__update_xskmap(_xsk, mapFd);
         if (error != 0)
             throw new Win32Exception(-error);
     }

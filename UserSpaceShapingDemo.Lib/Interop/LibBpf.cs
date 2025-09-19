@@ -51,6 +51,10 @@ internal static unsafe partial class LibBpf
     [LibraryImport(Lib, EntryPoint = "xsk_umem__delete")]
     public static partial int xsk_umem__delete(xsk_umem* umem);
 
+    // int xsk_setup_xdp_prog(int ifindex, int *xsks_map_fd)
+    [LibraryImport(Lib, EntryPoint = "xsk_setup_xdp_prog")]
+    public static partial int xsk_setup_xdp_prog(int ifindex, out int xsks_map_fd);
+
     // LIBBPF_API int xsk_socket__create(struct xsk_socket **xsk,
     //                                   const char *ifname, __u32 queue_id,
     //                                   struct xsk_umem *umem,
@@ -66,28 +70,13 @@ internal static unsafe partial class LibBpf
                                                  ref xsk_ring tx,
                                                  in xsk_socket_config config);
 
-    // LIBBPF_API int xsk_socket__create_shared(struct xsk_socket **xsk,
-    //                                          const char *ifname, __u32 queue_id,
-    //                                          struct xsk_umem *umem,
-    //                                          struct xsk_ring_cons *rx,
-    //                                          struct xsk_ring_prod *tx,
-    //                                          struct xsk_ring_prod *fill,
-    //                                          struct xsk_ring_cons *comp,
-    //                                          const struct xsk_socket_config *config);
-    [LibraryImport(Lib, EntryPoint = "xsk_socket__create_shared", StringMarshalling = StringMarshalling.Utf8)]
-    public static partial int xsk_socket__create_shared(out xsk_socket* xsk,
-                                                        string ifname,
-                                                        uint queue_id,
-                                                        xsk_umem* umem,
-                                                        ref xsk_ring rx,
-                                                        ref xsk_ring tx,
-                                                        ref xsk_ring fill,
-                                                        ref xsk_ring comp,
-                                                        in xsk_socket_config config);
-
     // LIBBPF_API void xsk_socket__delete(struct xsk_socket *xsk);
     [LibraryImport(Lib, EntryPoint = "xsk_socket__delete")]
     public static partial void xsk_socket__delete(xsk_socket* xsk);
+
+    // int xsk_socket__update_xskmap(struct xsk_socket *xsk, int xsks_map_fd);
+    [LibraryImport(Lib, EntryPoint = "xsk_socket__update_xskmap")]
+    public static partial int xsk_socket__update_xskmap(xsk_socket* xsk, int xsks_map_fd);
 
     // C# ports of libbpf's smp_load_acquire() and smp_store_release()
     // Source: tools/lib/bpf/xsk.h

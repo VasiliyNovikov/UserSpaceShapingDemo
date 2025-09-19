@@ -30,4 +30,8 @@ internal static unsafe partial class LibC
     // int umount2 (const char *__special_file, int __flags)
     [LibraryImport(Lib, EntryPoint = "umount2", StringMarshalling = StringMarshalling.Utf8, SetLastError = true)]
     public static partial int umount2(string specialFile, int flags);
+
+    // unsigned int if_nametoindex(const char *ifname);
+    [LibraryImport(Lib, EntryPoint = "if_nametoindex", StringMarshalling = StringMarshalling.Utf8, SetLastError = true)]
+    public static partial uint if_nametoindex(string ifname);
 }

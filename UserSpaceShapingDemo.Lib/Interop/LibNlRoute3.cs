@@ -37,6 +37,10 @@ internal static unsafe partial class LibNlRoute3
     [LibraryImport(Lib, EntryPoint = "rtnl_link_alloc", SetLastError = true)]
     public static partial rtnl_link* rtnl_link_alloc();
 
+    // void rtnl_link_put(struct rtnl_link *link)
+    [LibraryImport(Lib, EntryPoint = "rtnl_link_put")]
+    public static partial void rtnl_link_put(rtnl_link* link);
+
     // void rtnl_link_set_name(struct rtnl_link *link, const char *name)
     [LibraryImport(Lib, EntryPoint = "rtnl_link_set_name", StringMarshalling = StringMarshalling.Utf8)]
     public static partial void rtnl_link_set_name(rtnl_link* link, string? name);
@@ -73,9 +77,13 @@ internal static unsafe partial class LibNlRoute3
     [LibraryImport(Lib, EntryPoint = "rtnl_link_get_ns_fd")]
     public static partial int rtnl_link_get_ns_fd(rtnl_link* link);
 
-    // void rtnl_link_put(struct rtnl_link *link)
-    [LibraryImport(Lib, EntryPoint = "rtnl_link_put")]
-    public static partial void rtnl_link_put(rtnl_link* link);
+    // uint32_t rtnl_link_get_num_rx_queues(struct rtnl_link *link)
+    [LibraryImport(Lib, EntryPoint = "rtnl_link_get_num_rx_queues")]
+    public static partial uint rtnl_link_get_num_rx_queues(rtnl_link* link);
+
+    // void rtnl_link_set_num_rx_queues(struct rtnl_link *link, uint32_t nqueues)
+    [LibraryImport(Lib, EntryPoint = "rtnl_link_set_num_rx_queues")]
+    public static partial void rtnl_link_set_num_rx_queues(rtnl_link* link, uint nqueues);
 
     // struct rtnl_link *rtnl_link_veth_alloc(void)
     [LibraryImport(Lib, EntryPoint = "rtnl_link_veth_alloc", SetLastError = true)]

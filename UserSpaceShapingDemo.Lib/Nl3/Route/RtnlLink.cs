@@ -48,6 +48,12 @@ public sealed unsafe class RtnlLink : NativeObject
         set => LibNlRoute3.rtnl_link_set_ns_fd(Link, value);
     }
 
+    public uint RxQueueCount
+    {
+        get => LibNlRoute3.rtnl_link_get_num_rx_queues(Link);
+        set => LibNlRoute3.rtnl_link_set_num_rx_queues(Link, value);
+    }
+
     internal RtnlLink(LibNlRoute3.rtnl_link* link, bool owned)
     {
         Link = link;

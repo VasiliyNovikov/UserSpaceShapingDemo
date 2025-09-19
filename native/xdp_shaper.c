@@ -53,7 +53,7 @@
 
 #include <linux/if.h>
 
-#define FRAME_SIZE           4096u
+#define FRAME_SIZE           XSK_UMEM__DEFAULT_FRAME_SIZE
 #define NUM_FRAMES           4096u
 #define RX_RING_SIZE         1024u
 #define TX_RING_SIZE         1024u
