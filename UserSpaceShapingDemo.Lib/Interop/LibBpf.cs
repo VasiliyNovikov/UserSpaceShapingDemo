@@ -61,7 +61,7 @@ internal static unsafe partial class LibBpf
 
     // int xsk_setup_xdp_prog(int ifindex, int *xsks_map_fd)
     [LibraryImport(Lib, EntryPoint = "xsk_setup_xdp_prog")]
-    public static partial xsk_api_result xsk_setup_xdp_prog(int ifindex, out int xsks_map_fd);
+    public static partial xsk_api_result xsk_setup_xdp_prog(int ifindex, out FileDescriptor xsks_map_fd);
 
     // LIBBPF_API int xsk_socket__create(struct xsk_socket **xsk,
     //                                   const char *ifname, __u32 queue_id,
@@ -84,7 +84,7 @@ internal static unsafe partial class LibBpf
 
     // int xsk_socket__update_xskmap(struct xsk_socket *xsk, int xsks_map_fd);
     [LibraryImport(Lib, EntryPoint = "xsk_socket__update_xskmap")]
-    public static partial xsk_api_result xsk_socket__update_xskmap(xsk_socket* xsk, int xsks_map_fd);
+    public static partial xsk_api_result xsk_socket__update_xskmap(xsk_socket* xsk, FileDescriptor xsks_map_fd);
 
     // int xsk_socket__fd(const struct xsk_socket *xsk)
     [LibraryImport(Lib, EntryPoint = "xsk_socket__fd")]

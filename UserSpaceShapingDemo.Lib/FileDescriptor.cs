@@ -3,6 +3,8 @@ using System.Globalization;
 using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 
+using Microsoft.Win32.SafeHandles;
+
 namespace UserSpaceShapingDemo.Lib;
 
 [StructLayout(LayoutKind.Sequential)]
@@ -22,7 +24,7 @@ public readonly struct FileDescriptorRef : IDisposable
     private readonly SafeHandle _handle;
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public FileDescriptorRef(SafeHandle handle)
+    public FileDescriptorRef(SafeFileHandle handle)
     {
         _handle = handle ?? throw new ArgumentNullException(nameof(handle));
         bool success = false;
@@ -44,5 +46,5 @@ public readonly struct FileDescriptorRef : IDisposable
 public static class FileDescriptorRefExtensions
 {
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public static FileDescriptorRef Ref(this SafeHandle handle) => new(handle);
+    public static FileDescriptorRef Ref(this SafeFileHandle handle) => new(handle);
 }
