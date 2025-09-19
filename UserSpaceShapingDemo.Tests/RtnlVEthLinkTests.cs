@@ -17,14 +17,14 @@ public sealed class RtnlVEthLinkTests
         const string vethPeerAddress = "10.0.10.2/30";
 
         using var socket = new RtnlSocket();
-        using var vethPar = RtnlVEthPair.Allocate();
-        vethPar.Link.Name = vethName;
-        vethPar.Peer.Name = vethPeerName;
+        using var vethPair = RtnlVEthPair.Allocate();
+        vethPair.Link.Name = vethName;
+        vethPair.Peer.Name = vethPeerName;
 
         Assert.ThrowsExactly<AssertFailedException>(() => Script.Exec("ip", "link", "show", vethName));
         Assert.ThrowsExactly<AssertFailedException>(() => Script.Exec("ip", "link", "show", vethPeerName));
 
-        socket.AddLink(vethPar.Link);
+        socket.AddLink(vethPair.Link);
         try
         {
             var linkInfo = Script.Exec("ip", "link", "show", vethName);
