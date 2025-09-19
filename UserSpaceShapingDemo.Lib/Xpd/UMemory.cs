@@ -17,7 +17,16 @@ public sealed unsafe class UMemory : NativeObject
         get => _umem;
     }
 
+    public uint FrameCount { get; }
+    public uint FrameSize { get; }
+
     public FileDescriptor Fd => LibBpf.xsk_umem__fd(_umem);
+
+    public void* this[uint index]
+    {
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        get => LibBpf.xsk_umem__get_data(_umem, index);
+    }
 
     public UMemory(FillRingBuffer fillRing,
                    CompletionRingBuffer completionRing,
@@ -27,6 +36,8 @@ public sealed unsafe class UMemory : NativeObject
                    uint completionRingSize = LibBpf.XSK_RING_PROD__DEFAULT_NUM_DESCS,
                    uint frameHeadRoom = LibBpf.XSK_UMEM__DEFAULT_FRAME_HEADROOM)
     {
+        FrameCount = frameCount;
+        FrameSize = frameSize;
         var size = (ulong)frameCount * frameSize;
         _mem = NativeMemory.AlignedAlloc((nuint)size, (nuint)Environment.SystemPageSize);
 
