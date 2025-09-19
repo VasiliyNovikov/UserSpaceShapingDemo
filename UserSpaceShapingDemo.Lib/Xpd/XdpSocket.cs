@@ -15,8 +15,8 @@ public sealed unsafe class XdpSocket : NativeObject
                      TxRingBuffer txRing,
                      uint rxSize,
                      uint txSize,
-                     XdpSocketMode mode,
-                     XdpSocketBindMode bindMode)
+                     XdpSocketMode mode = XdpSocketMode.Default,
+                     XdpSocketBindMode bindMode = XdpSocketBindMode.Copy | XdpSocketBindMode.UseNeedWakeup)
     {
         var ifIndex = InterfaceNameHelper.GetIndex(ifName);
         var config = new LibBpf.xsk_socket_config

@@ -7,6 +7,7 @@ namespace UserSpaceShapingDemo.Lib.Xpd;
 [Flags]
 public enum XdpSocketMode : uint
 {
+    Default = 0,
     UpdateIfNoExist = LibBpf.XDP_FLAGS_UPDATE_IF_NOEXIST,
     Generic = LibBpf.XDP_FLAGS_SKB_MODE,
     Driver = LibBpf.XDP_FLAGS_DRV_MODE,
