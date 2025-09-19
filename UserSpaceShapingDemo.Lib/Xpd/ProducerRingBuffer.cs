@@ -20,7 +20,7 @@ public abstract class ProducerRingBuffer : RingBuffer
     public void Submit(uint count) => LibBpf.xsk_ring_prod__submit(ref Ring, count);
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public void ReserveAndSubmit(uint count, uint totalFrameCount, uint frameSize)
+    public void ReserveAndSubmit(uint count, uint frameSize)
     {
         while (count > 0)
         {
@@ -33,7 +33,7 @@ public abstract class ProducerRingBuffer : RingBuffer
 
             var lastIdx = idx + n;
             for (var i = idx; i < lastIdx; ++i)
-                Address(i) = ((ulong)(i % totalFrameCount)) * frameSize;
+                Address(i) = (ulong)i * frameSize;
 
             Submit(n);
             count -= n;
