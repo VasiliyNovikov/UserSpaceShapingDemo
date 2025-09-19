@@ -13,9 +13,9 @@ namespace UserSpaceShapingDemo.Tests;
 public sealed class TrafficSetup : IDisposable
 {
     private const byte PrefixLength = 30;
-    private const string SenderNetNsNamePrefix = "tst_send";
-    private const string ReceiverNetNsNamePrefix = "tst_recv";
-    private static readonly ConcurrentBag<int> InstanceIds = [.. Enumerable.Range(0, 1000)];
+    private const string SenderNetNsNamePrefix = "tst_snd_";
+    private const string ReceiverNetNsNamePrefix = "tst_rcv_";
+    private static readonly ConcurrentBag<int> InstanceIds = [.. Enumerable.Range(0, 0x1000)];
 
     public static readonly IPAddress SenderAddress = IPAddress.Parse("10.11.22.1");
     public static readonly IPAddress ReceiverAddress = IPAddress.Parse("10.11.22.2");
@@ -35,45 +35,33 @@ public sealed class TrafficSetup : IDisposable
         {
             using var senderNs = NetNs.Open(_senderName);
             using var receiverNs = NetNs.Open(_receiverName);
-            using var socket = new RtnlSocket();
             using var vethPair = RtnlVEthPair.Allocate();
-            vethPair.Link.Name = _senderName;
-            vethPair.Link.NsFd = senderNs.DangerousGetHandle().ToInt32();
-            vethPair.Peer.Name = _receiverName;
-            vethPair.Peer.NsFd = receiverNs.DangerousGetHandle().ToInt32();
+            foreach (var (name, link, ns) in new[] { (_senderName, vethPair.Link, senderNs),
+                                                     (_receiverName, vethPair.Peer, receiverNs) })
+            {
+                link.Name = name;
+                link.NsFd = ns.DangerousGetHandle().ToInt32();
+            }
+            using var socket = new RtnlSocket();
             socket.AddLink(vethPair.Link);
         }
-        using (NetNs.Enter(_senderName))
-        {
-            using var socket = new RtnlSocket();
+        foreach (var (name, address) in new[] { (_senderName, SenderAddress),
+                                                (_receiverName, ReceiverAddress) })
+            using (NetNs.Enter(name))
+            {
+                using var socket = new RtnlSocket();
 
-            using var link = socket.GetLink(_senderName);
-            using var linkAddr = new RtnlAddress();
-            using var addr = NlAddress.Parse($"{SenderAddress}/{PrefixLength}");
-            linkAddr.IfIndex = link.IfIndex;
-            linkAddr.Address = addr;
-            socket.AddAddress(linkAddr);
+                using var link = socket.GetLink(name);
+                using var linkAddr = new RtnlAddress();
+                using var addr = NlAddress.Parse($"{address}/{PrefixLength}");
+                linkAddr.IfIndex = link.IfIndex;
+                linkAddr.Address = addr;
+                socket.AddAddress(linkAddr);
 
-            using var linkChange = RtnlLink.Allocate();
-            linkChange.Up = true;
-            socket.UpdateLink(link, linkChange);
-        }
-
-        using (NetNs.Enter(_receiverName))
-        {
-            using var socket = new RtnlSocket();
-
-            using var link = socket.GetLink(_receiverName);
-            using var linkAddr = new RtnlAddress();
-            using var addr = NlAddress.Parse($"{ReceiverAddress}/{PrefixLength}");
-            linkAddr.IfIndex = link.IfIndex;
-            linkAddr.Address = addr;
-            socket.AddAddress(linkAddr);
-
-            using var linkChange = RtnlLink.Allocate();
-            linkChange.Up = true;
-            socket.UpdateLink(link, linkChange);
-        }
+                using var linkChange = RtnlLink.Allocate();
+                linkChange.Up = true;
+                socket.UpdateLink(link, linkChange);
+            }
     }
 
     ~TrafficSetup() => ReleaseUnmanagedResources();
@@ -87,13 +75,6 @@ public sealed class TrafficSetup : IDisposable
                 using var socket = new RtnlSocket();
                 using var link = RtnlLink.Allocate();
                 link.Name = _senderName;
-                socket.DeleteLink(link);
-            }
-            using (NetNs.Enter(_receiverName))
-            {
-                using var socket = new RtnlSocket();
-                using var link = RtnlLink.Allocate();
-                link.Name = _receiverName;
                 socket.DeleteLink(link);
             }
         }
@@ -116,20 +97,20 @@ public sealed class TrafficSetup : IDisposable
 
     public Socket CreateSenderSocket(SocketType socketType, ProtocolType protocolType)
     {
-        using (EnterSender())
-        {
-            var socket = new Socket(AddressFamily.InterNetwork, socketType, protocolType);
-            socket.Bind(new IPEndPoint(SenderAddress, 0));
-            return socket;
-        }
+        return CreateSocket(_senderName, socketType, protocolType, SenderAddress, 0);
     }
 
     public Socket CreateReceiverSocket(SocketType socketType, ProtocolType protocolType, int port)
     {
-        using (EnterReceiver())
+        return CreateSocket(_receiverName, socketType, protocolType, ReceiverAddress, port);
+    }
+
+    private static Socket CreateSocket(string name, SocketType socketType, ProtocolType protocolType, IPAddress address, int port)
+    {
+        using (NetNs.Enter(name))
         {
             var socket = new Socket(AddressFamily.InterNetwork, socketType, protocolType);
-            socket.Bind(new IPEndPoint(ReceiverAddress, port));
+            socket.Bind(new IPEndPoint(address, port));
             return socket;
         }
     }
