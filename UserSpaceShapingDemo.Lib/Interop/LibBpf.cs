@@ -55,6 +55,10 @@ internal static unsafe partial class LibBpf
     [LibraryImport(Lib, EntryPoint = "xsk_umem__fd")]
     public static partial int xsk_umem__fd(xsk_umem* umem);
 
+    // Port of libbpf's void *xsk_umem__get_data(void *umem_area, __u64 addr)
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public static void* xsk_umem__get_data(void* umem_area, ulong addr) => &((byte*)umem_area)[addr];
+
     // int xsk_setup_xdp_prog(int ifindex, int *xsks_map_fd)
     [LibraryImport(Lib, EntryPoint = "xsk_setup_xdp_prog")]
     public static partial xsk_api_result xsk_setup_xdp_prog(int ifindex, out int xsks_map_fd);
@@ -206,7 +210,7 @@ internal static unsafe partial class LibBpf
         xdp_desc* descs = (xdp_desc*)ring.ring;
         return ref descs[idx & ring.mask];
     }
-
+    
     [StructLayout(LayoutKind.Sequential)]
     public readonly struct xsk_api_result { public readonly int error_code; }
 
