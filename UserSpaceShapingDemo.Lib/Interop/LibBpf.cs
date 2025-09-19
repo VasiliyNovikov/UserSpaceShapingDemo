@@ -39,21 +39,21 @@ internal static unsafe partial class LibBpf
     //                      struct xsk_ring_prod *fill, struct xsk_ring_cons *comp,
     //                      const struct xsk_umem_config *config);
     [LibraryImport(Lib, EntryPoint = "xsk_umem__create")]
-    public static partial int xsk_umem__create(out xsk_umem* umem,
-                                               void* umem_area,
-                                               ulong size,
-                                               out xsk_ring fill,
-                                               out xsk_ring comp,
-                                               in xsk_umem_config config);
+    public static partial xsk_api_result xsk_umem__create(out xsk_umem* umem,
+                                                          void* umem_area,
+                                                          ulong size,
+                                                          out xsk_ring fill,
+                                                          out xsk_ring comp,
+                                                          in xsk_umem_config config);
 
     // int xsk_umem__delete(struct xsk_umem *umem);
     // Returns 0 on success, -EBUSY if the UMEM is still in use (per xsk.h).
     [LibraryImport(Lib, EntryPoint = "xsk_umem__delete")]
-    public static partial int xsk_umem__delete(xsk_umem* umem);
+    public static partial xsk_api_result xsk_umem__delete(xsk_umem* umem);
 
     // int xsk_setup_xdp_prog(int ifindex, int *xsks_map_fd)
     [LibraryImport(Lib, EntryPoint = "xsk_setup_xdp_prog")]
-    public static partial int xsk_setup_xdp_prog(int ifindex, out int xsks_map_fd);
+    public static partial xsk_api_result xsk_setup_xdp_prog(int ifindex, out int xsks_map_fd);
 
     // LIBBPF_API int xsk_socket__create(struct xsk_socket **xsk,
     //                                   const char *ifname, __u32 queue_id,
@@ -62,13 +62,13 @@ internal static unsafe partial class LibBpf
     //                                   struct xsk_ring_prod *tx,
     //                                   const struct xsk_socket_config *config);
     [LibraryImport(Lib, EntryPoint = "xsk_socket__create", StringMarshalling = StringMarshalling.Utf8)]
-    public static partial int xsk_socket__create(out xsk_socket* xsk,
-                                                 string ifname,
-                                                 uint queue_id,
-                                                 xsk_umem* umem,
-                                                 ref xsk_ring rx,
-                                                 ref xsk_ring tx,
-                                                 in xsk_socket_config config);
+    public static partial xsk_api_result xsk_socket__create(out xsk_socket* xsk,
+                                                            string ifname,
+                                                            uint queue_id,
+                                                            xsk_umem* umem,
+                                                            ref xsk_ring rx,
+                                                            ref xsk_ring tx,
+                                                            in xsk_socket_config config);
 
     // LIBBPF_API void xsk_socket__delete(struct xsk_socket *xsk);
     [LibraryImport(Lib, EntryPoint = "xsk_socket__delete")]
@@ -76,7 +76,7 @@ internal static unsafe partial class LibBpf
 
     // int xsk_socket__update_xskmap(struct xsk_socket *xsk, int xsks_map_fd);
     [LibraryImport(Lib, EntryPoint = "xsk_socket__update_xskmap")]
-    public static partial int xsk_socket__update_xskmap(xsk_socket* xsk, int xsks_map_fd);
+    public static partial xsk_api_result xsk_socket__update_xskmap(xsk_socket* xsk, int xsks_map_fd);
 
     // C# ports of libbpf's smp_load_acquire() and smp_store_release()
     // Source: tools/lib/bpf/xsk.h
@@ -198,6 +198,9 @@ internal static unsafe partial class LibBpf
         xdp_desc* descs = (xdp_desc*)ring.ring;
         return ref descs[idx & ring.mask];
     }
+
+    [StructLayout(LayoutKind.Sequential)]
+    public readonly struct xsk_api_result { public readonly int Error; }
 
     [StructLayout(LayoutKind.Sequential)]
     public struct xsk_umem_config

@@ -1,5 +1,3 @@
-using System.ComponentModel;
-
 using UserSpaceShapingDemo.Lib.Interop;
 
 namespace UserSpaceShapingDemo.Lib.Bpf;
@@ -27,13 +25,9 @@ public sealed unsafe class XdpSocket : NativeObject
             xdp_flags = (uint)mode,
             bind_flags = (ushort)bindMode,
         };
-        var error = LibBpf.xsk_socket__create(out _xsk, ifName, queueId, umem.UMem, ref rxRing.Ring, ref txRing.Ring, config);
-        if (error != 0)
-            throw new Win32Exception(-error);
+        LibBpf.xsk_socket__create(out _xsk, ifName, queueId, umem.UMem, ref rxRing.Ring, ref txRing.Ring, config).ThrowIfError();
         XdpProgram.GetMap(ifIndex, out var mapFd);
-        error = LibBpf.xsk_socket__update_xskmap(_xsk, mapFd);
-        if (error != 0)
-            throw new Win32Exception(-error);
+        LibBpf.xsk_socket__update_xskmap(_xsk, mapFd).ThrowIfError();
     }
 
     protected override void ReleaseUnmanagedResources()

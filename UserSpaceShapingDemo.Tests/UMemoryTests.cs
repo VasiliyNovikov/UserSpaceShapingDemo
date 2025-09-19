@@ -1,6 +1,4 @@
-﻿using System.ComponentModel;
-
-using Microsoft.VisualStudio.TestTools.UnitTesting;
+﻿using Microsoft.VisualStudio.TestTools.UnitTesting;
 
 using UserSpaceShapingDemo.Lib.Bpf;
 
@@ -22,7 +20,7 @@ public sealed class UMemoryTests
     {
         using var fillRing = new FillRingBuffer();
         using var completionRing = new CompletionRingBuffer();
-        var exception = Assert.ThrowsExactly<Win32Exception>(() => new UMemory(fillRing, completionRing, 0));
+        var exception = Assert.ThrowsExactly<XdpException>(() => new UMemory(fillRing, completionRing, 0));
         Assert.AreEqual(22, exception.NativeErrorCode);
     }
 }

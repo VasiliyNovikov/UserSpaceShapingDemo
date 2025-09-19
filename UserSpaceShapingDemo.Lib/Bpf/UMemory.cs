@@ -1,5 +1,4 @@
 ﻿using System;
-using System.ComponentModel;
 using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 
@@ -37,11 +36,14 @@ public sealed unsafe class UMemory : NativeObject
             frame_headroom = frameHeadRoom,
             flags = LibBpf.XSK_UMEM__DEFAULT_FLAGS
         };
-        var error = LibBpf.xsk_umem__create(out _umem, _mem, size, out fillRing.Ring, out completionRing.Ring, config);
-        if (error != 0)
+        try
+        {
+            LibBpf.xsk_umem__create(out _umem, _mem, size, out fillRing.Ring, out completionRing.Ring, config).ThrowIfError();
+        }
+        catch
         {
             NativeMemory.AlignedFree(_mem);
-            throw new Win32Exception(-error);
+            throw;
         }
     }
 
@@ -50,11 +52,7 @@ public sealed unsafe class UMemory : NativeObject
         try
         {
             if (_umem is not null)
-            {
-                var error = LibBpf.xsk_umem__delete(_umem);
-                if (error != 0)
-                    throw new Win32Exception(-error);
-            }
+                LibBpf.xsk_umem__delete(_umem).ThrowIfError();
         }
         finally
         {
