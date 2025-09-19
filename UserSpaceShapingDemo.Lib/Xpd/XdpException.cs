@@ -2,7 +2,7 @@ using System.ComponentModel;
 
 using UserSpaceShapingDemo.Lib.Interop;
 
-namespace UserSpaceShapingDemo.Lib.Bpf;
+namespace UserSpaceShapingDemo.Lib.Xpd;
 
 public sealed class XdpException(int error) : Win32Exception(-error);
 

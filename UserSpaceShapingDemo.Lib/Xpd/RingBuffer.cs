@@ -4,7 +4,7 @@ using System.Runtime.InteropServices;
 
 using UserSpaceShapingDemo.Lib.Interop;
 
-namespace UserSpaceShapingDemo.Lib.Bpf;
+namespace UserSpaceShapingDemo.Lib.Xpd;
 
 public abstract unsafe class RingBuffer : NativeObject
 {

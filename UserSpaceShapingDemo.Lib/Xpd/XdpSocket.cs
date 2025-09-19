@@ -1,10 +1,12 @@
 using UserSpaceShapingDemo.Lib.Interop;
 
-namespace UserSpaceShapingDemo.Lib.Bpf;
+namespace UserSpaceShapingDemo.Lib.Xpd;
 
 public sealed unsafe class XdpSocket : NativeObject
 {
     private readonly LibBpf.xsk_socket* _xsk;
+
+    public int Fd => LibBpf.xsk_socket__fd(_xsk);
 
     public XdpSocket(string ifName,
                      uint queueId,

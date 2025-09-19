@@ -51,6 +51,10 @@ internal static unsafe partial class LibBpf
     [LibraryImport(Lib, EntryPoint = "xsk_umem__delete")]
     public static partial xsk_api_result xsk_umem__delete(xsk_umem* umem);
 
+    // int xsk_umem__fd(const struct xsk_umem *umem)
+    [LibraryImport(Lib, EntryPoint = "xsk_umem__fd")]
+    public static partial int xsk_umem__fd(xsk_umem* umem);
+
     // int xsk_setup_xdp_prog(int ifindex, int *xsks_map_fd)
     [LibraryImport(Lib, EntryPoint = "xsk_setup_xdp_prog")]
     public static partial xsk_api_result xsk_setup_xdp_prog(int ifindex, out int xsks_map_fd);
@@ -77,6 +81,10 @@ internal static unsafe partial class LibBpf
     // int xsk_socket__update_xskmap(struct xsk_socket *xsk, int xsks_map_fd);
     [LibraryImport(Lib, EntryPoint = "xsk_socket__update_xskmap")]
     public static partial xsk_api_result xsk_socket__update_xskmap(xsk_socket* xsk, int xsks_map_fd);
+
+    // int xsk_socket__fd(const struct xsk_socket *xsk)
+    [LibraryImport(Lib, EntryPoint = "xsk_socket__fd")]
+    public static partial int xsk_socket__fd(xsk_socket* xsk);
 
     // C# ports of libbpf's smp_load_acquire() and smp_store_release()
     // Source: tools/lib/bpf/xsk.h

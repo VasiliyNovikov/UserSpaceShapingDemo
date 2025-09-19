@@ -4,7 +4,7 @@ using System.Runtime.InteropServices;
 
 using UserSpaceShapingDemo.Lib.Interop;
 
-namespace UserSpaceShapingDemo.Lib.Bpf;
+namespace UserSpaceShapingDemo.Lib.Xpd;
 
 public sealed unsafe class UMemory : NativeObject
 {
@@ -16,6 +16,8 @@ public sealed unsafe class UMemory : NativeObject
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         get => _umem;
     }
+
+    public int Fd => LibBpf.xsk_umem__fd(_umem);
 
     public UMemory(FillRingBuffer fillRing,
                    CompletionRingBuffer completionRing,

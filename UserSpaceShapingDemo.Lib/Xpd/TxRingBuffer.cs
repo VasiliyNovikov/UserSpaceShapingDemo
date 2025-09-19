@@ -1,6 +1,6 @@
 using System.Runtime.CompilerServices;
 
-namespace UserSpaceShapingDemo.Lib.Bpf;
+namespace UserSpaceShapingDemo.Lib.Xpd;
 
 public sealed class TxRingBuffer : ProducerRingBuffer
 {

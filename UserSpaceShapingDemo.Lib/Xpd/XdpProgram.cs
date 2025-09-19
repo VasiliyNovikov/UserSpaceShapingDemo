@@ -1,6 +1,6 @@
 using UserSpaceShapingDemo.Lib.Interop;
 
-namespace UserSpaceShapingDemo.Lib.Bpf;
+namespace UserSpaceShapingDemo.Lib.Xpd;
 
 public static class XdpProgram
 {

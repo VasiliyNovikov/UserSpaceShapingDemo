@@ -1,6 +1,6 @@
 using System.Runtime.InteropServices;
 
-namespace UserSpaceShapingDemo.Lib.Bpf;
+namespace UserSpaceShapingDemo.Lib.Xpd;
 
 [StructLayout(LayoutKind.Sequential)]
 public struct XdpDescriptor

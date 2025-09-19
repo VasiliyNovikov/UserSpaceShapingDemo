@@ -2,7 +2,7 @@ using System;
 
 using UserSpaceShapingDemo.Lib.Interop;
 
-namespace UserSpaceShapingDemo.Lib.Bpf;
+namespace UserSpaceShapingDemo.Lib.Xpd;
 
 [Flags]
 public enum XdpSocketBindMode : ushort
