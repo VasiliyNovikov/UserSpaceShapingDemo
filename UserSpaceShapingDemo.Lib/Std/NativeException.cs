@@ -8,7 +8,7 @@ public class NativeException(NativeErrorNumber errorNumber)
 {
     public NativeErrorNumber ErrorNumber => errorNumber;
 
-    public static NativeException FromLastError() => new(NativeErrorNumber.LastErrorNumber);
+    public static NativeException FromLastError() => new(NativeErrorNumber.Last);
 }
 
 public static class NativeExceptionExtensions

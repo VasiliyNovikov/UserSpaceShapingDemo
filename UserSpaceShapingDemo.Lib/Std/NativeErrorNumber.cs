@@ -72,12 +72,14 @@ public enum NativeErrorNumber
 
 public static unsafe class NativeErrorNumberExtensions
 {
+    private static readonly string?[] ErrorMessageCache = new string[256];
+
     [ThreadStatic]
     private static NativeErrorNumber* _lastErrorNumberLocation;
 
     extension(NativeErrorNumber errorNumber)
     {
-        public static NativeErrorNumber LastErrorNumber
+        public static NativeErrorNumber Last
         {
             [MethodImpl(MethodImplOptions.AggressiveInlining)]
             get
@@ -91,7 +93,16 @@ public static unsafe class NativeErrorNumberExtensions
         public string Message
         {
             [MethodImpl(MethodImplOptions.AggressiveInlining)]
-            get => Utf8StringMarshaller.ConvertToManaged(LibC.strerror(errorNumber))!;
+            get
+            {
+                int errorNumberInt = (int)errorNumber;
+                return (uint)errorNumberInt < ErrorMessageCache.Length
+                    ? ErrorMessageCache[errorNumberInt] ??= GetMessage(errorNumber)
+                    : GetMessage(errorNumber);
+
+                [MethodImpl(MethodImplOptions.AggressiveInlining)]
+                static string GetMessage(NativeErrorNumber errorNumber) => Utf8StringMarshaller.ConvertToManaged(LibC.strerror(errorNumber))!;
+            }
         }
     }
 }
