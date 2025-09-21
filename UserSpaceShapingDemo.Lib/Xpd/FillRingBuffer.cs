@@ -1,5 +1,4 @@
 using System;
-using System.ComponentModel;
 using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 using System.Threading;
@@ -46,8 +45,7 @@ public sealed unsafe class FillRingBuffer : ProducerRingBuffer
                         fd = socket.Descriptor,
                         events = LibC.POLLIN
                     };
-                    if (LibC.poll(&pollfd, 1, -1) == -1) // TODO: Handle timeout better
-                        throw new Win32Exception(Marshal.GetLastPInvokeError());
+                    LibC.poll(&pollfd, 1, -1).ThrowIfError(); // TODO: Handle timeout better
                 }
                 continue;
             }

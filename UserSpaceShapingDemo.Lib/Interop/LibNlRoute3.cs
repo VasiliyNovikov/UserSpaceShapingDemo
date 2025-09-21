@@ -34,7 +34,7 @@ internal static unsafe partial class LibNlRoute3
     public const int IFF_ECHO        = 0x40000;       // Echo sent packets
 
     // struct rtnl_link* rtnl_link_alloc(void)
-    [LibraryImport(Lib, EntryPoint = "rtnl_link_alloc", SetLastError = true)]
+    [LibraryImport(Lib, EntryPoint = "rtnl_link_alloc")]
     public static partial rtnl_link* rtnl_link_alloc();
 
     // void rtnl_link_put(struct rtnl_link *link)
@@ -86,7 +86,7 @@ internal static unsafe partial class LibNlRoute3
     public static partial void rtnl_link_set_num_rx_queues(rtnl_link* link, uint nqueues);
 
     // struct rtnl_link *rtnl_link_veth_alloc(void)
-    [LibraryImport(Lib, EntryPoint = "rtnl_link_veth_alloc", SetLastError = true)]
+    [LibraryImport(Lib, EntryPoint = "rtnl_link_veth_alloc")]
     public static partial rtnl_link* rtnl_link_veth_alloc();
 
     // void rtnl_link_veth_release(struct rtnl_link *link)
@@ -94,7 +94,7 @@ internal static unsafe partial class LibNlRoute3
     public static partial void rtnl_link_veth_release(rtnl_link* link);
 
     // struct rtnl_link* rtnl_link_veth_get_peer(struct rtnl_link *link)
-    [LibraryImport(Lib, EntryPoint = "rtnl_link_veth_get_peer", SetLastError = true)]
+    [LibraryImport(Lib, EntryPoint = "rtnl_link_veth_get_peer")]
     public static partial rtnl_link* rtnl_link_veth_get_peer(rtnl_link* link);
     
     // int rtnl_link_is_veth(struct rtnl_link *link)
@@ -118,7 +118,7 @@ internal static unsafe partial class LibNlRoute3
     public static partial LibNl3.nl_api_result rtnl_link_get_kernel(LibNl3.nl_sock* sk, int ifindex, string? name, out rtnl_link* result);
 
     // struct rtnl_addr *rtnl_addr_alloc(void)
-    [LibraryImport(Lib, EntryPoint = "rtnl_addr_alloc", SetLastError = true)]
+    [LibraryImport(Lib, EntryPoint = "rtnl_addr_alloc")]
     public static partial rtnl_addr* rtnl_addr_alloc();
 
     // void rtnl_addr_put(struct rtnl_addr *addr)

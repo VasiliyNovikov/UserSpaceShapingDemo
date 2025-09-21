@@ -68,7 +68,7 @@ public sealed unsafe class NlAddress : NativeObject
         fixed (byte* buf = addressBytes)
         {
             var addr = LibNl3.nl_addr_build((int)family, buf, (nuint)addressBytes.Length);
-            return addr is null ? throw NlException.FromLastPInvokeError() : addr;
+            return addr is null ? throw NlException.FromLastNativeError() : addr;
         }
     }
 
@@ -84,7 +84,7 @@ public sealed unsafe class NlAddress : NativeObject
         var addressBuffer = stackalloc byte[MaxAddressStringLength];
         var str = LibNl3.nl_addr2str(Addr, addressBuffer, MaxAddressStringLength);
         return str is null
-            ? throw NlException.FromLastPInvokeError()
+            ? throw NlException.FromLastNativeError()
             : Utf8StringMarshaller.ConvertToManaged(str)!;
     }
 

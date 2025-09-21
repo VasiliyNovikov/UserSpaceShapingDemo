@@ -1,6 +1,4 @@
-using System.ComponentModel;
 using System.Runtime.CompilerServices;
-using System.Runtime.InteropServices;
 
 using UserSpaceShapingDemo.Lib.Interop;
 
@@ -14,9 +12,5 @@ public abstract class FileObject(FileDescriptor descriptor) : NativeObject, IFil
         get => descriptor;
     }
 
-    protected override void ReleaseUnmanagedResources()
-    {
-        if (LibC.close(Descriptor) == -1)
-            throw new Win32Exception(Marshal.GetLastPInvokeError());
-    }
+    protected override void ReleaseUnmanagedResources() => LibC.close(Descriptor).ThrowIfError();
 }

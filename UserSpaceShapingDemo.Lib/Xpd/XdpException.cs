@@ -1,10 +1,8 @@
-using System.ComponentModel;
-
 using UserSpaceShapingDemo.Lib.Interop;
 
 namespace UserSpaceShapingDemo.Lib.Xpd;
 
-public sealed class XdpException(int error) : Win32Exception(-error);
+public sealed class XdpException(int error) : NativeException((NativeErrorNumber)(-error));
 
 internal static class XdpExceptionExtensions
 {

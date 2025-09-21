@@ -14,7 +14,7 @@ public abstract unsafe class NlSocket : NativeObject
         {
             Sock = LibNl3.nl_socket_alloc();
             if (Sock is null)
-                throw NlException.FromLastPInvokeError();
+                throw NlException.FromLastNativeError();
             try
             {
                 LibNl3.nl_connect(Sock, (int)protocol).ThrowIfError();

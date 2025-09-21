@@ -31,7 +31,7 @@ public sealed unsafe class RtnlAddress : NativeObject
     {
         var addr = LibNlRoute3.rtnl_addr_alloc();
         if (addr is null)
-            throw NlException.FromLastPInvokeError();
+            throw NlException.FromLastNativeError();
         Addr = addr;
     }
 

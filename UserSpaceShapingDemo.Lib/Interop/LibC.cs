@@ -1,4 +1,5 @@
 using System.IO;
+using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 
 namespace UserSpaceShapingDemo.Lib.Interop;
@@ -26,45 +27,58 @@ internal static unsafe partial class LibC
     public const short POLLERR  = 0b001000; // Error condition
     public const short POLLHUP  = 0b010000; // Hung up
     public const short POLLNVAL = 0b100000; // Invalid request: fd not open
+    
+    // int * __errno_location(void);
+    [LibraryImport(Lib, EntryPoint = "__errno_location")]
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public static partial NativeErrorNumber* __errno_location();
+
+    // char *strerror(int errnum);
+    [LibraryImport(Lib, EntryPoint = "strerror")]
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public static partial byte* strerror(NativeErrorNumber errnum);
 
     // int close(int fd);
-    [LibraryImport(Lib, EntryPoint = "close", SetLastError = true)]
+    [LibraryImport(Lib, EntryPoint = "close")]
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static partial int close(FileDescriptor fd);
 
     // int open(const char *pathname, int flags, mode_t mode);
-    [LibraryImport(Lib, EntryPoint = "open", StringMarshalling = StringMarshalling.Utf8, SetLastError = true)]
+    [LibraryImport(Lib, EntryPoint = "open", StringMarshalling = StringMarshalling.Utf8)]
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static partial int open(string path, int flags);
 
     // int open(const char *pathname, int flags, mode_t mode);
-    [LibraryImport(Lib, EntryPoint = "open", StringMarshalling = StringMarshalling.Utf8, SetLastError = true)]
+    [LibraryImport(Lib, EntryPoint = "open", StringMarshalling = StringMarshalling.Utf8)]
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static partial int open(string path, int flags, UnixFileMode mode);
 
     // int unshare (int __flags)
-    [LibraryImport(Lib, EntryPoint = "unshare", SetLastError = true)]
+    [LibraryImport(Lib, EntryPoint = "unshare")]
     public static partial int unshare(int flags);
 
     // int setns (int __fd, int __nstype)
-    [LibraryImport(Lib, EntryPoint = "setns", SetLastError = true)]
+    [LibraryImport(Lib, EntryPoint = "setns")]
     public static partial int setns(FileDescriptor fd, int nstype);
 
     // int mount (const char *__special_file, const char *__dir, const char *__fstype, unsigned long int __rwflag, const void *__data)
-    [LibraryImport(Lib, EntryPoint = "mount", StringMarshalling = StringMarshalling.Utf8, SetLastError = true)]
+    [LibraryImport(Lib, EntryPoint = "mount", StringMarshalling = StringMarshalling.Utf8)]
     public static partial int mount(string specialFile, string dir, string? fstype, ulong rwflag, void* data);
 
     // int umount2 (const char *__special_file, int __flags)
-    [LibraryImport(Lib, EntryPoint = "umount2", StringMarshalling = StringMarshalling.Utf8, SetLastError = true)]
+    [LibraryImport(Lib, EntryPoint = "umount2", StringMarshalling = StringMarshalling.Utf8)]
     public static partial int umount2(string specialFile, int flags);
 
     // unsigned int if_nametoindex(const char *ifname);
-    [LibraryImport(Lib, EntryPoint = "if_nametoindex", StringMarshalling = StringMarshalling.Utf8, SetLastError = true)]
+    [LibraryImport(Lib, EntryPoint = "if_nametoindex", StringMarshalling = StringMarshalling.Utf8)]
     public static partial uint if_nametoindex(string ifname);
 
     // int eventfd(unsigned int initval, int flags);
-    [LibraryImport(Lib, EntryPoint = "eventfd", SetLastError = true)]
+    [LibraryImport(Lib, EntryPoint = "eventfd")]
     public static partial FileDescriptor eventfd(uint initval, int flags);
 
     // int poll(struct pollfd *fds, nfds_t nfds, int timeout);
-    [LibraryImport(Lib, EntryPoint = "poll", SetLastError = true)]
+    [LibraryImport(Lib, EntryPoint = "poll")]
     public static partial int poll(pollfd* fds, uint nfds, int timeout);
 
     [StructLayout(LayoutKind.Sequential)]

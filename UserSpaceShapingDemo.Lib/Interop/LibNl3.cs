@@ -14,10 +14,10 @@ internal static unsafe partial class LibNl3
     
     // int nl_syserr2nlerr(int);
     [LibraryImport(Lib, EntryPoint = "syserr2nlerr")]
-    public static partial int nl_syserr2nlerr(int error);
+    public static partial int nl_syserr2nlerr(NativeErrorNumber error);
 
     // struct nl_sock *nl_socket_alloc(void);
-    [LibraryImport(Lib, EntryPoint = "nl_socket_alloc", SetLastError = true)]
+    [LibraryImport(Lib, EntryPoint = "nl_socket_alloc")]
     public static partial nl_sock* nl_socket_alloc();
 
     // void nl_socket_free(struct nl_sock *)
@@ -33,7 +33,7 @@ internal static unsafe partial class LibNl3
     public static partial nl_api_result nl_addr_parse(string addrstr, int hint, out nl_addr* result);
 
     // struct nl_addr *nl_addr_build(int family, void *buf, size_t size)
-    [LibraryImport(Lib, EntryPoint = "nl_addr_build", SetLastError = true)]
+    [LibraryImport(Lib, EntryPoint = "nl_addr_build")]
     public static partial nl_addr* nl_addr_build(int family, void* buf, nuint size);
     
     // char *nl_addr2str(struct nl_addr *addr, char *buf, size_t size)

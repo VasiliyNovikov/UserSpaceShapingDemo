@@ -1,5 +1,6 @@
 ﻿using Microsoft.VisualStudio.TestTools.UnitTesting;
 
+using UserSpaceShapingDemo.Lib;
 using UserSpaceShapingDemo.Lib.Xpd;
 
 namespace UserSpaceShapingDemo.Tests;
@@ -21,6 +22,6 @@ public sealed class UMemoryTests
         using var fillRing = new FillRingBuffer();
         using var completionRing = new CompletionRingBuffer();
         var exception = Assert.ThrowsExactly<XdpException>(() => new UMemory(fillRing, completionRing, 0));
-        Assert.AreEqual(22, exception.NativeErrorCode);
+        Assert.AreEqual(NativeErrorNumber.InvalidArgument, exception.ErrorNumber);
     }
 }

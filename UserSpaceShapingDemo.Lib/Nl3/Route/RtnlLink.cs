@@ -70,7 +70,7 @@ public sealed unsafe class RtnlLink : NativeObject
     {
         var link = LibNlRoute3.rtnl_link_alloc();
         return link is null
-            ? throw NlException.FromLastPInvokeError()
+            ? throw NlException.FromLastNativeError()
             : new(link, true);
     }
 }

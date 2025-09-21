@@ -22,7 +22,7 @@ public sealed unsafe class RtnlVEthPair : NativeObject
     {
         var l = LibNlRoute3.rtnl_link_veth_alloc();
         return l is null
-            ? throw NlException.FromLastPInvokeError()
+            ? throw NlException.FromLastNativeError()
             : new RtnlVEthPair(l);
     }
 }

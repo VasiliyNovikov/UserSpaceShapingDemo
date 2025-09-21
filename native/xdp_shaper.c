@@ -53,6 +53,7 @@
 
 #include <linux/if.h>
 #include <sys/eventfd.h>
+#include <errno.h>
 
 #define FRAME_SIZE           XSK_UMEM__DEFAULT_FRAME_SIZE
 #define NUM_FRAMES           4096u

@@ -1,7 +1,5 @@
 using System;
-using System.ComponentModel;
 using System.IO;
-using System.Runtime.InteropServices;
 
 using Microsoft.Win32.SafeHandles;
 
@@ -34,9 +32,7 @@ public static unsafe class NetNs
                 File.SetUnixFileMode(targetFd, NetNsFileMode);
 
             // Create a new network namespace for *this thread*
-            if (LibC.unshare(LibC.CLONE_NEWNET) < 0)
-                throw new Win32Exception(Marshal.GetLastPInvokeError());
-
+            LibC.unshare(LibC.CLONE_NEWNET).ThrowIfError();
             try
             {
                 // Open a handle to the *new* netns we just created
@@ -46,8 +42,7 @@ public static unsafe class NetNs
                 // Using the /proc/thread-self/fd/<nsFd> path ensures we bind the FD we opened.
                 using var nsFdRef = nsFd.Ref();
                 var srcPath = Path.Combine(SelfThreadFdPath, nsFdRef.ToString());
-                if (LibC.mount(srcPath, target, null, LibC.MS_BIND, null) < 0)
-                    throw new Win32Exception(Marshal.GetLastPInvokeError());
+                LibC.mount(srcPath, target, null, LibC.MS_BIND, null).ThrowIfError();
             }
             finally
             {
@@ -66,9 +61,7 @@ public static unsafe class NetNs
     {
         var target = Path.Combine(NetNsBasePath, name);
         // Unmount the netns file
-        if (LibC.umount2(target, LibC.MNT_DETACH) < 0)
-            throw new Win32Exception(Marshal.GetLastPInvokeError());
-        // Delete the file
+        LibC.umount2(target, LibC.MNT_DETACH).ThrowIfError();
         File.Delete(target);
     }
 
@@ -89,8 +82,7 @@ public static unsafe class NetNs
     private static void Set(SafeFileHandle nsFd)
     {
         using var fdRef = nsFd.Ref();
-        if (LibC.setns(fdRef, LibC.CLONE_NEWNET) < 0)
-            throw new Win32Exception(Marshal.GetLastPInvokeError());
+        LibC.setns(fdRef, LibC.CLONE_NEWNET).ThrowIfError();
     }
 
     public sealed class Scope : IDisposable
