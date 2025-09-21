@@ -1,14 +1,23 @@
+using System.Runtime.CompilerServices;
+
 using UserSpaceShapingDemo.Lib.Interop;
 
 namespace UserSpaceShapingDemo.Lib.Std;
 
-public sealed class Event(bool isSet, bool blocking) : FileObject(Create(isSet, blocking))
+public sealed unsafe class Event(bool isSet)
+    : FileObject(LibC.eventfd(isSet ? 1u : 0u, 0).ThrowIfError())
 {
-    private static FileDescriptor Create(bool isSet, bool blocking)
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public void Set()
     {
-        int flags = 0;
-        if (!blocking)
-            flags |= LibC.EFD_NONBLOCK;
-        return LibC.eventfd(isSet ? 1u : 0u, flags);
+        ulong value = 1;
+        Write(&value, sizeof(ulong));
+    }
+
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public void Wait()
+    {
+        ulong value;
+        Read(&value, sizeof(ulong));
     }
 }

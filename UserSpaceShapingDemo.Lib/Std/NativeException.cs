@@ -1,4 +1,5 @@
 using System;
+using System.Numerics;
 using System.Runtime.CompilerServices;
 
 namespace UserSpaceShapingDemo.Lib.Std;
@@ -13,10 +14,14 @@ public class NativeException(NativeErrorNumber errorNumber)
 
 public static class NativeExceptionExtensions
 {
-    public static int ThrowIfError(this int result) => result < 0 ? throw NativeException.FromLastError() : result;
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public static bool IsError<T>(this T result) where T : unmanaged, ISignedNumber<T> => result == T.NegativeOne;
+
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public static T ThrowIfError<T>(this T result) where T : unmanaged, ISignedNumber<T> => result.IsError() ? throw NativeException.FromLastError() : result;
 
     public static FileDescriptor ThrowIfError(this FileDescriptor result)
     {
-        return Unsafe.As<FileDescriptor, int>(ref result) < 0 ? throw NativeException.FromLastError() : result;
+        return Unsafe.As<FileDescriptor, int>(ref result) == -1 ? throw NativeException.FromLastError() : result;
     }
 }

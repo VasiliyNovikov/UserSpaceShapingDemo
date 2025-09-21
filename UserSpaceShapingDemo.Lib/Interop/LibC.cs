@@ -58,6 +58,16 @@ internal static unsafe partial class LibC
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static partial int open(string path, int flags, UnixFileMode mode);
 
+    // ssize_t read(int fd, void* buf, size_t count);
+    [LibraryImport(Lib, EntryPoint = "read")]
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public static partial nint read(FileDescriptor fd, void* buf, nuint count);
+
+    // ssize_t write(int fd, const void* buf, size_t count);
+    [LibraryImport(Lib, EntryPoint = "write")]
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public static partial nint write(FileDescriptor fd, void* buf, nuint count);
+
     // int unshare (int __flags)
     [LibraryImport(Lib, EntryPoint = "unshare")]
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
