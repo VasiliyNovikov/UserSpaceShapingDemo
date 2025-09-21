@@ -51,12 +51,7 @@ internal static unsafe partial class LibC
     // int open(const char *pathname, int flags, mode_t mode);
     [LibraryImport(Lib, EntryPoint = "open", StringMarshalling = StringMarshalling.Utf8)]
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public static partial int open(string path, int flags);
-
-    // int open(const char *pathname, int flags, mode_t mode);
-    [LibraryImport(Lib, EntryPoint = "open", StringMarshalling = StringMarshalling.Utf8)]
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public static partial int open(string path, int flags, UnixFileMode mode);
+    public static partial FileDescriptor open(string path, NativeFileFlags flags, UnixFileMode mode);
 
     // ssize_t read(int fd, void* buf, size_t count);
     [LibraryImport(Lib, EntryPoint = "read")]
