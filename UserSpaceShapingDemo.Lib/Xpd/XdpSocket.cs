@@ -1,12 +1,19 @@
+using System.Runtime.CompilerServices;
+
 using UserSpaceShapingDemo.Lib.Interop;
 
 namespace UserSpaceShapingDemo.Lib.Xpd;
 
-public sealed unsafe class XdpSocket : NativeObject
+public sealed unsafe class XdpSocket : NativeObject, IFileObject
 {
     private readonly LibBpf.xsk_socket* _xsk;
+    private FileDescriptor? _descriptor;
 
-    public FileDescriptor Fd => LibBpf.xsk_socket__fd(_xsk);
+    public FileDescriptor Descriptor
+    {
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        get => _descriptor ??= LibBpf.xsk_socket__fd(_xsk);
+    }
 
     public XdpSocket(string ifName,
                      uint queueId,

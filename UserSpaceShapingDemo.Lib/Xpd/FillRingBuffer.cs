@@ -14,18 +14,17 @@ public sealed unsafe class FillRingBuffer : ProducerRingBuffer
     public new ref ulong Address(uint idx) => ref base.Address(idx);
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    [SkipLocalsInit]
     public void InitFill(UMemory umem, XdpSocket? socket = null)
     {
-        var count = umem.FrameCount;
-        while (count > 0)
+        Span<ulong> addresses = stackalloc ulong[(int)umem.FrameCount];
+        ref var address = ref MemoryMarshal.GetReference(addresses);
+        for (var i = 0; i < umem.FrameCount; ++i)
         {
-            var n = ReserveWait(count, out var idx, socket);
-            var lastIdx = idx + n;
-            for (var i = idx; i < lastIdx; ++i)
-                Address(i) = (ulong)(i % umem.FrameCount) * umem.FrameSize;
-            Submit(n);
-            count -= n;
+            address = (ulong)i * umem.FrameSize;
+            address = ref Unsafe.Add(ref address, 1);
         }
+        Fill(addresses, socket);
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -35,7 +34,24 @@ public sealed unsafe class FillRingBuffer : ProducerRingBuffer
         ref var address = ref MemoryMarshal.GetReference(addresses);
         while (count > 0)
         {
-            var n = ReserveWait(count, out var idx, socket);
+            var n = Reserve(count, out var idx);
+            if (n == 0)
+            {
+                if (socket is null)
+                    Thread.SpinWait(1);
+                else
+                {
+                    var pollfd = new LibC.pollfd
+                    {
+                        fd = socket.Descriptor,
+                        events = LibC.POLLIN
+                    };
+                    if (LibC.poll(&pollfd, 1, -1) == -1) // TODO: Handle timeout better
+                        throw new Win32Exception(Marshal.GetLastPInvokeError());
+                }
+                continue;
+            }
+
             var lastIdx = idx + n;
             for (var i = idx; i < lastIdx; ++i)
             {
@@ -44,29 +60,6 @@ public sealed unsafe class FillRingBuffer : ProducerRingBuffer
             }
             Submit(n);
             count -= n;
-        }
-    }
-
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    private uint ReserveWait(uint count, out uint idx, XdpSocket? socket = null)
-    {
-        while (true)
-        {
-            var n = Reserve(count, out idx);
-            if (n != 0)
-                return n;
-            if (socket is null)
-                Thread.SpinWait(1);
-            else
-            {
-                var pollfd = new LibC.pollfd
-                {
-                    fd = socket.Fd,
-                    events = LibC.POLLIN
-                };
-                if (LibC.poll(&pollfd, 1, -1) == -1) // TODO: Handle timeout better
-                    throw new Win32Exception(Marshal.GetLastPInvokeError());
-            }
         }
     }
 }
