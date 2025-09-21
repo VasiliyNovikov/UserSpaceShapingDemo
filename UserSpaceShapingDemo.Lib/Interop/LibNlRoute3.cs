@@ -1,5 +1,7 @@
 using System.Runtime.InteropServices;
 
+using UserSpaceShapingDemo.Lib.Std;
+
 namespace UserSpaceShapingDemo.Lib.Interop;
 
 internal static unsafe partial class LibNlRoute3

@@ -2,6 +2,8 @@ using System.IO;
 using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 
+using UserSpaceShapingDemo.Lib.Std;
+
 namespace UserSpaceShapingDemo.Lib.Interop;
 
 internal static unsafe partial class LibC

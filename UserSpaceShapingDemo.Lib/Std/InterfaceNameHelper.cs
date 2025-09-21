@@ -1,6 +1,6 @@
 using UserSpaceShapingDemo.Lib.Interop;
 
-namespace UserSpaceShapingDemo.Lib;
+namespace UserSpaceShapingDemo.Lib.Std;
 
 public static class InterfaceNameHelper
 {

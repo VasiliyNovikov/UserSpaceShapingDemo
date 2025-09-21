@@ -2,7 +2,7 @@ using System.Runtime.CompilerServices;
 
 using UserSpaceShapingDemo.Lib.Interop;
 
-namespace UserSpaceShapingDemo.Lib;
+namespace UserSpaceShapingDemo.Lib.Std;
 
 public abstract class FileObject(FileDescriptor descriptor) : NativeObject, IFileObject
 {

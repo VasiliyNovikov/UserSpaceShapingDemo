@@ -1,6 +1,7 @@
 using System.Runtime.InteropServices.Marshalling;
 
 using UserSpaceShapingDemo.Lib.Interop;
+using UserSpaceShapingDemo.Lib.Std;
 
 namespace UserSpaceShapingDemo.Lib.Nl3.Route;
 
@@ -42,7 +43,7 @@ public sealed unsafe class RtnlLink : NativeObject
         }
     }
 
-    public FileDescriptor NsFd
+    public FileDescriptor NsDescriptor
     {
         get => LibNlRoute3.rtnl_link_get_ns_fd(Link);
         set => LibNlRoute3.rtnl_link_set_ns_fd(Link, value);

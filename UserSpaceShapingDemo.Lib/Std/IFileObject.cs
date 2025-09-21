@@ -1,4 +1,4 @@
-namespace UserSpaceShapingDemo.Lib;
+namespace UserSpaceShapingDemo.Lib.Std;
 
 public interface IFileObject
 {

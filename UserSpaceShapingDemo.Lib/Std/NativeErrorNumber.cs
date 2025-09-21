@@ -5,7 +5,7 @@ using System.Runtime.InteropServices.Marshalling;
 
 using UserSpaceShapingDemo.Lib.Interop;
 
-namespace UserSpaceShapingDemo.Lib;
+namespace UserSpaceShapingDemo.Lib.Std;
 
 [SuppressMessage("Microsoft.Formatting", "IDE0055: Fix formatting", Justification = "Intentional enum value alignment")]
 public enum NativeErrorNumber

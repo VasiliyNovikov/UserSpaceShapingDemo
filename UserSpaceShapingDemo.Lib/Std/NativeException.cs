@@ -1,7 +1,7 @@
 using System;
 using System.Runtime.CompilerServices;
 
-namespace UserSpaceShapingDemo.Lib;
+namespace UserSpaceShapingDemo.Lib.Std;
 
 public class NativeException(NativeErrorNumber errorNumber)
     : Exception(errorNumber.Message)

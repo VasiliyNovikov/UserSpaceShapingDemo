@@ -1,6 +1,6 @@
 using UserSpaceShapingDemo.Lib.Interop;
 
-namespace UserSpaceShapingDemo.Lib;
+namespace UserSpaceShapingDemo.Lib.Std;
 
 public sealed class Event(bool isSet, bool blocking) : FileObject(Create(isSet, blocking))
 {

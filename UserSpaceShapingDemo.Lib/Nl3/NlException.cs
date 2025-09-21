@@ -2,6 +2,7 @@ using System;
 using System.Runtime.InteropServices.Marshalling;
 
 using UserSpaceShapingDemo.Lib.Interop;
+using UserSpaceShapingDemo.Lib.Std;
 
 namespace UserSpaceShapingDemo.Lib.Nl3;
 

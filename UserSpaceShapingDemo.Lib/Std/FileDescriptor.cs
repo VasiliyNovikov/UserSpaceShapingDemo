@@ -5,7 +5,7 @@ using System.Runtime.InteropServices;
 
 using Microsoft.Win32.SafeHandles;
 
-namespace UserSpaceShapingDemo.Lib;
+namespace UserSpaceShapingDemo.Lib.Std;
 
 [StructLayout(LayoutKind.Sequential)]
 public readonly struct FileDescriptor

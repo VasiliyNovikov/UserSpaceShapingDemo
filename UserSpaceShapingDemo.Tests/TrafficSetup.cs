@@ -4,9 +4,9 @@ using System.Linq;
 using System.Net;
 using System.Net.Sockets;
 
-using UserSpaceShapingDemo.Lib;
 using UserSpaceShapingDemo.Lib.Nl3;
 using UserSpaceShapingDemo.Lib.Nl3.Route;
+using UserSpaceShapingDemo.Lib.Std;
 
 namespace UserSpaceShapingDemo.Tests;
 
@@ -42,7 +42,7 @@ public sealed class TrafficSetup : IDisposable
                 link.Name = name;
                 link.RxQueueCount = 1;
                 using var nsRef = ns.Ref();
-                link.NsFd = nsRef;
+                link.NsDescriptor = nsRef;
             }
             using var socket = new RtnlSocket();
             socket.AddLink(vethPair.Link);

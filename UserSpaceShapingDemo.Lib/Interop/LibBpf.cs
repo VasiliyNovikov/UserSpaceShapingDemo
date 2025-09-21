@@ -2,6 +2,8 @@ using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 using System.Threading;
 
+using UserSpaceShapingDemo.Lib.Std;
+
 namespace UserSpaceShapingDemo.Lib.Interop;
 
 internal static unsafe partial class LibBpf

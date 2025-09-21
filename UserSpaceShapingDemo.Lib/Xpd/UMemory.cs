@@ -3,10 +3,11 @@ using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 
 using UserSpaceShapingDemo.Lib.Interop;
+using UserSpaceShapingDemo.Lib.Std;
 
 namespace UserSpaceShapingDemo.Lib.Xpd;
 
-public sealed unsafe class UMemory : NativeObject
+public sealed unsafe class UMemory : NativeObject, IFileObject
 {
     private readonly void* _mem;
     private readonly LibBpf.xsk_umem* _umem;
@@ -20,7 +21,11 @@ public sealed unsafe class UMemory : NativeObject
     public uint FrameCount { get; }
     public uint FrameSize { get; }
 
-    public FileDescriptor Fd => LibBpf.xsk_umem__fd(_umem);
+    public FileDescriptor Descriptor
+    {
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        get => LibBpf.xsk_umem__fd(_umem);
+    }
 
     public void* this[uint index]
     {

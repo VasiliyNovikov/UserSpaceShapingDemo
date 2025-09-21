@@ -5,7 +5,7 @@ using Microsoft.Win32.SafeHandles;
 
 using UserSpaceShapingDemo.Lib.Interop;
 
-namespace UserSpaceShapingDemo.Lib;
+namespace UserSpaceShapingDemo.Lib.Std;
 
 public static unsafe class NetNs
 {
