@@ -1,8 +1,6 @@
 using System;
 using System.IO;
 
-using Microsoft.Win32.SafeHandles;
-
 using UserSpaceShapingDemo.Lib.Interop;
 
 namespace UserSpaceShapingDemo.Lib.Std;
@@ -22,31 +20,29 @@ public static unsafe class NetNs
         Directory.CreateDirectory(NetNsBasePath, NetNsBasePathMode);
 
         // Keep a handle to the original netns so we can switch back later
-        using var oldNsFd = OpenCurrent();
+        using var oldNs = OpenCurrent();
 
         var target = Path.Combine(NetNsBasePath, name);
         try
         {
             // Create the target file (regular file is fine) that we'll bind-mount onto
-            using (var targetFd = File.OpenHandle(target, FileMode.CreateNew, FileAccess.ReadWrite, FileShare.None))
-                File.SetUnixFileMode(targetFd, NetNsFileMode);
+            using (new NativeFile(target, NativeFileFlags.Create | NativeFileFlags.Exclusive | NativeFileFlags.ReadWrite, NetNsFileMode)) { }
 
             // Create a new network namespace for *this thread*
             LibC.unshare(LibC.CLONE_NEWNET).ThrowIfError();
             try
             {
                 // Open a handle to the *new* netns we just created
-                using var nsFd = OpenCurrent();
+                using var ns = OpenCurrent();
 
                 // Bind-mount the new netns to /run/netns/<name> to persist it.
                 // Using the /proc/thread-self/fd/<nsFd> path ensures we bind the FD we opened.
-                using var nsFdRef = nsFd.Ref();
-                var srcPath = Path.Combine(SelfThreadFdPath, nsFdRef.ToString());
+                var srcPath = Path.Combine(SelfThreadFdPath, ns.Descriptor.ToString());
                 LibC.mount(srcPath, target, null, LibC.MS_BIND, null).ThrowIfError();
             }
             finally
             {
-                Set(oldNsFd);
+                Set(oldNs);
             }
         }
         catch
@@ -73,43 +69,34 @@ public static unsafe class NetNs
 
     public static Scope EnterRoot() => new(RootNsNetPath);
 
-    private static SafeFileHandle OpenPath(string path) => File.OpenHandle(path, FileMode.Open, FileAccess.Read, FileShare.Read);
+    private static NativeFile OpenPath(string path) => new(path, NativeFileFlags.ReadOnly);
 
-    private static SafeFileHandle OpenCurrent() => OpenPath(SelfThreadNsNetPath);
+    private static NativeFile OpenCurrent() => OpenPath(SelfThreadNsNetPath);
 
-    public static SafeFileHandle Open(string name) => OpenPath(Path.Combine(NetNsBasePath, name));
+    public static NativeFile Open(string name) => OpenPath(Path.Combine(NetNsBasePath, name));
 
-    private static void Set(SafeFileHandle nsFd)
-    {
-        using var fdRef = nsFd.Ref();
-        LibC.setns(fdRef, LibC.CLONE_NEWNET).ThrowIfError();
-    }
+    private static void Set(NativeFile ns) => LibC.setns(ns.Descriptor, LibC.CLONE_NEWNET).ThrowIfError();
 
     public sealed class Scope : IDisposable
     {
-        private readonly SafeFileHandle _oldNsFd;
+        private readonly NativeFile _oldNs;
 
         internal Scope(string path)
         {
-            // Keep a handle to the original netns so we can switch back later
-            _oldNsFd = OpenCurrent();
-
-            // Open a handle to the target netns
-            using var targetFd = OpenPath(path);
-
-            // Switch this thread to the target netns
-            Set(targetFd);
+            _oldNs = OpenCurrent();
+            using var targetNs = OpenPath(path);
+            Set(targetNs);
         }
 
         public void Dispose()
         {
             try
             {
-                Set(_oldNsFd);
+                Set(_oldNs);
             }
             finally
             {
-                _oldNsFd.Dispose();
+                _oldNs.Dispose();
             }
         }
     }

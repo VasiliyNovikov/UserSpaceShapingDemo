@@ -1,9 +1,6 @@
-using System;
 using System.Globalization;
 using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
-
-using Microsoft.Win32.SafeHandles;
 
 namespace UserSpaceShapingDemo.Lib.Std;
 
@@ -13,38 +10,5 @@ public readonly struct FileDescriptor
     private readonly int _fd;
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    internal FileDescriptor(int fd) => _fd = fd;
-
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public override string ToString() => _fd.ToString(CultureInfo.InvariantCulture);
-}
-
-public readonly struct FileDescriptorRef : IDisposable
-{
-    private readonly SafeHandle _handle;
-
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public FileDescriptorRef(SafeFileHandle handle)
-    {
-        _handle = handle ?? throw new ArgumentNullException(nameof(handle));
-        bool success = false;
-        _handle.DangerousAddRef(ref success);
-        if (!success)
-            throw new InvalidOperationException("Failed to add reference to handle.");
-    }
-
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public void Dispose() => _handle.DangerousRelease();
-
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public override string ToString() => ((FileDescriptor)this).ToString();
-
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public static implicit operator FileDescriptor(FileDescriptorRef reference) => new(reference._handle.DangerousGetHandle().ToInt32());
-}
-
-public static class FileDescriptorRefExtensions
-{
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public static FileDescriptorRef Ref(this SafeFileHandle handle) => new(handle);
 }
