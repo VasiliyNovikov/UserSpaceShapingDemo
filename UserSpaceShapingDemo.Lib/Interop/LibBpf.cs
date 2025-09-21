@@ -39,6 +39,7 @@ internal static unsafe partial class LibBpf
     //                      struct xsk_ring_prod *fill, struct xsk_ring_cons *comp,
     //                      const struct xsk_umem_config *config);
     [LibraryImport(Lib, EntryPoint = "xsk_umem__create")]
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static partial xsk_api_result xsk_umem__create(out xsk_umem* umem,
                                                           void* umem_area,
                                                           ulong size,
@@ -49,10 +50,13 @@ internal static unsafe partial class LibBpf
     // int xsk_umem__delete(struct xsk_umem *umem);
     // Returns 0 on success, -EBUSY if the UMEM is still in use (per xsk.h).
     [LibraryImport(Lib, EntryPoint = "xsk_umem__delete")]
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static partial xsk_api_result xsk_umem__delete(xsk_umem* umem);
 
     // int xsk_umem__fd(const struct xsk_umem *umem)
     [LibraryImport(Lib, EntryPoint = "xsk_umem__fd")]
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    [SuppressGCTransition]
     public static partial FileDescriptor xsk_umem__fd(xsk_umem* umem);
 
     // Port of libbpf's void *xsk_umem__get_data(void *umem_area, __u64 addr)
@@ -70,6 +74,7 @@ internal static unsafe partial class LibBpf
     //                                   struct xsk_ring_prod *tx,
     //                                   const struct xsk_socket_config *config);
     [LibraryImport(Lib, EntryPoint = "xsk_socket__create", StringMarshalling = StringMarshalling.Utf8)]
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static partial xsk_api_result xsk_socket__create(out xsk_socket* xsk,
                                                             string ifname,
                                                             uint queue_id,
@@ -80,14 +85,18 @@ internal static unsafe partial class LibBpf
 
     // LIBBPF_API void xsk_socket__delete(struct xsk_socket *xsk);
     [LibraryImport(Lib, EntryPoint = "xsk_socket__delete")]
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static partial void xsk_socket__delete(xsk_socket* xsk);
 
     // int xsk_socket__update_xskmap(struct xsk_socket *xsk, int xsks_map_fd);
     [LibraryImport(Lib, EntryPoint = "xsk_socket__update_xskmap")]
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static partial xsk_api_result xsk_socket__update_xskmap(xsk_socket* xsk, FileDescriptor xsks_map_fd);
 
     // int xsk_socket__fd(const struct xsk_socket *xsk)
     [LibraryImport(Lib, EntryPoint = "xsk_socket__fd")]
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    [SuppressGCTransition]
     public static partial FileDescriptor xsk_socket__fd(xsk_socket* xsk);
 
     // C# ports of libbpf's smp_load_acquire() and smp_store_release()
