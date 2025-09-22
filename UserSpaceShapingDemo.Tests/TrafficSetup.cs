@@ -21,23 +21,24 @@ public sealed class TrafficSetup : IDisposable
     public static readonly IPAddress ReceiverAddress = IPAddress.Parse("10.11.22.2");
 
     private readonly int _id;
-    private readonly string _senderName;
-    private readonly string _receiverName;
+
+    public string SenderName { get; }
+    public string ReceiverName { get; }
 
     public TrafficSetup()
     {
         if (!InstanceIds.TryDequeue(out _id))
             throw new InvalidOperationException("Too many instances of TestTrafficSetup");
-        _senderName = $"{SenderNetNsNamePrefix}{_id:X}";
-        _receiverName = $"{ReceiverNetNsNamePrefix}{_id:X}";
-        NetNs.Add(_senderName);
-        NetNs.Add(_receiverName);
+        SenderName = $"{SenderNetNsNamePrefix}{_id:X}";
+        ReceiverName = $"{ReceiverNetNsNamePrefix}{_id:X}";
+        NetNs.Add(SenderName);
+        NetNs.Add(ReceiverName);
         {
-            using var senderNs = NetNs.Open(_senderName);
-            using var receiverNs = NetNs.Open(_receiverName);
+            using var senderNs = NetNs.Open(SenderName);
+            using var receiverNs = NetNs.Open(ReceiverName);
             using var vethPair = RtnlVEthPair.Allocate();
-            foreach (var (name, link, ns) in new[] { (_senderName, vethPair.Link, senderNs),
-                                                     (_receiverName, vethPair.Peer, receiverNs) })
+            foreach (var (name, link, ns) in new[] { (SenderName, vethPair.Link, senderNs),
+                                                     (ReceiverName, vethPair.Peer, receiverNs) })
             {
                 link.Name = name;
                 link.RxQueueCount = 1;
@@ -46,8 +47,8 @@ public sealed class TrafficSetup : IDisposable
             using var socket = new RtnlSocket();
             socket.AddLink(vethPair.Link);
         }
-        foreach (var (name, address) in new[] { (_senderName, SenderAddress),
-                                                (_receiverName, ReceiverAddress) })
+        foreach (var (name, address) in new[] { (SenderName, SenderAddress),
+                                                (ReceiverName, ReceiverAddress) })
             using (NetNs.Enter(name))
             {
                 using var socket = new RtnlSocket();
@@ -71,18 +72,18 @@ public sealed class TrafficSetup : IDisposable
     {
         try
         {
-            using (NetNs.Enter(_senderName))
+            using (NetNs.Enter(SenderName))
             {
                 using var socket = new RtnlSocket();
                 using var link = RtnlLink.Allocate();
-                link.Name = _senderName;
+                link.Name = SenderName;
                 socket.DeleteLink(link);
             }
         }
         finally
         {
-            NetNs.Delete(_senderName);
-            NetNs.Delete(_receiverName);
+            NetNs.Delete(SenderName);
+            NetNs.Delete(ReceiverName);
         }
         InstanceIds.Enqueue(_id);
     }
@@ -93,17 +94,17 @@ public sealed class TrafficSetup : IDisposable
         GC.SuppressFinalize(this);
     }
 
-    public NetNs.Scope EnterSender() => NetNs.Enter(_senderName);
-    public NetNs.Scope EnterReceiver() => NetNs.Enter(_receiverName);
+    public NetNs.Scope EnterSender() => NetNs.Enter(SenderName);
+    public NetNs.Scope EnterReceiver() => NetNs.Enter(ReceiverName);
 
     public Socket CreateSenderSocket(SocketType socketType, ProtocolType protocolType)
     {
-        return CreateSocket(_senderName, socketType, protocolType, SenderAddress, 0);
+        return CreateSocket(SenderName, socketType, protocolType, SenderAddress, 0);
     }
 
     public Socket CreateReceiverSocket(SocketType socketType, ProtocolType protocolType, int port)
     {
-        return CreateSocket(_receiverName, socketType, protocolType, ReceiverAddress, port);
+        return CreateSocket(ReceiverName, socketType, protocolType, ReceiverAddress, port);
     }
 
     private static Socket CreateSocket(string name, SocketType socketType, ProtocolType protocolType, IPAddress address, int port)

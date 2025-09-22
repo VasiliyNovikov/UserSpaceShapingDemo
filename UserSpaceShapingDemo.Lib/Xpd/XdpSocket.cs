@@ -39,8 +39,8 @@ public sealed unsafe class XdpSocket : NativeObject, IFileObject
             bind_flags = (ushort)bindMode,
         };
         LibBpf.xsk_socket__create(out _xsk, ifName, queueId, umem.UMem, ref rxRing.Ring, ref txRing.Ring, config).ThrowIfError();
-        XdpProgram.GetMap(ifIndex, out var mapFd);
-        LibBpf.xsk_socket__update_xskmap(_xsk, mapFd).ThrowIfError();
+        XdpProgram.GetMap(ifIndex, out var mapDescriptor);
+        LibBpf.xsk_socket__update_xskmap(_xsk, mapDescriptor).ThrowIfError();
     }
 
     public void WaitForRead(NativeCancellationToken cancellationToken) => cancellationToken.WaitRead(Descriptor);
