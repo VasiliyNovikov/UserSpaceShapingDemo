@@ -8,6 +8,8 @@ namespace UserSpaceShapingDemo.Lib;
 
 public sealed class NativeCancellationToken : NativeObject
 {
+    public static NativeCancellationToken None => new(CancellationToken.None);
+
     private readonly CancellationToken _cancellationToken;
     private readonly NativeEvent? _event;
     private readonly CancellationTokenRegistration? _cancellationRegistration;

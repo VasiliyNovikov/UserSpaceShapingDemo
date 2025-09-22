@@ -10,6 +10,8 @@ public sealed unsafe class XdpSocket : NativeObject, IFileObject
     private readonly LibBpf.xsk_socket* _xsk;
     private FileDescriptor? _descriptor;
 
+    public UMemory Umem { get; }
+
     public FileDescriptor Descriptor
     {
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -26,6 +28,7 @@ public sealed unsafe class XdpSocket : NativeObject, IFileObject
                      XdpSocketMode mode = XdpSocketMode.Default,
                      XdpSocketBindMode bindMode = XdpSocketBindMode.Copy | XdpSocketBindMode.UseNeedWakeup)
     {
+        Umem = umem;
         var ifIndex = InterfaceNameHelper.GetIndex(ifName);
         var config = new LibBpf.xsk_socket_config
         {
@@ -39,6 +42,10 @@ public sealed unsafe class XdpSocket : NativeObject, IFileObject
         XdpProgram.GetMap(ifIndex, out var mapFd);
         LibBpf.xsk_socket__update_xskmap(_xsk, mapFd).ThrowIfError();
     }
+
+    public void WaitForRead(NativeCancellationToken cancellationToken) => cancellationToken.WaitRead(Descriptor);
+
+    public void WaitForWrite(NativeCancellationToken cancellationToken) => cancellationToken.WaitWrite(Descriptor);
 
     protected override void ReleaseUnmanagedResources()
     {
