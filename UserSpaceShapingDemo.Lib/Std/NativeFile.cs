@@ -6,7 +6,7 @@ using UserSpaceShapingDemo.Lib.Interop;
 
 namespace UserSpaceShapingDemo.Lib.Std;
 
-public unsafe class NativeFile(string path, NativeFileFlags flags, UnixFileMode mode = UnixFileMode.None)
+public sealed unsafe class NativeFile(string path, NativeFileFlags flags, UnixFileMode mode = UnixFileMode.None)
     : FileObject(LibC.open(path, flags, mode).ThrowIfError())
 {
     [MethodImpl(MethodImplOptions.AggressiveInlining)]

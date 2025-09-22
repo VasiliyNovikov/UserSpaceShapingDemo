@@ -29,7 +29,7 @@ internal static unsafe partial class LibC
     public const short POLLERR  = 0b001000; // Error condition
     public const short POLLHUP  = 0b010000; // Hung up
     public const short POLLNVAL = 0b100000; // Invalid request: fd not open
-    
+
     // int * __errno_location(void);
     [LibraryImport(Lib, EntryPoint = "__errno_location")]
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -103,10 +103,10 @@ internal static unsafe partial class LibC
     public static partial int poll(pollfd* fds, uint nfds, int timeout);
 
     [StructLayout(LayoutKind.Sequential)]
-    public struct pollfd
+    public readonly struct pollfd
     {
-        public FileDescriptor fd; // File descriptor to poll
-        public short events; // Types of events poller cares about
-        public short revents; // Types of events that actually occurred
+        public readonly FileDescriptor fd; // File descriptor to poll
+        public readonly short events; // Types of events poller cares about
+        public readonly short revents; // Types of events that actually occurred
     };
 }
