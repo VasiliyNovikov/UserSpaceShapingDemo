@@ -27,10 +27,16 @@ public sealed unsafe class UMemory : NativeObject, IFileObject
         get => LibBpf.xsk_umem__fd(_umem);
     }
 
-    public void* this[uint index]
+    public void* this[ulong address]
     {
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        get => LibBpf.xsk_umem__get_data(_umem, index);
+        get => LibBpf.xsk_umem__get_data(_umem, address);
+    }
+
+    public Span<byte> this[in XdpDescriptor packet]
+    {
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        get => new(this[packet.Address], (int)packet.Length);
     }
 
     public UMemory(FillRingBuffer fillRing,
@@ -62,6 +68,18 @@ public sealed unsafe class UMemory : NativeObject, IFileObject
         {
             NativeMemory.AlignedFree(_mem);
             throw;
+        }
+    }
+
+    public void Init(Span<ulong> addresses)
+    {
+        if ((uint)addresses.Length < FrameCount)
+            throw new ArgumentOutOfRangeException(nameof(addresses));
+        ref var address = ref MemoryMarshal.GetReference(addresses);
+        for (var i = 0; i < FrameCount; ++i)
+        {
+            address = (ulong)i * FrameSize;
+            address = ref Unsafe.Add(ref address, 1);
         }
     }
 
