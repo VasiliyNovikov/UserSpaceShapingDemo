@@ -1,6 +1,5 @@
 using System;
 using System.Net.Sockets;
-using System.Threading;
 
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 
