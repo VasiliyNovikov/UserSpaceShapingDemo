@@ -23,6 +23,9 @@ public sealed unsafe class UMemory : NativeObject, IFileObject
     public uint FillRingSize { get; }
     public uint CompletionRingSize { get; }
 
+    public FillRingBuffer FillRing { get; } = new();
+    public CompletionRingBuffer CompletionRing { get; } = new();
+
     public FileDescriptor Descriptor
     {
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -41,9 +44,7 @@ public sealed unsafe class UMemory : NativeObject, IFileObject
         get => new(this[packet.Address], (int)packet.Length);
     }
 
-    public UMemory(FillRingBuffer fillRing,
-                   CompletionRingBuffer completionRing,
-                   uint frameCount,
+    public UMemory(uint frameCount = 4096,
                    uint frameSize = LibBpf.XSK_UMEM__DEFAULT_FRAME_SIZE,
                    uint fillRingSize = LibBpf.XSK_RING_CONS__DEFAULT_NUM_DESCS,
                    uint completionRingSize = LibBpf.XSK_RING_PROD__DEFAULT_NUM_DESCS,
@@ -66,7 +67,7 @@ public sealed unsafe class UMemory : NativeObject, IFileObject
         };
         try
         {
-            LibBpf.xsk_umem__create(out _umem, _mem, size, out fillRing.Ring, out completionRing.Ring, config).ThrowIfError();
+            LibBpf.xsk_umem__create(out _umem, _mem, size, out FillRing.Ring, out CompletionRing.Ring, config).ThrowIfError();
         }
         catch
         {

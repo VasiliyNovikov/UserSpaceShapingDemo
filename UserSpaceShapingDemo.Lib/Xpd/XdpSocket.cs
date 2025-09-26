@@ -12,19 +12,20 @@ public sealed unsafe class XdpSocket : NativeObject, IFileObject
 
     public UMemory Umem { get; }
 
+    public RxRingBuffer RxRing { get; } = new();
+    public TxRingBuffer TxRing { get; } = new();
+
     public FileDescriptor Descriptor
     {
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         get => _descriptor ??= LibBpf.xsk_socket__fd(_xsk);
     }
 
-    public XdpSocket(string ifName,
-                     uint queueId,
-                     UMemory umem,
-                     RxRingBuffer rxRing,
-                     TxRingBuffer txRing,
-                     uint rxSize,
-                     uint txSize,
+    public XdpSocket(UMemory umem,
+                     string ifName,
+                     uint queueId = 0,
+                     uint rxSize = LibBpf.XSK_RING_CONS__DEFAULT_NUM_DESCS,
+                     uint txSize = LibBpf.XSK_RING_PROD__DEFAULT_NUM_DESCS,
                      XdpSocketMode mode = XdpSocketMode.Default,
                      XdpSocketBindMode bindMode = XdpSocketBindMode.Copy | XdpSocketBindMode.UseNeedWakeup)
     {
@@ -38,7 +39,7 @@ public sealed unsafe class XdpSocket : NativeObject, IFileObject
             xdp_flags = (uint)mode,
             bind_flags = (ushort)bindMode,
         };
-        LibBpf.xsk_socket__create(out _xsk, ifName, queueId, umem.UMem, ref rxRing.Ring, ref txRing.Ring, config).ThrowIfError();
+        LibBpf.xsk_socket__create(out _xsk, ifName, queueId, umem.UMem, out RxRing.Ring, out TxRing.Ring, config).ThrowIfError();
         XdpProgram.GetMap(ifIndex, out var mapDescriptor);
         LibBpf.xsk_socket__update_xskmap(_xsk, mapDescriptor).ThrowIfError();
     }

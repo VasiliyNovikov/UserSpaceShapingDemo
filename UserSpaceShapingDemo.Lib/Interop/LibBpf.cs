@@ -81,8 +81,8 @@ internal static unsafe partial class LibBpf
                                                             string ifname,
                                                             uint queue_id,
                                                             xsk_umem* umem,
-                                                            ref xsk_ring rx,
-                                                            ref xsk_ring tx,
+                                                            out xsk_ring rx,
+                                                            out xsk_ring tx,
                                                             in xsk_socket_config config);
 
     // LIBBPF_API void xsk_socket__delete(struct xsk_socket *xsk);
