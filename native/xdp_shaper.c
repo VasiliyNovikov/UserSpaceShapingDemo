@@ -1,6 +1,7 @@
 // xdp_shaper.c
 // Build: see Makefile. Run as root.
 // Example: sudo ./xdp_shaper -i eth0 -q 0 --delay-ms 10 --drop-nth 10
+// https://github.com/xdp-project/xdp-tutorial/blob/main/advanced03-AF_XDP/af_xdp_user.c
 
 #define _GNU_SOURCE
 #include <errno.h>

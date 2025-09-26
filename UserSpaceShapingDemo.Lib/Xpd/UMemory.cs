@@ -20,6 +20,8 @@ public sealed unsafe class UMemory : NativeObject, IFileObject
 
     public uint FrameCount { get; }
     public uint FrameSize { get; }
+    public uint FillRingSize { get; }
+    public uint CompletionRingSize { get; }
 
     public FileDescriptor Descriptor
     {
@@ -49,6 +51,8 @@ public sealed unsafe class UMemory : NativeObject, IFileObject
     {
         FrameCount = frameCount;
         FrameSize = frameSize;
+        FillRingSize = fillRingSize;
+        CompletionRingSize = completionRingSize;
         var size = (ulong)frameCount * frameSize;
         _mem = NativeMemory.AlignedAlloc((nuint)size, (nuint)Environment.SystemPageSize);
 
@@ -73,7 +77,7 @@ public sealed unsafe class UMemory : NativeObject, IFileObject
 
     public void Init(Span<ulong> addresses)
     {
-        if ((uint)addresses.Length < FrameCount)
+        if ((uint)addresses.Length != FrameCount)
             throw new ArgumentOutOfRangeException(nameof(addresses));
         ref var address = ref MemoryMarshal.GetReference(addresses);
         for (var i = 0; i < FrameCount; ++i)

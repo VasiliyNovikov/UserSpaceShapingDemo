@@ -1,3 +1,5 @@
+using System;
+
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 
 using UserSpaceShapingDemo.Lib.Xpd;
@@ -35,7 +37,11 @@ public sealed class XdpSocketTests
             using var completionRing = new CompletionRingBuffer();
             using var umem = new UMemory(fillRing, completionRing, 4096);
             using var socket = new XdpSocket(setup.ReceiverName, 0, umem, rxBuffer, txBuffer, 2048, 2048, XdpSocketMode.Generic);
-            Assert.IsNotNull(socket);
+
+            Span<ulong> addresses = stackalloc ulong[(int)umem.FrameCount];
+            umem.Init(addresses);
+            var count = fillRing.Fill(addresses[..(int)umem.FillRingSize]);
+            Assert.AreEqual(umem.FillRingSize, count);
         }
     }
 }

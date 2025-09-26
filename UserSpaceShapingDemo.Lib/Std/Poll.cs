@@ -13,7 +13,16 @@ public static unsafe class Poll
     public static uint Wait(Span<Query> queries, int timeoutMilliseconds)
     {
         fixed (Query* queriesPtr = queries)
-            return (uint)LibC.poll((LibC.pollfd*)queriesPtr, (uint)queries.Length, timeoutMilliseconds).ThrowIfError();
+        {
+            var result = LibC.poll((LibC.pollfd*)queriesPtr, (uint)queries.Length, timeoutMilliseconds);
+            if (!result.IsError())
+                return (uint)result;
+
+            var error = NativeErrorNumber.Last;
+            return error == NativeErrorNumber.InterruptedSystemCall
+                ? 0u
+                : throw new NativeException(error);
+        }
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
