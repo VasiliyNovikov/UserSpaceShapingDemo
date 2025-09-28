@@ -7,9 +7,6 @@ namespace UserSpaceShapingDemo.Lib.Xpd;
 public sealed class FillRingBuffer : ProducerRingBuffer
 {
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public new ref ulong Address(uint idx) => ref base.Address(idx);
-
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public uint Fill(ReadOnlySpan<ulong> addresses)
     {
         var filledCount = 0u;

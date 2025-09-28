@@ -13,8 +13,8 @@ public abstract class ProducerRingBuffer : RingBuffer
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public uint Reserve(uint count, out uint idx) => LibBpf.xsk_ring_prod__reserve(ref Ring, count, out idx);
+    protected uint Reserve(uint count, out uint idx) => LibBpf.xsk_ring_prod__reserve(ref Ring, count, out idx);
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public void Submit(uint count) => LibBpf.xsk_ring_prod__submit(ref Ring, count);
+    protected void Submit(uint count) => LibBpf.xsk_ring_prod__submit(ref Ring, count);
 }
