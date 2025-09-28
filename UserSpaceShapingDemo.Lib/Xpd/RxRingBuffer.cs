@@ -9,14 +9,30 @@ public sealed class RxRingBuffer : ConsumerRingBuffer
     public new ref readonly XdpDescriptor Descriptor(uint idx) => ref base.Descriptor(idx);
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public uint Receive(Span<XdpDescriptor> buffer)
+    public ReceiveScope Receive(Span<XdpDescriptor> buffer)
     {
         var count = Peek((uint)buffer.Length, out var startIdx);
         if (count == 0)
-            return 0;
+            return default;
         for (var i = 0; i < count; i++)
             buffer[i] = Descriptor(startIdx + (uint)i);
-        Release(count);
-        return count;
+        return new(this, buffer, count);
+    }
+
+    [method: MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public readonly ref struct ReceiveScope(RxRingBuffer ringBuffer, ReadOnlySpan<XdpDescriptor> buffer, uint count) : IDisposable
+    {
+        public ReadOnlySpan<XdpDescriptor> Packets
+        {
+            [MethodImpl(MethodImplOptions.AggressiveInlining)]
+            get;
+        } = buffer[..(int)count];
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public void Dispose()
+        {
+            if (!Packets.IsEmpty)
+                ringBuffer.Release((uint)Packets.Length);
+        }
     }
 }

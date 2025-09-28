@@ -1,6 +1,7 @@
 using System;
 using System.Net;
 using System.Net.Sockets;
+using System.Text;
 
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 
@@ -30,7 +31,8 @@ public sealed class XdpSocketTests
     [Timeout(10000, CooperativeCancellation = true)]
     public void XdpSocket_Receive()
     {
-        var message = "Hello from veth"u8;
+        var message = "Hello from veth";
+        var messageBytes = Encoding.ASCII.GetBytes(message);
         const int headerSize = 14 + 20 + 8; // Ethernet + IPv4 + UDP
         const int port = 12345;
 
@@ -39,11 +41,12 @@ public sealed class XdpSocketTests
         sender.Connect(TrafficSetup.ReceiverAddress, port);
         using (var receiver = setup.CreateReceiverSocket(SocketType.Dgram, ProtocolType.Udp, port))
         {
-            sender.Send(message);
-            Span<byte> receivedMessage = stackalloc byte[message.Length];
+            sender.Send(messageBytes);
+            Span<byte> receivedMessageBytes = stackalloc byte[message.Length];
             EndPoint endPoint = new IPEndPoint(IPAddress.Any, 0);
-            receiver.ReceiveFrom(receivedMessage, ref endPoint);
-            Assert.IsTrue(message.SequenceEqual(receivedMessage));
+            receiver.ReceiveFrom(receivedMessageBytes, ref endPoint);
+            var receivedMessage = Encoding.ASCII.GetString(receivedMessageBytes);
+            Assert.AreEqual(message, receivedMessage);
         }
         // After this block ARP resolution should be done and XDP should be able to capture actual packets.
         using (setup.EnterReceiver())
@@ -56,17 +59,22 @@ public sealed class XdpSocketTests
 
             using var socket = new XdpSocket(umem, setup.ReceiverName);
 
-            sender.Send(message);
+            sender.Send(messageBytes);
 
             using var nativeCancellationToken = new NativeCancellationToken(TestContext.CancellationTokenSource.Token);
 
             socket.WaitForRead(nativeCancellationToken);
 
             Span<XdpDescriptor> buffer = stackalloc XdpDescriptor[256];
-            var receiveCount = socket.RxRing.Receive(buffer);
-            Assert.AreEqual(1u, receiveCount);
-            var descriptor = buffer[0];
-            Assert.AreEqual((uint)message.Length + headerSize, descriptor.Length);
+            using var receiveScope = socket.RxRing.Receive(buffer);
+            Assert.AreEqual(1, receiveScope.Packets.Length);
+            var packet = receiveScope.Packets[0];
+            var payloadLength = packet.Length - headerSize;
+            Assert.AreEqual((uint)message.Length, payloadLength);
+            var packetData = umem[packet];
+            var payload = packetData[headerSize..];
+            var payloadString = Encoding.ASCII.GetString(payload);
+            Assert.AreEqual(message, payloadString);
         }
     }
 }
