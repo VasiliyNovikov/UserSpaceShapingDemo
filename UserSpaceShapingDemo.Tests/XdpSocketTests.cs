@@ -1,4 +1,5 @@
 using System;
+using System.Net;
 using System.Net.Sockets;
 
 using Microsoft.VisualStudio.TestTools.UnitTesting;
@@ -36,6 +37,15 @@ public sealed class XdpSocketTests
         using var setup = new TrafficSetup();
         using var sender = setup.CreateSenderSocket(SocketType.Dgram, ProtocolType.Udp);
         sender.Connect(TrafficSetup.ReceiverAddress, port);
+        using (var receiver = setup.CreateReceiverSocket(SocketType.Dgram, ProtocolType.Udp, port))
+        {
+            sender.Send(message);
+            Span<byte> receivedMessage = stackalloc byte[message.Length];
+            EndPoint endPoint = new IPEndPoint(IPAddress.Any, 0);
+            receiver.ReceiveFrom(receivedMessage, ref endPoint);
+            Assert.IsTrue(message.SequenceEqual(receivedMessage));
+        }
+        // After this block ARP resolution should be done and XDP should be able to capture actual packets.
         using (setup.EnterReceiver())
         {
             using var umem = new UMemory();
