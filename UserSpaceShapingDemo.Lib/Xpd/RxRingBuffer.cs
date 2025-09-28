@@ -9,30 +9,36 @@ public sealed class RxRingBuffer : ConsumerRingBuffer
     public new ref readonly XdpDescriptor Descriptor(uint idx) => ref base.Descriptor(idx);
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public ReceiveScope Receive(Span<XdpDescriptor> buffer)
+    public PacketRange Receive(uint count)
     {
-        var count = Peek((uint)buffer.Length, out var startIdx);
-        if (count == 0)
-            return default;
-        for (uint i = 0; i < count; ++i)
-            buffer[(int)i] = Descriptor(startIdx + i);
-        return new(this, buffer, count);
+        count = Peek(count, out var startIdx);
+        return count == 0 ? default : new PacketRange(this, startIdx, count);
     }
 
     [method: MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public readonly ref struct ReceiveScope(RxRingBuffer ringBuffer, ReadOnlySpan<XdpDescriptor> buffer, uint count) : IDisposable
+    public readonly struct PacketRange(RxRingBuffer ringBuffer, uint index, uint length) : IDisposable
     {
-        public ReadOnlySpan<XdpDescriptor> Packets
+        public uint Length
         {
             [MethodImpl(MethodImplOptions.AggressiveInlining)]
-            get;
-        } = buffer[..(int)count];
+            get => length;
+        }
+
+        public ref readonly XdpDescriptor this[uint i]
+        {
+            [MethodImpl(MethodImplOptions.AggressiveInlining)]
+            get
+            {
+                ArgumentOutOfRangeException.ThrowIfGreaterThanOrEqual(i, length);
+                return ref ringBuffer.Descriptor(index + i);
+            }
+        }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public void Dispose()
         {
-            if (!Packets.IsEmpty)
-                ringBuffer.Release((uint)Packets.Length);
+            if (length > 0)
+                ringBuffer.Release(length);
         }
     }
 }

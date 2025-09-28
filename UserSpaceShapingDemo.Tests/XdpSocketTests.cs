@@ -67,12 +67,12 @@ public sealed class XdpSocketTests
 
             socket.WaitForRead(nativeCancellationToken);
 
-            Span<XdpDescriptor> buffer = stackalloc XdpDescriptor[256];
-            using var receiveScope = socket.RxRing.Receive(buffer);
-            Assert.AreEqual(1, receiveScope.Packets.Length);
-            var packet = receiveScope.Packets[0];
+            using var packets = socket.RxRing.Receive(256);
+            Assert.AreEqual(1u, packets.Length);
+            ref readonly var packet = ref packets[0];
             var payloadLength = packet.Length - headerSize;
             Assert.AreEqual((uint)message.Length, payloadLength);
+
             var packetData = umem[packet];
 
             ref var ethernetHeader = ref Unsafe.As<byte, EthernetHeader>(ref packetData[0]);
