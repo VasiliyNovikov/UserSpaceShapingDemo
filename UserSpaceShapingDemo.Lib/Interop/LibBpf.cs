@@ -214,7 +214,7 @@ internal static unsafe partial class LibBpf
         return ref addrs[idx & ring.mask];
     }
 
-    // Port of libbpf's xsk_ring_cons__comp_desc() and xsk_ring_prod__fill_desc()
+    // Port of libbpf's xsk_ring_cons__rx_desc() and xsk_ring_prod__tx_desc()
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static ref xdp_desc xsk_ring__desc(ref xsk_ring ring, uint idx)
     {

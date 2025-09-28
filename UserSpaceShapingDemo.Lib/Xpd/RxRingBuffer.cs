@@ -14,8 +14,8 @@ public sealed class RxRingBuffer : ConsumerRingBuffer
         var count = Peek((uint)buffer.Length, out var startIdx);
         if (count == 0)
             return default;
-        for (var i = 0; i < count; i++)
-            buffer[i] = Descriptor(startIdx + (uint)i);
+        for (uint i = 0; i < count; ++i)
+            buffer[(int)i] = Descriptor(startIdx + i);
         return new(this, buffer, count);
     }
 
