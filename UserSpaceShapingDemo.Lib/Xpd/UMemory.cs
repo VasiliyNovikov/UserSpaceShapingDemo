@@ -9,7 +9,7 @@ namespace UserSpaceShapingDemo.Lib.Xpd;
 
 public sealed unsafe class UMemory : NativeObject, IFileObject
 {
-    private readonly void* _mem;
+    private readonly void* _umem_area;
     private readonly LibBpf.xsk_umem* _umem;
 
     internal LibBpf.xsk_umem* UMem
@@ -35,13 +35,13 @@ public sealed unsafe class UMemory : NativeObject, IFileObject
     public void* this[ulong address]
     {
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        get => LibBpf.xsk_umem__get_data(_umem, address);
+        get => LibBpf.xsk_umem__get_data(_umem_area, address);
     }
 
     public Span<byte> this[in XdpDescriptor packet]
     {
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        get => new(this[packet.Address], (int)packet.Length);
+        get => new(this[LibBpf.xsk_umem__add_offset_to_addr(packet.Address)], (int)packet.Length);
     }
 
     public UMemory(uint frameCount = 4096,
@@ -55,7 +55,7 @@ public sealed unsafe class UMemory : NativeObject, IFileObject
         FillRingSize = fillRingSize;
         CompletionRingSize = completionRingSize;
         var size = (ulong)frameCount * frameSize;
-        _mem = NativeMemory.AlignedAlloc((nuint)size, (nuint)Environment.SystemPageSize);
+        _umem_area = NativeMemory.AlignedAlloc((nuint)size, (nuint)Environment.SystemPageSize);
 
         var config = new LibBpf.xsk_umem_config
         {
@@ -67,11 +67,11 @@ public sealed unsafe class UMemory : NativeObject, IFileObject
         };
         try
         {
-            LibBpf.xsk_umem__create(out _umem, _mem, size, out FillRing.Ring, out CompletionRing.Ring, config).ThrowIfError();
+            LibBpf.xsk_umem__create(out _umem, _umem_area, size, out FillRing.Ring, out CompletionRing.Ring, config).ThrowIfError();
         }
         catch
         {
-            NativeMemory.AlignedFree(_mem);
+            NativeMemory.AlignedFree(_umem_area);
             throw;
         }
     }
@@ -81,9 +81,9 @@ public sealed unsafe class UMemory : NativeObject, IFileObject
         if ((uint)addresses.Length != FrameCount)
             throw new ArgumentOutOfRangeException(nameof(addresses));
         ref var address = ref MemoryMarshal.GetReference(addresses);
-        for (var i = 0; i < FrameCount; ++i)
+        for (var i = 0ul; i < FrameCount; ++i)
         {
-            address = (ulong)i * FrameSize;
+            address = i * FrameSize;
             address = ref Unsafe.Add(ref address, 1);
         }
     }
@@ -97,8 +97,8 @@ public sealed unsafe class UMemory : NativeObject, IFileObject
         }
         finally
         {
-            if (_mem is not null)
-                NativeMemory.AlignedFree(_mem);
+            if (_umem_area is not null)
+                NativeMemory.AlignedFree(_umem_area);
         }
     }
 }

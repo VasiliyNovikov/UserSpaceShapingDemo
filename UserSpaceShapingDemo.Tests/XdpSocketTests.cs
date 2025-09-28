@@ -1,6 +1,8 @@
 using System;
 using System.Net;
 using System.Net.Sockets;
+using System.Runtime.CompilerServices;
+using System.Runtime.InteropServices;
 using System.Text;
 
 using Microsoft.VisualStudio.TestTools.UnitTesting;
@@ -31,7 +33,7 @@ public sealed class XdpSocketTests
     [Timeout(10000, CooperativeCancellation = true)]
     public void XdpSocket_Receive()
     {
-        var message = "Hello from veth";
+        const string message = "Hello from XDP!!!";
         var messageBytes = Encoding.ASCII.GetBytes(message);
         const int headerSize = 14 + 20 + 8; // Ethernet + IPv4 + UDP
         const int port = 12345;
@@ -72,9 +74,21 @@ public sealed class XdpSocketTests
             var payloadLength = packet.Length - headerSize;
             Assert.AreEqual((uint)message.Length, payloadLength);
             var packetData = umem[packet];
+
+            ref var ethernetHeader = ref Unsafe.As<byte, EthernetHeader>(ref packetData[0]);
+            Assert.AreEqual(0x0800, IPAddress.NetworkToHostOrder((short)ethernetHeader.EtherType)); // IPv4
+
             var payload = packetData[headerSize..];
             var payloadString = Encoding.ASCII.GetString(payload);
             Assert.AreEqual(message, payloadString);
         }
+    }
+
+    [StructLayout(LayoutKind.Sequential, Pack = 1)]
+    private unsafe struct EthernetHeader
+    {
+        public fixed byte DestinationAddress[6];
+        public fixed byte SourceAddress[6];
+        public readonly ushort EtherType;
     }
 }
