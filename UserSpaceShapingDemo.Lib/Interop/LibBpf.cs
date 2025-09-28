@@ -36,9 +36,6 @@ internal static unsafe partial class LibBpf
     public const uint XDP_FLAGS_DRV_MODE          = 0b0100;
     public const uint XDP_FLAGS_HW_MODE           = 0b1000;
 
-    public const int XSK_UNALIGNED_BUF_OFFSET_SHIFT = 48;
-    public const ulong XSK_UNALIGNED_BUF_ADDR_MASK  = (1ul << XSK_UNALIGNED_BUF_OFFSET_SHIFT) - 1ul;
-
     // Raw P/Invoke where config may be NULL (defaults applied by libbpf)
     // int xsk_umem__create(struct xsk_umem **umem, void *area, __u64 size,
     //                      struct xsk_ring_prod *fill, struct xsk_ring_cons *comp,
@@ -224,15 +221,6 @@ internal static unsafe partial class LibBpf
         xdp_desc* descs = (xdp_desc*)ring.ring;
         return ref descs[idx & ring.mask];
     }
-
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public static ulong xsk_umem__extract_addr(ulong addr) => addr & XSK_UNALIGNED_BUF_ADDR_MASK;
-
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public static ulong xsk_umem__extract_offset(ulong addr) => addr >> XSK_UNALIGNED_BUF_OFFSET_SHIFT;
-
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public static ulong xsk_umem__add_offset_to_addr(ulong addr) => xsk_umem__extract_addr(addr) + xsk_umem__extract_offset(addr);
 
     [StructLayout(LayoutKind.Sequential)]
     public readonly struct xsk_api_result { public readonly int error_code; }

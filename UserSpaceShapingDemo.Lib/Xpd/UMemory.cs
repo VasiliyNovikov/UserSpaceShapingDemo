@@ -41,7 +41,7 @@ public sealed unsafe class UMemory : NativeObject, IFileObject
     public Span<byte> this[in XdpDescriptor packet]
     {
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        get => new(this[LibBpf.xsk_umem__add_offset_to_addr(packet.Address)], (int)packet.Length);
+        get => new(this[packet.Address], (int)packet.Length);
     }
 
     public UMemory(uint frameCount = 4096,
