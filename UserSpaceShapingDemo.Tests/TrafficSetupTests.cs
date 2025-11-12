@@ -52,7 +52,7 @@ public class TrafficSetupTests
 
         var bytesReceived = receiver.ReceiveFrom(receivedMessage, ref endPoint);
 
-        Assert.IsInstanceOfType<IPEndPoint>(endPoint, out var senderEndPoint);
+        var senderEndPoint = Assert.IsInstanceOfType<IPEndPoint>(endPoint);
         Assert.AreEqual(TrafficSetup.SenderAddress, senderEndPoint.Address);
         Assert.AreEqual(message.Length, bytesReceived);
         Assert.IsTrue(message.SequenceEqual(receivedMessage));
