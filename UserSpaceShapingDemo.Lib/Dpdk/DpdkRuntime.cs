@@ -1,12 +1,13 @@
+using System;
 using System.Runtime.InteropServices.Marshalling;
 
 using UserSpaceShapingDemo.Lib.Interop;
 
 namespace UserSpaceShapingDemo.Lib.Dpdk;
 
-public static class DpdkRuntime
+public sealed unsafe class DpdkRuntime : IDisposable
 {
-    public static unsafe void Initialize(string[] args)
+    public DpdkRuntime(string[] args)
     {
         var nativeArgs = stackalloc byte*[args.Length];
         try
@@ -21,5 +22,11 @@ public static class DpdkRuntime
             for (var i = 0; i < args.Length; ++i)
                 Utf8StringMarshaller.Free(nativeArgs[i]);
         }
+    }
+
+    public void Dispose()
+    {
+        if (LibDpdk.rte_eal_cleanup() == -1)
+            throw DpdkException.FromLastError();
     }
 }

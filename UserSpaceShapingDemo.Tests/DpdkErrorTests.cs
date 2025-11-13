@@ -6,7 +6,7 @@ using UserSpaceShapingDemo.Lib.Std;
 namespace UserSpaceShapingDemo.Tests;
 
 [TestClass]
-public class LibDpdkTests
+public class DpdkErrorTests
 {
     [TestMethod]
     public void NativeErrorNumber_DpdkLast() => Assert.AreEqual(NativeErrorNumber.OK, NativeErrorNumber.DpdkLast);

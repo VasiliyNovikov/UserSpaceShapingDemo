@@ -68,6 +68,7 @@ internal static unsafe class LibDpdk
             _get_rte_errno = (delegate* unmanaged[Cdecl]<NativeErrorNumber>)NativeLibrary.GetExport(shimLib, "get_rte_errno");
             rte_strerror = (delegate* unmanaged[Cdecl]<NativeErrorNumber, byte*>)NativeLibrary.GetExport(shimLib, "rte_strerror");
             rte_eal_init = (delegate* unmanaged[Cdecl]<int, byte**, int>)NativeLibrary.GetExport(shimLib, "rte_eal_init");
+            rte_eal_cleanup = (delegate* unmanaged[Cdecl]<int>)NativeLibrary.GetExport(shimLib, "rte_eal_cleanup");
         }
         finally
         {
@@ -81,9 +82,12 @@ internal static unsafe class LibDpdk
         get => _get_rte_errno();
     }
 
-    // const char *rte_strerror(int errnum);
+    // const char *rte_strerror(int errnum)
     public static readonly delegate* unmanaged[Cdecl]<NativeErrorNumber, byte*> rte_strerror;
 
     // int rte_eal_init(int argc, char **argv)
     public static readonly delegate* unmanaged[Cdecl]<int, byte**, int> rte_eal_init;
+
+    // int rte_eal_cleanup(void)
+    public static readonly delegate* unmanaged[Cdecl]<int> rte_eal_cleanup;
 }
