@@ -15,6 +15,7 @@ apt-get install -y \
   zlib1g-dev \
   libnl-3-dev \
   libnl-route-3-dev \
+  libdpdk-dev \
   pkg-config \
   linux-headers-$(uname -r) \
   linux-tools-$(uname -r) \

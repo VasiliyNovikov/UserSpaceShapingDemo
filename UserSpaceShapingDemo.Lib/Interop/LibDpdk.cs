@@ -5,16 +5,18 @@ using System.Linq;
 using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 
+using UserSpaceShapingDemo.Lib.Std;
+
 namespace UserSpaceShapingDemo.Lib.Interop;
-internal static unsafe partial class LibDpdk
+
+internal static unsafe class LibDpdk
 {
-    private const string Lib = "libdpdk";
     private const string Shim = """
                                 #include <rte_errno.h>
                                 int get_rte_errno(void) { return rte_errno; }
                                 """;
 
-    private static readonly delegate* unmanaged[Cdecl]<int> _get_rte_errno;
+    private static readonly delegate* unmanaged[Cdecl]<NativeErrorNumber> _get_rte_errno;
 
     static LibDpdk()
     {
@@ -62,7 +64,10 @@ internal static unsafe partial class LibDpdk
             if (ccProcess.ExitCode != 0)
                 throw new InvalidOperationException($"cc failed with exit code {ccProcess.ExitCode}: {ccError}");
             var shimLib = NativeLibrary.Load(soPath);
-            _get_rte_errno = (delegate* unmanaged[Cdecl]<int>)NativeLibrary.GetExport(shimLib, "get_rte_errno");
+            
+            _get_rte_errno = (delegate* unmanaged[Cdecl]<NativeErrorNumber>)NativeLibrary.GetExport(shimLib, "get_rte_errno");
+            rte_strerror = (delegate* unmanaged[Cdecl]<NativeErrorNumber, byte*>)NativeLibrary.GetExport(shimLib, "rte_strerror");
+            rte_eal_init = (delegate* unmanaged[Cdecl]<int, byte**, int>)NativeLibrary.GetExport(shimLib, "rte_eal_init");
         }
         finally
         {
@@ -70,13 +75,15 @@ internal static unsafe partial class LibDpdk
         }
     }
 
-    public static int rte_errno
+    public static NativeErrorNumber rte_errno
     {
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         get => _get_rte_errno();
     }
 
-    [LibraryImport(Lib, EntryPoint = "rte_eal_init")]
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public static partial int rte_eal_init(int argc, byte** argv);
+    // const char *rte_strerror(int errnum);
+    public static readonly delegate* unmanaged[Cdecl]<NativeErrorNumber, byte*> rte_strerror;
+
+    // int rte_eal_init(int argc, char **argv)
+    public static readonly delegate* unmanaged[Cdecl]<int, byte**, int> rte_eal_init;
 }

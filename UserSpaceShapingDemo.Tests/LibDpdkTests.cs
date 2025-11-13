@@ -1,6 +1,7 @@
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 
-using UserSpaceShapingDemo.Lib.Interop;
+using UserSpaceShapingDemo.Lib.Dpdk;
+using UserSpaceShapingDemo.Lib.Std;
 
 namespace UserSpaceShapingDemo.Tests;
 
@@ -8,5 +9,12 @@ namespace UserSpaceShapingDemo.Tests;
 public class LibDpdkTests
 {
     [TestMethod]
-    public void LibDpdk_rte_errno() => Assert.AreEqual(0, LibDpdk.rte_errno);
+    public void NativeErrorNumber_DpdkLast() => Assert.AreEqual(NativeErrorNumber.OK, NativeErrorNumber.DpdkLast);
+
+    [TestMethod]
+    public void NativeErrorNumber_DpdkMessage()
+    {
+        Assert.AreEqual("Operation not permitted", NativeErrorNumber.OperationNotPermitted.DpdkMessage);
+        Assert.AreEqual("Operation already in progress", NativeErrorNumber.OperationAlreadyInProgress.DpdkMessage);
+    }
 }
