@@ -1,6 +1,7 @@
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 
 using UserSpaceShapingDemo.Lib.Dpdk;
+using UserSpaceShapingDemo.Lib.Std;
 
 namespace UserSpaceShapingDemo.Tests;
 
@@ -10,6 +11,19 @@ public class DpdkRuntimeTests
     [TestMethod]
     public void DpdkRuntime_Initialize_Empty()
     {
-        using var _ = new DpdkRuntime(["--in-memory", "--iova=va", "--file-prefix=test"]);
+        var testNs = "test-dpdk";
+        NetNs.Add(testNs);
+        try
+        {
+            using (NetNs.Enter(testNs))
+            {
+                using var _ = new DpdkRuntime(["test", "--no-pci", "--no-huge", "--iova=va", "--file-prefix=test",
+                                               "--vdev=net_ring0", "--vdev=net_ring1"]);
+            }
+        }
+        finally
+        {
+            NetNs.Delete(testNs);
+        }
     }
 }

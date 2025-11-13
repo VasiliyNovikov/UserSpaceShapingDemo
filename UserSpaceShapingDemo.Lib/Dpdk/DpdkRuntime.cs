@@ -19,8 +19,8 @@ public sealed unsafe class DpdkRuntime : IDisposable
         }
         finally
         {
-            for (var i = 0; i < args.Length; ++i)
-                Utf8StringMarshaller.Free(nativeArgs[i]);
+            //for (var i = 0; i < args.Length; ++i)
+            //    Utf8StringMarshaller.Free(nativeArgs[i]);
         }
     }
 
