@@ -107,9 +107,9 @@ public sealed class TrafficSetup : IDisposable
     public NetNs.Scope EnterSender() => NetNs.Enter(SenderName);
     public NetNs.Scope EnterReceiver() => NetNs.Enter(ReceiverName);
 
-    public Socket CreateSenderSocket(SocketType socketType, ProtocolType protocolType)
+    public Socket CreateSenderSocket(SocketType socketType, ProtocolType protocolType, int port = 0)
     {
-        return CreateSocket(SenderName, socketType, protocolType, SenderAddress, 0);
+        return CreateSocket(SenderName, socketType, protocolType, SenderAddress, port);
     }
 
     public Socket CreateReceiverSocket(SocketType socketType, ProtocolType protocolType, int port)
