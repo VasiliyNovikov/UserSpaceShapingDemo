@@ -4,6 +4,8 @@ using System.Linq;
 using System.Net;
 using System.Net.Sockets;
 
+using NetworkingPrimitivesCore;
+
 using UserSpaceShapingDemo.Lib.Nl3;
 using UserSpaceShapingDemo.Lib.Nl3.Route;
 using UserSpaceShapingDemo.Lib.Std;
@@ -16,6 +18,9 @@ public sealed class TrafficSetup : IDisposable
     private const string SenderNetNsNamePrefix = "tst_snd_";
     private const string ReceiverNetNsNamePrefix = "tst_rcv_";
     private static readonly ConcurrentQueue<int> InstanceIds = new(Enumerable.Range(0, 0x1000));
+
+    public static readonly MACAddress SenderMacAddress = MACAddress.Parse("02:11:22:33:44:55");
+    public static readonly MACAddress ReceiverMacAddress = MACAddress.Parse("02:66:77:88:99:AA");
 
     public static readonly IPAddress SenderAddress = IPAddress.Parse("10.11.22.1");
     public static readonly IPAddress ReceiverAddress = IPAddress.Parse("10.11.22.2");
@@ -47,8 +52,8 @@ public sealed class TrafficSetup : IDisposable
             using var socket = new RtnlSocket();
             socket.AddLink(vethPair.Link);
         }
-        foreach (var (name, address) in new[] { (SenderName, SenderAddress),
-                                                (ReceiverName, ReceiverAddress) })
+        foreach (var (name, address, macAddress) in new[] { (SenderName, SenderAddress, SenderMacAddress),
+                                                            (ReceiverName, ReceiverAddress, ReceiverMacAddress) })
             using (NetNs.Enter(name))
             {
                 using var socket = new RtnlSocket();
@@ -60,9 +65,14 @@ public sealed class TrafficSetup : IDisposable
                 linkAddr.Address = addr;
                 socket.AddAddress(linkAddr);
 
-                using var linkChange = RtnlLink.Allocate();
-                linkChange.Up = true;
-                socket.UpdateLink(link, linkChange);
+                using var linkMacChange = RtnlLink.Allocate();
+                using var linkMac = new NlAddress(macAddress.Bytes, AddressFamily.DataLink);
+                linkMacChange.Address = linkMac;
+                socket.UpdateLink(link, linkMacChange);
+
+                using var linkUpChange = RtnlLink.Allocate();
+                linkUpChange.Up = true;
+                socket.UpdateLink(link, linkUpChange);
             }
     }
 

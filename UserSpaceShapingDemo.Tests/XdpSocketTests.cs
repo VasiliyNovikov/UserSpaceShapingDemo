@@ -7,13 +7,15 @@ using System.Text;
 
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 
+using NetworkingPrimitivesCore;
+
 using UserSpaceShapingDemo.Lib;
 using UserSpaceShapingDemo.Lib.Xpd;
 
 namespace UserSpaceShapingDemo.Tests;
 
 [TestClass]
-public sealed class XdpSocketTests
+public sealed unsafe class XdpSocketTests
 {
     public TestContext TestContext { get; set; } = null!;
 
@@ -35,7 +37,6 @@ public sealed class XdpSocketTests
     {
         const string message = "Hello from XDP!!!";
         var messageBytes = Encoding.ASCII.GetBytes(message);
-        const int headerSize = 14 + 20 + 8; // Ethernet + IPv4 + UDP
         const int port = 12345;
 
         using var setup = new TrafficSetup();
@@ -70,25 +71,58 @@ public sealed class XdpSocketTests
             using var packets = socket.RxRing.Receive(256);
             Assert.AreEqual(1u, packets.Length);
             ref readonly var packet = ref packets[0];
-            var payloadLength = packet.Length - headerSize;
-            Assert.AreEqual((uint)message.Length, payloadLength);
 
             var packetData = umem[packet];
 
             ref var ethernetHeader = ref Unsafe.As<byte, EthernetHeader>(ref packetData[0]);
-            Assert.AreEqual(0x0800, IPAddress.NetworkToHostOrder((short)ethernetHeader.EtherType)); // IPv4
+            Assert.AreEqual(0x0800, (ushort)ethernetHeader.EtherType); // IPv4
+            Assert.AreEqual(TrafficSetup.SenderMacAddress, ethernetHeader.SourceAddress);
+            Assert.AreEqual(TrafficSetup.ReceiverMacAddress, ethernetHeader.DestinationAddress);
 
-            var payload = packetData[headerSize..];
+            ref var ipv4Header = ref Unsafe.As<byte, IPv4Header>(ref packetData[sizeof(EthernetHeader)]);
+            Assert.AreEqual(17, ipv4Header.Protocol); // UDP
+            Assert.AreEqual(TrafficSetup.SenderAddress, ipv4Header.SourceAddress);
+            Assert.AreEqual(TrafficSetup.ReceiverAddress, ipv4Header.DestinationAddress);
+
+            ref var udpHeader = ref Unsafe.As<byte, UDPHeader>(ref packetData[sizeof(EthernetHeader) + sizeof(IPv4Header)]);
+            Assert.AreEqual(port, (ushort)udpHeader.DestinationPort);
+
+            var payload = packetData[(sizeof(EthernetHeader) + sizeof(IPv4Header) + sizeof(UDPHeader))..];
+            Assert.AreEqual(message.Length, payload.Length);
             var payloadString = Encoding.ASCII.GetString(payload);
             Assert.AreEqual(message, payloadString);
         }
     }
 
     [StructLayout(LayoutKind.Sequential, Pack = 1)]
-    private unsafe struct EthernetHeader
+    private struct EthernetHeader
     {
-        public fixed byte DestinationAddress[6];
-        public fixed byte SourceAddress[6];
-        public readonly ushort EtherType;
+        public MACAddress DestinationAddress;
+        public MACAddress SourceAddress;
+        public NetInt<ushort> EtherType;
+    }
+
+    [StructLayout(LayoutKind.Sequential, Pack = 1)]
+    private struct IPv4Header
+    {
+        public byte VersionAndHeaderLength;
+        public byte TypeOfService;
+        public NetInt<ushort> TotalLength;
+        public NetInt<ushort> Id;
+        public NetInt<ushort> FragmentOffset;
+        public byte Ttl;
+        public byte Protocol;
+        public NetInt<ushort> Checksum;
+        public IPv4Address SourceAddress;
+        public IPv4Address DestinationAddress;
+    }
+
+    [StructLayout(LayoutKind.Sequential, Pack = 1)]
+    private struct UDPHeader
+    {
+        public NetInt<ushort> SourcePort;
+        public NetInt<ushort> DestinationPort;
+        public NetInt<ushort> Size;
+        public NetInt<ushort> Checksum;
     }
 }

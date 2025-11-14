@@ -87,6 +87,14 @@ internal static unsafe partial class LibNlRoute3
     [LibraryImport(Lib, EntryPoint = "rtnl_link_set_num_rx_queues")]
     public static partial void rtnl_link_set_num_rx_queues(rtnl_link* link, uint nqueues);
 
+    // struct nl_addr* rtnl_link_get_addr(struct rtnl_link *link)
+    [LibraryImport(Lib, EntryPoint = "rtnl_link_get_addr")]
+    public static partial LibNl3.nl_addr* rtnl_link_get_addr(rtnl_link* link);
+
+    // void rtnl_link_set_addr(struct rtnl_link *link,struct nl_addr *addr)
+    [LibraryImport(Lib, EntryPoint = "rtnl_link_set_addr")]
+    public static partial void rtnl_link_set_addr(rtnl_link* link, LibNl3.nl_addr* addr);
+
     // struct rtnl_link *rtnl_link_veth_alloc(void)
     [LibraryImport(Lib, EntryPoint = "rtnl_link_veth_alloc")]
     public static partial rtnl_link* rtnl_link_veth_alloc();

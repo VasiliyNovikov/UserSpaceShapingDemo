@@ -55,6 +55,16 @@ public sealed unsafe class RtnlLink : NativeObject
         set => LibNlRoute3.rtnl_link_set_num_rx_queues(Link, value);
     }
 
+    public NlAddress Address
+    {
+        get
+        {
+            var addrPtr = LibNlRoute3.rtnl_link_get_addr(Link);
+            return new NlAddress(addrPtr, false);
+        }
+        set => LibNlRoute3.rtnl_link_set_addr(Link, value.Addr);
+    }
+
     internal RtnlLink(LibNlRoute3.rtnl_link* link, bool owned)
     {
         Link = link;

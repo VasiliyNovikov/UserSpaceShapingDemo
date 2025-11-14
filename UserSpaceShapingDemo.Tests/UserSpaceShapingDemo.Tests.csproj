@@ -2,6 +2,7 @@
   <Import Project="../UserSpaceShapingDemo.props" />
   <ItemGroup>
     <PackageReference Include="MSTest" />
+    <PackageReference Include="NetworkingPrimitivesCore" />
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\UserSpaceShapingDemo.Lib\UserSpaceShapingDemo.Lib.csproj" />
