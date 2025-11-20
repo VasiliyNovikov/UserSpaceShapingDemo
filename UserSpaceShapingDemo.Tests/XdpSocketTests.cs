@@ -150,6 +150,14 @@ public sealed unsafe class XdpSocketTests
                 var receiveMessage = Encoding.ASCII.GetString(receiveMessageBytes);
                 Assert.AreEqual(replyMessage, receiveMessage);
             }
+
+            using (var completed = umem.CompletionRing.Complete(256))
+            {
+                Assert.AreEqual(1u, completed.Length);
+                using var fill = umem.FillRing.Fill(1);
+                Assert.AreEqual(1u, fill.Length);
+                fill[0] = completed[0];
+            }
         }
     }
 

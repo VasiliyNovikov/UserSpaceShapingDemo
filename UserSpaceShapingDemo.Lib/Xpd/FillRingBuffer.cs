@@ -14,20 +14,52 @@ public sealed class FillRingBuffer : ProducerRingBuffer
         ref var address = ref MemoryMarshal.GetReference(addresses);
         while (count > 0)
         {
-            var n = Reserve(count, out var idx);
-            if (n == 0)
+            using var addressRange = Fill(count);
+            if (addressRange.Length == 0)
                 break;
 
-            var lastIdx = idx + n;
-            for (var i = idx; i < lastIdx; ++i)
+            for (uint i = 0; i < addressRange.Length; ++i)
             {
-                Address(i) = address;
+                addressRange[i] = address;
                 address = ref Unsafe.Add(ref address, 1);
             }
-            Submit(n);
-            count -= n;
-            filledCount += n;
+            count -= addressRange.Length;
+            filledCount += addressRange.Length;
         }
         return filledCount;
+    }
+
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public AddressRange Fill(uint count)
+    {
+        count = Reserve(count, out var startIdx);
+        return count == 0 ? default : new AddressRange(this, startIdx, count);
+    }
+
+    [method: MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public readonly struct AddressRange(FillRingBuffer ringBuffer, uint index, uint length) : IDisposable
+    {
+        public uint Length
+        {
+            [MethodImpl(MethodImplOptions.AggressiveInlining)]
+            get => length;
+        }
+
+        public ref ulong this[uint i]
+        {
+            [MethodImpl(MethodImplOptions.AggressiveInlining)]
+            get
+            {
+                ArgumentOutOfRangeException.ThrowIfGreaterThanOrEqual(i, length);
+                return ref ringBuffer.Address(index + i);
+            }
+        }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public void Dispose()
+        {
+            if (length > 0)
+                ringBuffer.Submit(length);
+        }
     }
 }
