@@ -36,7 +36,11 @@ public sealed class TrafficSetup : IDisposable
             throw new InvalidOperationException("Too many instances of TestTrafficSetup");
         SenderName = $"{SenderNetNsNamePrefix}{_id:X}";
         ReceiverName = $"{ReceiverNetNsNamePrefix}{_id:X}";
+        if (NetNs.Exists(SenderName))
+            NetNs.Delete(SenderName);
         NetNs.Add(SenderName);
+        if (NetNs.Exists(ReceiverName))
+            NetNs.Delete(ReceiverName);
         NetNs.Add(ReceiverName);
         {
             using var senderNs = NetNs.Open(SenderName);
