@@ -73,10 +73,13 @@ public sealed unsafe class XdpSocketTests
 
             socket.WaitForRead(nativeCancellationToken);
 
+            ulong receivedAddress;
+
             using (var receivePackets = socket.RxRing.Receive(256))
             {
                 Assert.AreEqual(1u, receivePackets.Length);
                 ref readonly var packet = ref receivePackets[0];
+                receivedAddress = packet.Address;
 
                 var packetData = umem[packet];
 
@@ -106,6 +109,7 @@ public sealed unsafe class XdpSocketTests
                 Assert.AreEqual(1u, sendPackets.Length);
 
                 ref var packet = ref sendPackets[0];
+                packet.Address = receivedAddress;
                 packet.Length = (uint)(sizeof(EthernetHeader) + sizeof(IPv4Header) + sizeof(UDPHeader) + replyMessageBytes.Length);
                 var packetData = umem[packet];
 
