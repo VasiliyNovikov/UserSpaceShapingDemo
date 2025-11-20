@@ -76,7 +76,7 @@ public sealed unsafe class UMemory : NativeObject, IFileObject
         }
     }
 
-    public void Init(Span<ulong> addresses)
+    public void GetAddresses(Span<ulong> addresses)
     {
         if ((uint)addresses.Length != FrameCount)
             throw new ArgumentOutOfRangeException(nameof(addresses));

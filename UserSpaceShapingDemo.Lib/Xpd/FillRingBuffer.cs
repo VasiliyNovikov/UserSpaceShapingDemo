@@ -1,34 +1,10 @@
 using System;
 using System.Runtime.CompilerServices;
-using System.Runtime.InteropServices;
 
 namespace UserSpaceShapingDemo.Lib.Xpd;
 
 public sealed class FillRingBuffer : ProducerRingBuffer
 {
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public uint Fill(ReadOnlySpan<ulong> addresses)
-    {
-        var filledCount = 0u;
-        var count = (uint)addresses.Length;
-        ref var address = ref MemoryMarshal.GetReference(addresses);
-        while (count > 0)
-        {
-            using var addressRange = Fill(count);
-            if (addressRange.Length == 0)
-                break;
-
-            for (uint i = 0; i < addressRange.Length; ++i)
-            {
-                addressRange[i] = address;
-                address = ref Unsafe.Add(ref address, 1);
-            }
-            count -= addressRange.Length;
-            filledCount += addressRange.Length;
-        }
-        return filledCount;
-    }
-
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public AddressRange Fill(uint count)
     {
