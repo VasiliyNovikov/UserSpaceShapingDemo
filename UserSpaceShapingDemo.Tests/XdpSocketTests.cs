@@ -62,14 +62,15 @@ public sealed unsafe class XdpSocketTests
             using var umem = new UMemory();
             Span<ulong> addresses = stackalloc ulong[(int)umem.FrameCount];
             umem.GetAddresses(addresses);
-            using (var fill = umem.FillRing.Fill(umem.FillRingSize))
+
+            using var socket = new XdpSocket(umem, setup.ReceiverName);
+
+            using (var fill = socket.FillRing.Fill(umem.FillRingSize))
             {
                 Assert.AreEqual(umem.FillRingSize, fill.Length);
                 for (var i = 0u; i < fill.Length; ++i)
                     fill[i] = addresses[(int)i];
             }
-
-            using var socket = new XdpSocket(umem, setup.ReceiverName);
 
             sender.Send(messageBytes);
 
@@ -155,10 +156,10 @@ public sealed unsafe class XdpSocketTests
                 Assert.AreEqual(replyMessage, receiveMessage);
             }
 
-            using (var completed = umem.CompletionRing.Complete(256))
+            using (var completed = socket.CompletionRing.Complete(256))
             {
                 Assert.AreEqual(1u, completed.Length);
-                using var fill = umem.FillRing.Fill(1);
+                using var fill = socket.FillRing.Fill(1);
                 Assert.AreEqual(1u, fill.Length);
                 fill[0] = completed[0];
             }

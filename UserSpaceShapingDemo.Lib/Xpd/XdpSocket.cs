@@ -12,6 +12,8 @@ public sealed unsafe class XdpSocket : NativeObject, IFileObject
 
     public UMemory Umem { get; }
 
+    public FillRingBuffer FillRing { get; }
+    public CompletionRingBuffer CompletionRing { get; }
     public RxRingBuffer RxRing { get; } = new();
     public TxRingBuffer TxRing { get; } = new();
 
@@ -27,7 +29,8 @@ public sealed unsafe class XdpSocket : NativeObject, IFileObject
                      uint rxSize = LibBpf.XSK_RING_CONS__DEFAULT_NUM_DESCS,
                      uint txSize = LibBpf.XSK_RING_PROD__DEFAULT_NUM_DESCS,
                      XdpSocketMode mode = XdpSocketMode.Default,
-                     XdpSocketBindMode bindMode = XdpSocketBindMode.Copy | XdpSocketBindMode.UseNeedWakeup)
+                     XdpSocketBindMode bindMode = XdpSocketBindMode.Copy | XdpSocketBindMode.UseNeedWakeup,
+                     bool shared = false)
     {
         Umem = umem;
         var ifIndex = InterfaceNameHelper.GetIndex(ifName);
@@ -39,7 +42,20 @@ public sealed unsafe class XdpSocket : NativeObject, IFileObject
             xdp_flags = (uint)mode,
             bind_flags = (ushort)bindMode,
         };
-        LibBpf.xsk_socket__create(out _xsk, ifName, queueId, umem.UMem, out RxRing.Ring, out TxRing.Ring, config).ThrowIfError();
+        if (shared)
+        {
+            config.bind_flags |= LibBpf.XDP_SHARED_UMEM;
+            FillRing = new();
+            CompletionRing = new();
+            LibBpf.xsk_socket__create_shared(out _xsk, ifName, queueId, umem.UMem, out RxRing.Ring, out TxRing.Ring, out FillRing.Ring, out CompletionRing.Ring, config).ThrowIfError();
+        }
+        else
+        {
+            FillRing = umem.FillRing;
+            CompletionRing = umem.CompletionRing;
+            LibBpf.xsk_socket__create(out _xsk, ifName, queueId, umem.UMem, out RxRing.Ring, out TxRing.Ring, config).ThrowIfError();
+        }
+
         XdpProgram.GetMap(ifIndex, out var mapDescriptor);
         LibBpf.xsk_socket__update_xskmap(_xsk, mapDescriptor).ThrowIfError();
     }

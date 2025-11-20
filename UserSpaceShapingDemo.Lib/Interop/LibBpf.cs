@@ -85,6 +85,27 @@ internal static unsafe partial class LibBpf
                                                             out xsk_ring tx,
                                                             in xsk_socket_config config);
 
+    // LIBBPF_API int
+    // xsk_socket__create_shared(struct xsk_socket **xsk_ptr,
+    //                           const char *ifname,
+    //                           __u32 queue_id, struct xsk_umem *umem,
+    //                           struct xsk_ring_cons *rx,
+    //                           struct xsk_ring_prod *tx,
+    //                           struct xsk_ring_prod *fill,
+    //                           struct xsk_ring_cons *comp,
+    //                           const struct xsk_socket_config *config);
+    [LibraryImport(Lib, EntryPoint = "xsk_socket__create_shared", StringMarshalling = StringMarshalling.Utf8)]
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public static partial xsk_api_result xsk_socket__create_shared(out xsk_socket* xsk,
+                                                                   string ifname,
+                                                                   uint queue_id,
+                                                                   xsk_umem* umem,
+                                                                   out xsk_ring rx,
+                                                                   out xsk_ring tx,
+                                                                   out xsk_ring fill,
+                                                                   out xsk_ring comp,
+                                                                   in xsk_socket_config config);
+
     // LIBBPF_API void xsk_socket__delete(struct xsk_socket *xsk);
     [LibraryImport(Lib, EntryPoint = "xsk_socket__delete")]
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
