@@ -30,6 +30,8 @@ internal static unsafe partial class LibC
     public const short POLLHUP  = 0b010000; // Hung up
     public const short POLLNVAL = 0b100000; // Invalid request: fd not open
 
+    public const int MSG_DONTWAIT = 0x40;
+
     // int * __errno_location(void);
     [LibraryImport(Lib, EntryPoint = "__errno_location")]
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -101,6 +103,11 @@ internal static unsafe partial class LibC
     [LibraryImport(Lib, EntryPoint = "poll")]
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static partial int poll(pollfd* fds, uint nfds, int timeout);
+
+    // ssize_t sendto(int socket, const void *message, size_t length, int flags, const struct sockaddr *dest_addr, socklen_t dest_len);
+    [LibraryImport(Lib, EntryPoint = "sendto")]
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public static partial nint sendto(FileDescriptor socket, void* message, nuint length, int flags, void* dest_addr, uint dest_len);
 
     [StructLayout(LayoutKind.Sequential)]
     public readonly struct pollfd

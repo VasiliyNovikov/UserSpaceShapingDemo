@@ -48,6 +48,8 @@ public sealed unsafe class XdpSocket : NativeObject, IFileObject
 
     public void WaitForWrite(NativeCancellationToken cancellationToken) => cancellationToken.WaitWrite(Descriptor);
 
+    public void WakeUp() => LibC.sendto(Descriptor, null, 0, LibC.MSG_DONTWAIT, null, 0).ThrowIfError();
+
     protected override void ReleaseUnmanagedResources()
     {
         if (_xsk is not null)

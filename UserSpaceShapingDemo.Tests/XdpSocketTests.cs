@@ -141,9 +141,7 @@ public sealed unsafe class XdpSocketTests
             }
 
             if (socket.TxRing.NeedsWakeup)
-            {
-                // Send empty packet to wake up the TX processing
-            }
+                socket.WakeUp();
 
             {
                 Span<byte> receiveMessageBytes = stackalloc byte[replyMessage.Length];
