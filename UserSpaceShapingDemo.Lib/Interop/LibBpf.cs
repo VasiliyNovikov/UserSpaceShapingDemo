@@ -1,3 +1,4 @@
+using System;
 using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 using System.Threading;
@@ -167,7 +168,7 @@ internal static unsafe partial class LibBpf
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static uint xsk_ring_cons__peek(ref xsk_ring cons, uint nb, out uint idx)
     {
-        uint entries = xsk_cons_nb_avail(ref cons, nb);
+        var entries = xsk_cons_nb_avail(ref cons, nb);
         if (entries > 0)
         {
             idx = cons.cached_cons;
@@ -206,16 +207,17 @@ internal static unsafe partial class LibBpf
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static uint xsk_ring_prod__reserve(ref xsk_ring prod, uint nb, out uint idx)
     {
-        if (xsk_prod_nb_free(ref prod, nb) < nb)
+        var entries = Math.Min(xsk_prod_nb_free(ref prod, nb), nb);
+        if (entries == 0)
         {
             Unsafe.SkipInit(out idx);
             return 0;
         }
 
         idx = prod.cached_prod;
-        prod.cached_prod += nb;
+        prod.cached_prod += entries;
 
-        return nb;
+        return entries;
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]

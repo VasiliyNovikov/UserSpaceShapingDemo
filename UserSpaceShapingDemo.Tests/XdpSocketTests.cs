@@ -6,6 +6,7 @@ using System.Net.Sockets;
 using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 using System.Text;
+using System.Threading;
 using System.Threading.Tasks;
 
 using Microsoft.VisualStudio.TestTools.UnitTesting;
@@ -13,6 +14,7 @@ using Microsoft.VisualStudio.TestTools.UnitTesting;
 using NetworkingPrimitivesCore;
 
 using UserSpaceShapingDemo.Lib;
+using UserSpaceShapingDemo.Lib.Std;
 using UserSpaceShapingDemo.Lib.Xpd;
 
 namespace UserSpaceShapingDemo.Tests;
@@ -78,7 +80,7 @@ public sealed unsafe class XdpSocketTests
 
             using var nativeCancellationToken = new NativeCancellationToken(TestContext.CancellationTokenSource.Token);
 
-            Assert.IsTrue(socket.WaitForRead(nativeCancellationToken));
+            Assert.IsTrue(socket.WaitFor(Poll.Event.Readable, nativeCancellationToken));
 
             ulong receivedAddress;
 
@@ -182,6 +184,9 @@ public sealed unsafe class XdpSocketTests
         using var setup1 = new TrafficSetup();
         using var setup2 = new TrafficSetup(sharedSenderNs: setup1.ReceiverNs);
 
+        using var forwardCancellation = new CancellationTokenSource();
+        using var linkedCancellation = CancellationTokenSource.CreateLinkedTokenSource(forwardCancellation.Token, TestContext.CancellationTokenSource.Token);
+
         var forwarderTask = Task.Factory.StartNew(() =>
         {
             using var forwardNs = setup1.EnterReceiver();
@@ -215,17 +220,58 @@ public sealed unsafe class XdpSocketTests
             Queue<ulong> addressesToFill1 = [];
             Queue<ulong> addressesToFill2 = [];
 
-            var nativeCancellationToken = new NativeCancellationToken(TestContext.CancellationTokenSource.Token);
+            using var nativeCancellationToken = new NativeCancellationToken(linkedCancellation.Token);
 
-            /*while (true)
+            while (true)
             {
-                var socket = XdpSocket.WaitFor([socket1, socket2], Poll.Event.Readable | Poll.Event.Writable , nativeCancellationToken);
-                Assert.IsNotNull(socket);
-
-            }*/
+                var events1 = Poll.Event.Readable;
+                if (packetsToSend1.Count > 0)
+                    events1 |= Poll.Event.Writable;
+                var events2 = Poll.Event.Readable;
+                if (packetsToSend2.Count > 0)
+                    events2 |= Poll.Event.Writable;
+                Assert.IsTrue(XdpSocket.WaitFor([socket1, socket2], [events1, events2], nativeCancellationToken));
+                ForwardOnce(socket1, socket2, packetsToSend2, addressesToFill1);
+                ForwardOnce(socket2, socket1, packetsToSend1, addressesToFill2);
+            }
         }, TaskCreationOptions.LongRunning);
 
-        forwarderTask.Wait();
+        Thread.Sleep(200);
+
+        forwardCancellation.Cancel();
+
+        var ex = Assert.ThrowsExactly<AggregateException>(() => forwarderTask.Wait());
+        Assert.IsInstanceOfType<OperationCanceledException>(ex.InnerException);
+    }
+
+    private static void ForwardOnce(XdpSocket sourceSocket, XdpSocket destinationSocket, Queue<XdpDescriptor> packetsToSend, Queue<ulong> addressesToFill)
+    {
+        using (var receivePackets = sourceSocket.RxRing.Receive(256))
+        {
+            for (var i = 0u; i < receivePackets.Length; ++i)
+            {
+                ref readonly var packet = ref receivePackets[i];
+                packetsToSend.Enqueue(packet);
+            }
+        }
+        using (var sendPackets = destinationSocket.TxRing.Send((uint)packetsToSend.Count))
+        {
+            for (var i = 0u; i < sendPackets.Length; ++i)
+            {
+                var descriptor = packetsToSend.Dequeue();
+                ref var packet = ref sendPackets[i];
+                packet.Address = descriptor.Address;
+                packet.Length = descriptor.Length;
+            }
+            if (destinationSocket.TxRing.NeedsWakeup)
+                destinationSocket.WakeUp();
+        }
+        using (var completed = sourceSocket.CompletionRing.Complete(256))
+            for (var i = 0u; i < completed.Length; ++i)
+                addressesToFill.Enqueue(completed[i]);
+        using (var fill = sourceSocket.FillRing.Fill((uint)addressesToFill.Count))
+            for (var i = 0u; i < fill.Length; ++i)
+                fill[i] = addressesToFill.Dequeue();
     }
 
     private enum EthernetType : ushort

@@ -61,9 +61,9 @@ public sealed unsafe class XdpSocket : NativeObject, IFileObject
         LibBpf.xsk_socket__update_xskmap(_xsk, mapDescriptor).ThrowIfError();
     }
 
-    public bool WaitForRead(NativeCancellationToken cancellationToken) => cancellationToken.Wait(this, Poll.Event.Readable);
+    public bool WaitFor(Poll.Event events, NativeCancellationToken cancellationToken) => cancellationToken.Wait(this, events);
 
-    public static XdpSocket? WaitFor(ReadOnlySpan<XdpSocket> sockets, Poll.Event events, NativeCancellationToken cancellationToken) => cancellationToken.Wait(sockets, events) as XdpSocket;
+    public static bool WaitFor(ReadOnlySpan<XdpSocket> sockets, ReadOnlySpan<Poll.Event> events, NativeCancellationToken cancellationToken) => cancellationToken.Wait(sockets, events);
 
     public void WakeUp() => LibC.sendto(Descriptor, null, 0, LibC.MSG_DONTWAIT, null, 0).ThrowIfError();
 

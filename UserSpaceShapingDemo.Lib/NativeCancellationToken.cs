@@ -32,12 +32,12 @@ public sealed class NativeCancellationToken : NativeObject
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public IFileObject? Wait(ReadOnlySpan<IFileObject> objects, Poll.Event events)
+    public bool Wait(ReadOnlySpan<IFileObject> objects, ReadOnlySpan<Poll.Event> events)
     {
         var objectCount = objects.Length;
         Span<Poll.Query> queries = stackalloc Poll.Query[objectCount + 1];
         for (var i = 0; i < objectCount; ++i)
-            queries[i] = new(objects[i].Descriptor, events);
+            queries[i] = new(objects[i].Descriptor, events[i]);
         if (_event is null)
             queries = queries[..objectCount];
         else
@@ -45,17 +45,14 @@ public sealed class NativeCancellationToken : NativeObject
 
         if (Poll.Wait(queries, -1))
         {
-            for (var i = 0; i < objectCount; ++i)
-                if (queries[i].ReturnedEvents != default)
-                    return objects[i];
-
             if (_event is not null && (queries[objectCount].ReturnedEvents & NativePollEvent) == NativePollEvent)
                 _cancellationToken.ThrowIfCancellationRequested();
+            return true;
         }
 
-        return null;
+        return false;
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public bool Wait(IFileObject @object, Poll.Event events) => Wait([@object], events) is not null;
+    public bool Wait(IFileObject @object, Poll.Event events) => Wait([@object], [events]);
 }
