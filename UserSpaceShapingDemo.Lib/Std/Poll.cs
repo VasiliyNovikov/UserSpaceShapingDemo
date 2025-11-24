@@ -10,31 +10,31 @@ namespace UserSpaceShapingDemo.Lib.Std;
 public static unsafe class Poll
 {
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public static uint Wait(Span<Query> queries, int timeoutMilliseconds)
+    public static bool Wait(Span<Query> queries, int timeoutMilliseconds)
     {
         fixed (Query* queriesPtr = queries)
         {
             var result = LibC.poll((LibC.pollfd*)queriesPtr, (uint)queries.Length, timeoutMilliseconds);
             if (!result.IsError())
-                return (uint)result;
+                return result > 0;
 
             var error = NativeErrorNumber.Last;
             return error == NativeErrorNumber.InterruptedSystemCall
-                ? 0u
+                ? false
                 : throw new NativeException(error);
         }
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public static uint Wait(Span<Query> queries, TimeSpan timeout) => Wait(queries, (int)timeout.TotalMilliseconds);
+    public static bool Wait(Span<Query> queries, TimeSpan timeout) => Wait(queries, (int)timeout.TotalMilliseconds);
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static Event? Wait(FileDescriptor descriptor, Event @event, int timeoutMilliseconds)
     {
         Span<Query> queries = [new(descriptor, @event)];
-        return Wait(queries, timeoutMilliseconds) == 0
-            ? null
-            : queries[0].ReturnedEvents;
+        return Wait(queries, timeoutMilliseconds)
+            ? queries[0].ReturnedEvents
+            : null;
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -59,10 +59,10 @@ public static unsafe class Poll
     {
         None = 0,
         Readable = LibC.POLLIN,
-        Urgent = LibC.POLLPRI,
+        Urgent   = LibC.POLLPRI,
         Writable = LibC.POLLOUT,
-        Error = LibC.POLLERR,
-        HangUp = LibC.POLLHUP,
-        Invalid = LibC.POLLNVAL
+        Error    = LibC.POLLERR,
+        HangUp   = LibC.POLLHUP,
+        Invalid  = LibC.POLLNVAL
     }
 }

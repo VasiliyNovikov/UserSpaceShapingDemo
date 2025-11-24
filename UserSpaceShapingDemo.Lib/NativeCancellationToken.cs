@@ -8,6 +8,7 @@ namespace UserSpaceShapingDemo.Lib;
 
 public sealed class NativeCancellationToken : NativeObject
 {
+    private const Poll.Event NativePollEvent = Poll.Event.Readable;
     public static NativeCancellationToken None => new(CancellationToken.None);
 
     private readonly CancellationToken _cancellationToken;
@@ -31,22 +32,30 @@ public sealed class NativeCancellationToken : NativeObject
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public void Wait(FileDescriptor descriptor, Poll.Event events)
+    public IFileObject? Wait(ReadOnlySpan<IFileObject> objects, Poll.Event events)
     {
+        var objectCount = objects.Length;
+        Span<Poll.Query> queries = stackalloc Poll.Query[objectCount + 1];
+        for (var i = 0; i < objectCount; ++i)
+            queries[i] = new(objects[i].Descriptor, events);
         if (_event is null)
-            Poll.Wait(descriptor, events, -1);
+            queries = queries[..objectCount];
         else
+            queries[objectCount] = new(_event.Descriptor, NativePollEvent);
+
+        if (Poll.Wait(queries, -1))
         {
-            Span<Poll.Query> queries = [new(_event.Descriptor, Poll.Event.Readable), new(descriptor, events)];
-            Poll.Wait(queries, -1);
-            if ((queries[0].ReturnedEvents & Poll.Event.Readable) == Poll.Event.Readable)
+            for (var i = 0; i < objectCount; ++i)
+                if (queries[i].ReturnedEvents != default)
+                    return objects[i];
+
+            if (_event is not null && (queries[objectCount].ReturnedEvents & NativePollEvent) == NativePollEvent)
                 _cancellationToken.ThrowIfCancellationRequested();
         }
+
+        return null;
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public void WaitRead(FileDescriptor descriptor) => Wait(descriptor, Poll.Event.Readable);
-
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public void WaitWrite(FileDescriptor descriptor) => Wait(descriptor, Poll.Event.Writable);
+    public bool Wait(IFileObject @object, Poll.Event events) => Wait([@object], events) is not null;
 }

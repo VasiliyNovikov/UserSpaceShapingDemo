@@ -1,10 +1,12 @@
 #pragma warning disable IDE0063
 using System;
+using System.Collections.Generic;
 using System.Net;
 using System.Net.Sockets;
 using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 using System.Text;
+using System.Threading.Tasks;
 
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 
@@ -76,7 +78,7 @@ public sealed unsafe class XdpSocketTests
 
             using var nativeCancellationToken = new NativeCancellationToken(TestContext.CancellationTokenSource.Token);
 
-            socket.WaitForRead(nativeCancellationToken);
+            Assert.IsTrue(socket.WaitForRead(nativeCancellationToken));
 
             ulong receivedAddress;
 
@@ -179,8 +181,11 @@ public sealed unsafe class XdpSocketTests
 
         using var setup1 = new TrafficSetup();
         using var setup2 = new TrafficSetup(sharedSenderNs: setup1.ReceiverNs);
-        using (var forwarder = setup1.EnterReceiver())
+
+        var forwarderTask = Task.Factory.StartNew(() =>
         {
+            using var forwardNs = setup1.EnterReceiver();
+
             using var umem = new UMemory(8192);
             Span<ulong> addresses = stackalloc ulong[(int)umem.FrameCount];
             umem.GetAddresses(addresses);
@@ -204,7 +209,23 @@ public sealed unsafe class XdpSocketTests
                 for (var i = 0u; i < fill.Length; ++i)
                     fill[i] = addresses2[(int)i];
             }
-        }
+
+            Queue<XdpDescriptor> packetsToSend1 = [];
+            Queue<XdpDescriptor> packetsToSend2 = [];
+            Queue<ulong> addressesToFill1 = [];
+            Queue<ulong> addressesToFill2 = [];
+
+            var nativeCancellationToken = new NativeCancellationToken(TestContext.CancellationTokenSource.Token);
+
+            /*while (true)
+            {
+                var socket = XdpSocket.WaitFor([socket1, socket2], Poll.Event.Readable | Poll.Event.Writable , nativeCancellationToken);
+                Assert.IsNotNull(socket);
+
+            }*/
+        }, TaskCreationOptions.LongRunning);
+
+        forwarderTask.Wait();
     }
 
     private enum EthernetType : ushort
