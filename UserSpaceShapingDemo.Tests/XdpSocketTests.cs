@@ -270,9 +270,9 @@ public sealed class XdpSocketTests
                 packet.Address = descriptor.Address;
                 packet.Length = descriptor.Length;
             }
-            if (destinationSocket.TxRing.NeedsWakeup)
-                destinationSocket.WakeUp();
         }
+        if (destinationSocket.TxRing.NeedsWakeup)
+            destinationSocket.WakeUp();
         using (var completed = sourceSocket.CompletionRing.Complete(256))
             for (var i = 0u; i < completed.Length; ++i)
                 addressesToFill.Enqueue(completed[i]);
