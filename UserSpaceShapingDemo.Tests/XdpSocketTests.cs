@@ -187,6 +187,8 @@ public sealed class XdpSocketTests
         using var forwardCancellation = new CancellationTokenSource();
         using var linkedCancellation = CancellationTokenSource.CreateLinkedTokenSource(forwardCancellation.Token, TestContext.CancellationTokenSource.Token);
 
+        bool forwardedAny = false;
+
         var forwarderTask = Task.Factory.StartNew(() =>
         {
             using var forwardNs = setup1.EnterReceiver();
@@ -233,6 +235,7 @@ public sealed class XdpSocketTests
                 Assert.IsTrue(XdpSocket.WaitFor([socket1, socket2], [events1, events2], nativeCancellationToken));
                 ForwardOnce(socket1, socket2, packetsToSend2, addressesToFill1);
                 ForwardOnce(socket2, socket1, packetsToSend1, addressesToFill2);
+                forwardedAny = true;
             }
         }, TaskCreationOptions.LongRunning);
 
@@ -240,6 +243,10 @@ public sealed class XdpSocketTests
         using var receiver = setup2.CreateReceiverSocket(SocketType.Dgram, ProtocolType.Udp, receiverPort);
 
         await sender.SendToAsync(messageBytes, new IPEndPoint(TrafficSetup.ReceiverAddress, receiverPort), TestContext.CancellationTokenSource.Token);
+
+        await Task.Delay(200, TestContext.CancellationTokenSource.Token);
+
+        Assert.IsTrue(forwardedAny, "No packets were forwarded");
 
         var receivedMessageBytes = new byte[message.Length];
         await receiver.ReceiveFromAsync(receivedMessageBytes, new IPEndPoint(IPAddress.Any, 0), TestContext.CancellationTokenSource.Token);
