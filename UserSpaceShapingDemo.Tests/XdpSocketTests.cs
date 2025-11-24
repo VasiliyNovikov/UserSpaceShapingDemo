@@ -20,7 +20,7 @@ using UserSpaceShapingDemo.Lib.Xpd;
 namespace UserSpaceShapingDemo.Tests;
 
 [TestClass]
-public sealed unsafe class XdpSocketTests
+public sealed class XdpSocketTests
 {
     public TestContext TestContext { get; set; } = null!;
 
@@ -38,7 +38,7 @@ public sealed unsafe class XdpSocketTests
 
     [TestMethod]
     [Timeout(10000, CooperativeCancellation = true)]
-    public void XdpSocket_Receive_Send()
+    public unsafe void XdpSocket_Receive_Send()
     {
         const string message = "Hello from XDP client!!!";
         const string replyMessage = "Hello from XDP server!!!";
@@ -172,14 +172,14 @@ public sealed unsafe class XdpSocketTests
 
     [TestMethod]
     [Timeout(10000, CooperativeCancellation = true)]
-    public void XdpSocket_Forward()
+    public async Task XdpSocket_Forward()
     {
-        //const string message = "Hello from XDP client!!!";
-        //const string replyMessage = "Hello from XDP server!!!";
-        //var messageBytes = Encoding.ASCII.GetBytes(message);
-        //var replyMessageBytes = Encoding.ASCII.GetBytes(replyMessage);
-        //const int senderPort = 54321;
-        //const int receiverPort = 12345;
+        const string message = "Hello from XDP client!!!";
+        const string replyMessage = "Hello from XDP server!!!";
+        var messageBytes = Encoding.ASCII.GetBytes(message);
+        var replyMessageBytes = Encoding.ASCII.GetBytes(replyMessage);
+        const int senderPort = 54321;
+        const int receiverPort = 12345;
 
         using var setup1 = new TrafficSetup();
         using var setup2 = new TrafficSetup(sharedSenderNs: setup1.ReceiverNs);
@@ -236,12 +236,19 @@ public sealed unsafe class XdpSocketTests
             }
         }, TaskCreationOptions.LongRunning);
 
-        Thread.Sleep(200);
+        using var sender = setup1.CreateSenderSocket(SocketType.Dgram, ProtocolType.Udp, senderPort);
+        using var receiver = setup2.CreateReceiverSocket(SocketType.Dgram, ProtocolType.Udp, receiverPort);
 
-        forwardCancellation.Cancel();
+        await sender.SendToAsync(messageBytes, new IPEndPoint(TrafficSetup.ReceiverAddress, receiverPort), TestContext.CancellationTokenSource.Token);
 
-        var ex = Assert.ThrowsExactly<AggregateException>(() => forwarderTask.Wait());
-        Assert.IsInstanceOfType<OperationCanceledException>(ex.InnerException);
+        var receivedMessageBytes = new byte[message.Length];
+        await receiver.ReceiveFromAsync(receivedMessageBytes, new IPEndPoint(IPAddress.Any, 0), TestContext.CancellationTokenSource.Token);
+        var receivedMessage = Encoding.ASCII.GetString(receivedMessageBytes);
+        Assert.AreEqual(message, receivedMessage);
+
+        await forwardCancellation.CancelAsync();
+
+        await Assert.ThrowsExactlyAsync<OperationCanceledException>(() => forwarderTask);
     }
 
     private static void ForwardOnce(XdpSocket sourceSocket, XdpSocket destinationSocket, Queue<XdpDescriptor> packetsToSend, Queue<ulong> addressesToFill)
