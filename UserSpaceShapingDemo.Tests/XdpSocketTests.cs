@@ -273,7 +273,7 @@ public sealed class XdpSocketTests
         }
         if (destinationSocket.TxRing.NeedsWakeup)
             destinationSocket.WakeUp();
-        using (var completed = sourceSocket.CompletionRing.Complete(256))
+        using (var completed = destinationSocket.CompletionRing.Complete(256))
             for (var i = 0u; i < completed.Length; ++i)
                 addressesToFill.Enqueue(completed[i]);
         using (var fill = sourceSocket.FillRing.Fill((uint)addressesToFill.Count))
