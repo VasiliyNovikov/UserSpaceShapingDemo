@@ -221,8 +221,6 @@ public sealed unsafe class XdpSocketTests
             var sum32 = 0u;
             foreach (var item in buffer)
                 sum32 += (ushort)item;
-            while ((sum32 >> 16) != 0)
-                sum32 = (sum32 & 0xFFFF) + (sum32 >> 16);
             sum32 = (sum32 & 0xFFFF) + (sum32 >> 16);
             sum32 += sum32 >> 16;
             Checksum = (NetInt<ushort>)(ushort)~sum32;
