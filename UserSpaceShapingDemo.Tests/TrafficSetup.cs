@@ -26,24 +26,42 @@ public sealed class TrafficSetup : IDisposable
     public static readonly IPAddress ReceiverAddress = IPAddress.Parse("10.11.22.2");
 
     private readonly int _id;
+    private readonly bool _isSharedSenderNs;
 
+    public string SenderNs { get; }
     public string SenderName { get; }
+    public string ReceiverNs { get; }
     public string ReceiverName { get; }
 
-    public TrafficSetup()
+    public TrafficSetup(string? sharedSenderNs = null)
     {
         if (!InstanceIds.TryDequeue(out _id))
             throw new InvalidOperationException("Too many instances of TestTrafficSetup");
+
         SenderName = $"{SenderNetNsNamePrefix}{_id:X}";
         ReceiverName = $"{ReceiverNetNsNamePrefix}{_id:X}";
-        if (NetNs.Exists(SenderName))
-            NetNs.Delete(SenderName);
-        NetNs.Add(SenderName);
-        if (NetNs.Exists(ReceiverName))
-            NetNs.Delete(ReceiverName);
-        NetNs.Add(ReceiverName);
+        if (sharedSenderNs is null)
         {
-            using var senderNs = NetNs.Open(SenderName);
+            _isSharedSenderNs = false;
+            SenderNs = SenderName;
+            if (NetNs.Exists(SenderNs))
+                NetNs.Delete(SenderNs);
+            NetNs.Add(SenderNs);
+        }
+        else
+        {
+            _isSharedSenderNs = true;
+            SenderNs = sharedSenderNs;
+            if (!NetNs.Exists(SenderNs))
+                throw new InvalidOperationException($"Shared sender namespace '{sharedSenderNs}' does not exist");
+        }
+
+        ReceiverNs = ReceiverName;
+        if (NetNs.Exists(ReceiverNs))
+            NetNs.Delete(ReceiverNs);
+        NetNs.Add(ReceiverNs);
+        {
+            using var senderNs = NetNs.Open(SenderNs);
             using var receiverNs = NetNs.Open(ReceiverName);
             using var vethPair = RtnlVEthPair.Allocate();
             foreach (var (name, link, ns) in new[] { (SenderName, vethPair.Link, senderNs),
@@ -56,9 +74,9 @@ public sealed class TrafficSetup : IDisposable
             using var socket = new RtnlSocket();
             socket.AddLink(vethPair.Link);
         }
-        foreach (var (name, address, macAddress) in new[] { (SenderName, SenderAddress, SenderMacAddress),
-                                                            (ReceiverName, ReceiverAddress, ReceiverMacAddress) })
-            using (NetNs.Enter(name))
+        foreach (var (ns, name, address, macAddress) in new[] { (SenderNs, SenderName, SenderAddress, SenderMacAddress),
+                                                                (ReceiverNs, ReceiverName, ReceiverAddress, ReceiverMacAddress) })
+            using (NetNs.Enter(ns))
             {
                 using var socket = new RtnlSocket();
 
@@ -86,7 +104,7 @@ public sealed class TrafficSetup : IDisposable
     {
         try
         {
-            using (NetNs.Enter(SenderName))
+            using (NetNs.Enter(SenderNs))
             {
                 using var socket = new RtnlSocket();
                 using var link = RtnlLink.Allocate();
@@ -96,8 +114,9 @@ public sealed class TrafficSetup : IDisposable
         }
         finally
         {
-            NetNs.Delete(SenderName);
-            NetNs.Delete(ReceiverName);
+            if (!_isSharedSenderNs)
+                NetNs.Delete(SenderNs);
+            NetNs.Delete(ReceiverNs);
         }
         InstanceIds.Enqueue(_id);
     }
@@ -108,17 +127,17 @@ public sealed class TrafficSetup : IDisposable
         GC.SuppressFinalize(this);
     }
 
-    public NetNs.Scope EnterSender() => NetNs.Enter(SenderName);
-    public NetNs.Scope EnterReceiver() => NetNs.Enter(ReceiverName);
+    public NetNs.Scope EnterSender() => NetNs.Enter(SenderNs);
+    public NetNs.Scope EnterReceiver() => NetNs.Enter(ReceiverNs);
 
     public Socket CreateSenderSocket(SocketType socketType, ProtocolType protocolType, int port = 0)
     {
-        return CreateSocket(SenderName, socketType, protocolType, SenderAddress, port);
+        return CreateSocket(SenderNs, socketType, protocolType, SenderAddress, port);
     }
 
     public Socket CreateReceiverSocket(SocketType socketType, ProtocolType protocolType, int port)
     {
-        return CreateSocket(ReceiverName, socketType, protocolType, ReceiverAddress, port);
+        return CreateSocket(ReceiverNs, socketType, protocolType, ReceiverAddress, port);
     }
 
     private static Socket CreateSocket(string name, SocketType socketType, ProtocolType protocolType, IPAddress address, int port)

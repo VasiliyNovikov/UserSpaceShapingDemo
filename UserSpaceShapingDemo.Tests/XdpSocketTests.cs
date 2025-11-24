@@ -166,6 +166,47 @@ public sealed unsafe class XdpSocketTests
         }
     }
 
+    [TestMethod]
+    [Timeout(10000, CooperativeCancellation = true)]
+    public void XdpSocket_Forward()
+    {
+        //const string message = "Hello from XDP client!!!";
+        //const string replyMessage = "Hello from XDP server!!!";
+        //var messageBytes = Encoding.ASCII.GetBytes(message);
+        //var replyMessageBytes = Encoding.ASCII.GetBytes(replyMessage);
+        //const int senderPort = 54321;
+        //const int receiverPort = 12345;
+
+        using var setup1 = new TrafficSetup();
+        using var setup2 = new TrafficSetup(sharedSenderNs: setup1.ReceiverNs);
+        using (var forwarder = setup1.EnterReceiver())
+        {
+            using var umem = new UMemory(8192);
+            Span<ulong> addresses = stackalloc ulong[(int)umem.FrameCount];
+            umem.GetAddresses(addresses);
+
+            var addresses1 = addresses[..(int)(umem.FrameCount / 2)];
+            var addresses2 = addresses[(int)(umem.FrameCount / 2)..];
+
+            using var socket1 = new XdpSocket(umem, setup1.ReceiverName);
+            using var socket2 = new XdpSocket(umem, setup2.SenderName, shared: true);
+
+            using (var fill = socket1.FillRing.Fill(umem.FillRingSize))
+            {
+                Assert.AreEqual(umem.FillRingSize, fill.Length);
+                for (var i = 0u; i < fill.Length; ++i)
+                    fill[i] = addresses1[(int)i];
+            }
+
+            using (var fill = socket2.FillRing.Fill(umem.FillRingSize))
+            {
+                Assert.AreEqual(umem.FillRingSize, fill.Length);
+                for (var i = 0u; i < fill.Length; ++i)
+                    fill[i] = addresses2[(int)i];
+            }
+        }
+    }
+
     private enum EthernetType : ushort
     {
         IPv4 = 0x0800,
