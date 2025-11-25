@@ -180,11 +180,13 @@ public sealed class XdpSocketTests
         const int clientPort = 54321;
         const int serverPort = 12345;
 
+        var cancellationToken = TestContext.CancellationTokenSource.Token;
+
         using var setup1 = new TrafficSetup();
         using var setup2 = new TrafficSetup(sharedSenderNs: setup1.ReceiverNs);
 
         using var forwardCancellation = new CancellationTokenSource();
-        using var linkedCancellation = CancellationTokenSource.CreateLinkedTokenSource(forwardCancellation.Token, TestContext.CancellationTokenSource.Token);
+        using var linkedCancellation = CancellationTokenSource.CreateLinkedTokenSource(forwardCancellation.Token, cancellationToken);
 
         var forwarderTask = Task.Factory.StartNew(() =>
         {
@@ -243,23 +245,23 @@ public sealed class XdpSocketTests
         using var client = setup1.CreateSenderSocket(SocketType.Dgram, ProtocolType.Udp, clientPort);
         using var server = setup2.CreateReceiverSocket(SocketType.Dgram, ProtocolType.Udp, serverPort);
 
-        await client.SendToAsync(clientMessageBytes, new IPEndPoint(TrafficSetup.ReceiverAddress, serverPort), TestContext.CancellationTokenSource.Token);
+        await client.SendToAsync(clientMessageBytes, new IPEndPoint(TrafficSetup.ReceiverAddress, serverPort), cancellationToken);
 
         if (forwarderTask.IsCompleted)
             await forwarderTask;
 
         var receivedClientMessageBytes = new byte[clientMessage.Length];
-        await server.ReceiveFromAsync(receivedClientMessageBytes, new IPEndPoint(IPAddress.Any, 0), TestContext.CancellationTokenSource.Token);
+        await server.ReceiveFromAsync(receivedClientMessageBytes, new IPEndPoint(IPAddress.Any, 0), cancellationToken);
         var receivedClientMessage = Encoding.ASCII.GetString(receivedClientMessageBytes);
         Assert.AreEqual(clientMessage, receivedClientMessage);
 
-        await server.SendToAsync(serverMessageBytes, new IPEndPoint(TrafficSetup.SenderAddress, clientPort), TestContext.CancellationTokenSource.Token);
+        await server.SendToAsync(serverMessageBytes, new IPEndPoint(TrafficSetup.SenderAddress, clientPort), cancellationToken);
 
         if (forwarderTask.IsCompleted)
             await forwarderTask;
 
         var receivedServerMessageBytes = new byte[serverMessage.Length];
-        await client.ReceiveFromAsync(receivedServerMessageBytes, new IPEndPoint(IPAddress.Any, 0), TestContext.CancellationTokenSource.Token);
+        await client.ReceiveFromAsync(receivedServerMessageBytes, new IPEndPoint(IPAddress.Any, 0), cancellationToken);
         var receivedServerMessage = Encoding.ASCII.GetString(receivedServerMessageBytes);
         Assert.AreEqual(serverMessage, receivedServerMessage);
 
