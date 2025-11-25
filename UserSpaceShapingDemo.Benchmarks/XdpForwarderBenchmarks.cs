@@ -83,9 +83,26 @@ public class XdpForwarderBenchmarks : IDisposable
     [BenchmarkCategory("Send")]
     public void Send_Forwarded() => Send(_forwardSender, _forwardReceiver);
 
+    [Benchmark(Baseline = true)]
+    [BenchmarkCategory("SendBatch")]
+    public void SendBatch_Direct() => SendBatch(_directSender, _directReceiver);
+
+    [Benchmark]
+    [BenchmarkCategory("SendBatch")]
+    public void SendBatch_Forwarded() => SendBatch(_forwardSender, _forwardReceiver);
+
     private void Send(Socket sender, Socket receiver)
     {
         sender.SendTo(_packet, _receiverEndPoint);
         receiver.ReceiveFrom(_packetBuffer, ref _endPointBuffer);
+    }
+
+    private void SendBatch(Socket sender, Socket receiver)
+    {
+        const int batchSize = 16;
+        for (var i = 0; i < batchSize; ++i)
+            sender.SendTo(_packet, _receiverEndPoint);
+        for (var i = 0; i < batchSize; ++i)
+            receiver.ReceiveFrom(_packetBuffer, ref _endPointBuffer);
     }
 }
