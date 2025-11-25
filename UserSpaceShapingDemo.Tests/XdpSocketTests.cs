@@ -283,15 +283,14 @@ public sealed class XdpSocketTests
                 ref var packet = ref sendPackets[i];
                 packet.Address = descriptor.Address;
                 packet.Length = descriptor.Length;
-                TestContext.WriteLine($"{DateTime.UtcNow:O}: Forwarding packet ({PacketToString(sourceSocket.Umem[packet])}) to socket {destinationSocket.IfName}");
+                var packetData = sourceSocket.Umem[descriptor];
+                UpdateChecksums(packetData);
+                TestContext.WriteLine($"{DateTime.UtcNow:O}: Forwarding packet ({PacketToString(packetData)}) to socket {destinationSocket.IfName}");
             }
         }
 
         if (destinationSocket.TxRing.NeedsWakeup)
-        {
-            ++activityCounter;
             destinationSocket.WakeUp();
-        }
 
         using (var completed = destinationSocket.CompletionRing.Complete())
             for (var i = 0u; i < completed.Length; ++i)
@@ -310,7 +309,21 @@ public sealed class XdpSocketTests
             }
         return activityCounter > 0;
     }
-    
+
+    private static unsafe void UpdateChecksums(Span<byte> packetData)
+    {
+        ref var ethernetHeader = ref Unsafe.As<byte, EthernetHeader>(ref packetData[0]);
+        if (ethernetHeader.EtherType == EthernetType.IPv4)
+        {
+            ref var ipv4Header = ref Unsafe.As<byte, IPv4Header>(ref packetData[sizeof(EthernetHeader)]);
+            if (ipv4Header.Protocol == IPProtocol.UDP)
+            {
+                ref var udpHeader = ref Unsafe.As<byte, UDPHeader>(ref packetData[sizeof(EthernetHeader) + sizeof(IPv4Header)]);
+                udpHeader.Checksum = default;
+            }
+        }
+    }
+
     private static unsafe string PacketToString(Span<byte> packetData)
     {
         var sb = new StringBuilder();
