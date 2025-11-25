@@ -12,6 +12,7 @@ public sealed unsafe class XdpSocket : NativeObject, IFileObject
     private FileDescriptor? _descriptor;
 
     public UMemory Umem { get; }
+    public string IfName { get; }
 
     public FillRingBuffer FillRing { get; }
     public CompletionRingBuffer CompletionRing { get; }
@@ -34,6 +35,7 @@ public sealed unsafe class XdpSocket : NativeObject, IFileObject
                      bool shared = false)
     {
         Umem = umem;
+        IfName = ifName;
         var ifIndex = InterfaceNameHelper.GetIndex(ifName);
         var config = new LibBpf.xsk_socket_config
         {

@@ -1,6 +1,7 @@
 #pragma warning disable IDE0063
 using System;
 using System.Collections.Generic;
+using System.Globalization;
 using System.Net;
 using System.Net.Sockets;
 using System.Runtime.CompilerServices;
@@ -37,7 +38,7 @@ public sealed class XdpSocketTests
     }
 
     [TestMethod]
-    [Timeout(10000, CooperativeCancellation = true)]
+    [Timeout(5000, CooperativeCancellation = true)]
     public unsafe void XdpSocket_Receive_Send()
     {
         const string message = "Hello from XDP client!!!";
@@ -170,8 +171,8 @@ public sealed class XdpSocketTests
         }
     }
 
-    //[TestMethod]
-    [Timeout(10000, CooperativeCancellation = true)]
+    [TestMethod]
+    [Timeout(5000, CooperativeCancellation = true)]
     public async Task XdpSocket_Forward()
     {
         const string message = "Hello from XDP client!!!";
@@ -187,8 +188,6 @@ public sealed class XdpSocketTests
         using var forwardCancellation = new CancellationTokenSource();
         using var linkedCancellation = CancellationTokenSource.CreateLinkedTokenSource(forwardCancellation.Token, TestContext.CancellationTokenSource.Token);
 
-        bool forwardedAny = false;
-
         var forwarderTask = Task.Factory.StartNew(() =>
         {
             using var forwardNs = setup1.EnterReceiver();
@@ -199,18 +198,31 @@ public sealed class XdpSocketTests
 
             using var socket1 = new XdpSocket(umem, setup1.ReceiverName);
             using var socket2 = new XdpSocket(umem, setup2.SenderName, shared: true);
+            
+            var addresses1 = addresses[..(int)(umem.FrameCount / 2)];
+            using (var fill = socket1.FillRing.Fill((uint)addresses1.Length))
+            {
+                Assert.AreEqual(umem.FillRingSize, fill.Length);
+                for (var i = 0u; i < fill.Length; ++i)
+                    fill[i] = addresses1[(int)i];
+            }
+
+            var addresses2 = addresses[(int)(umem.FrameCount / 2)..];
+            using (var fill = socket2.FillRing.Fill((uint)addresses2.Length))
+            {
+                Assert.AreEqual(umem.FillRingSize, fill.Length);
+                for (var i = 0u; i < fill.Length; ++i)
+                    fill[i] = addresses2[(int)i];
+            }
 
             Queue<XdpDescriptor> packetsToSend1 = [];
             Queue<XdpDescriptor> packetsToSend2 = [];
             Queue<ulong> addressesToFill1 = [];
             Queue<ulong> addressesToFill2 = [];
 
-            foreach (var address in addresses[..(int)(umem.FrameCount / 2)])
-                addressesToFill1.Enqueue(address);
-            foreach (var address in addresses[(int)(umem.FrameCount / 2)..])
-                addressesToFill2.Enqueue(address);
-
             using var nativeCancellationToken = new NativeCancellationToken(linkedCancellation.Token);
+            
+            TestContext.WriteLine($"{DateTime.UtcNow:O}: Starting forwarding loop");
 
             while (true)
             {
@@ -224,18 +236,19 @@ public sealed class XdpSocketTests
                 if (packetsToSend2.Count > 0)
                     events2 |= Poll.Event.Writable;
                 Assert.IsTrue(XdpSocket.WaitFor([socket1, socket2], [events1, events2], nativeCancellationToken));
-                forwardedAny = true;
             }
         }, TaskCreationOptions.LongRunning);
+
+        if (forwarderTask.IsCompleted)
+            await forwarderTask;
 
         using var sender = setup1.CreateSenderSocket(SocketType.Dgram, ProtocolType.Udp, senderPort);
         using var receiver = setup2.CreateReceiverSocket(SocketType.Dgram, ProtocolType.Udp, receiverPort);
 
         await sender.SendToAsync(messageBytes, new IPEndPoint(TrafficSetup.ReceiverAddress, receiverPort), TestContext.CancellationTokenSource.Token);
-
-        await Task.Delay(200, TestContext.CancellationTokenSource.Token);
-
-        Assert.IsTrue(forwardedAny, "No packets were forwarded");
+        
+        if (forwarderTask.IsCompleted)
+            await forwarderTask;
 
         var receivedMessageBytes = new byte[message.Length];
         await receiver.ReceiveFromAsync(receivedMessageBytes, new IPEndPoint(IPAddress.Any, 0), TestContext.CancellationTokenSource.Token);
@@ -247,16 +260,17 @@ public sealed class XdpSocketTests
         await Assert.ThrowsExactlyAsync<OperationCanceledException>(() => forwarderTask);
     }
 
-    private static bool ForwardOnce(XdpSocket sourceSocket, XdpSocket destinationSocket, Queue<XdpDescriptor> packetsToSend, Queue<ulong> addressesToFill)
+    private bool ForwardOnce(XdpSocket sourceSocket, XdpSocket destinationSocket, Queue<XdpDescriptor> packetsToSend, Queue<ulong> addressesToFill)
     {
         ulong activityCounter = 0;
-        using (var receivePackets = sourceSocket.RxRing.Receive(256))
+        using (var receivePackets = sourceSocket.RxRing.Receive())
         {
             for (var i = 0u; i < receivePackets.Length; ++i)
             {
                 ++activityCounter;
                 ref readonly var packet = ref receivePackets[i];
                 packetsToSend.Enqueue(packet);
+                TestContext.WriteLine($"{DateTime.UtcNow:O}: Received packet ({PacketToString(sourceSocket.Umem[packet])}) from socket {sourceSocket.IfName}");
             }
         }
 
@@ -269,6 +283,7 @@ public sealed class XdpSocketTests
                 ref var packet = ref sendPackets[i];
                 packet.Address = descriptor.Address;
                 packet.Length = descriptor.Length;
+                TestContext.WriteLine($"{DateTime.UtcNow:O}: Forwarding packet ({PacketToString(sourceSocket.Umem[packet])}) to socket {destinationSocket.IfName}");
             }
         }
 
@@ -278,11 +293,12 @@ public sealed class XdpSocketTests
             destinationSocket.WakeUp();
         }
 
-        using (var completed = destinationSocket.CompletionRing.Complete(256))
+        using (var completed = destinationSocket.CompletionRing.Complete())
             for (var i = 0u; i < completed.Length; ++i)
             {
                 ++activityCounter;
                 addressesToFill.Enqueue(completed[i]);
+                TestContext.WriteLine($"{DateTime.UtcNow:O}: Completed frame on socket {destinationSocket.IfName}");
             }
 
         using (var fill = sourceSocket.FillRing.Fill((uint)addressesToFill.Count))
@@ -290,14 +306,34 @@ public sealed class XdpSocketTests
             {
                 ++activityCounter;
                 fill[i] = addressesToFill.Dequeue();
+                TestContext.WriteLine($"{DateTime.UtcNow:O}: Refilled frame on socket {sourceSocket.IfName}");
             }
         return activityCounter > 0;
+    }
+    
+    private static unsafe string PacketToString(Span<byte> packetData)
+    {
+        var sb = new StringBuilder();
+        sb.Append(CultureInfo.InvariantCulture, $"len: {packetData.Length}");
+        ref var ethernetHeader = ref Unsafe.As<byte, EthernetHeader>(ref packetData[0]);
+        sb.Append(CultureInfo.InvariantCulture, $", type={ethernetHeader.EtherType}, src_mac={ethernetHeader.SourceAddress}, dst_mac={ethernetHeader.DestinationAddress}");
+        if (ethernetHeader.EtherType == EthernetType.IPv4)
+        {
+            ref var ipv4Header = ref Unsafe.As<byte, IPv4Header>(ref packetData[sizeof(EthernetHeader)]);
+            sb.Append(CultureInfo.InvariantCulture, $", src_ip={ipv4Header.SourceAddress}, dst_ip={ipv4Header.DestinationAddress}, proto={ipv4Header.Protocol}");
+            if (ipv4Header.Protocol == IPProtocol.UDP)
+            {
+                ref var udpHeader = ref Unsafe.As<byte, UDPHeader>(ref packetData[sizeof(EthernetHeader) + sizeof(IPv4Header)]);
+                sb.Append(CultureInfo.InvariantCulture, $", src_port={udpHeader.SourcePort}, dst_port={udpHeader.DestinationPort}");
+            }
+        }
+        return sb.ToString();
     }
 
     private enum EthernetType : ushort
     {
         IPv4 = 0x0800,
-        Arp = 0x0806,
+        ARP = 0x0806,
         IPv6 = 0x86DD,
     }
 
