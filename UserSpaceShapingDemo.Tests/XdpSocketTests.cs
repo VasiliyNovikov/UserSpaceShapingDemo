@@ -5,16 +5,14 @@ using System.Globalization;
 using System.Net;
 using System.Net.Sockets;
 using System.Runtime.CompilerServices;
-using System.Runtime.InteropServices;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 
-using NetworkingPrimitivesCore;
-
 using UserSpaceShapingDemo.Lib;
+using UserSpaceShapingDemo.Lib.Headers;
 using UserSpaceShapingDemo.Lib.Std;
 using UserSpaceShapingDemo.Lib.Xpd;
 
@@ -348,154 +346,5 @@ public sealed class XdpSocketTests
             }
         }
         return sb.ToString();
-    }
-
-    private enum EthernetType : ushort
-    {
-        IPv4 = 0x0800,
-        ARP = 0x0806,
-        IPv6 = 0x86DD,
-    }
-
-    [StructLayout(LayoutKind.Sequential, Pack = 1)]
-    private struct EthernetHeader
-    {
-        public MACAddress DestinationAddress;
-        public MACAddress SourceAddress;
-        private NetInt<ushort> _etherType;
-
-        public EthernetType EtherType
-        {
-            readonly get => (EthernetType)(ushort)_etherType;
-            set => _etherType = (NetInt<ushort>)(ushort)value;
-        }
-
-        public ref T Layer2Header<T>() where T : unmanaged => ref Unsafe.As<EthernetHeader, T>(ref Unsafe.Add(ref Unsafe.AsRef(ref this), 1));
-    }
-
-    private enum ARPHardwareType : ushort
-    {
-        Ethernet = 1
-    }
-
-    private enum ARPOperation : ushort
-    {
-        Request = 1,
-        Reply = 2
-    }
-
-    [StructLayout(LayoutKind.Sequential, Pack = 1)]
-    private struct ARPHeader
-    {
-        private NetInt<ushort> _hardwareType;
-        private NetInt<ushort> _protocolType;
-        public byte HardwareAddressLength;
-        public byte ProtocolAddressLength;
-        private NetInt<ushort> _operation;
-        public MACAddress SenderHardwareAddress;
-        public IPv4Address SenderProtocolAddress;
-        public MACAddress TargetHardwareAddress;
-        public IPv4Address TargetProtocolAddress;
-
-        public ushort HardwareType
-        {
-            readonly get => (ushort)_hardwareType;
-            set => _hardwareType = (NetInt<ushort>)value;
-        }
-
-        public EthernetType ProtocolType
-        {
-            readonly get => (EthernetType)(ushort)_protocolType;
-            set => _protocolType = (NetInt<ushort>)(ushort)value;
-        }
-
-        public ARPOperation Operation
-        {
-            readonly get => (ARPOperation)(ushort)_operation;
-            set => _operation = (NetInt<ushort>)(ushort)value;
-        }
-    }
-
-    private enum IPProtocol : byte
-    {
-        ICMP = 1,
-        TCP = 6,
-        UDP = 17
-    }
-
-    [StructLayout(LayoutKind.Sequential, Pack = 1)]
-    private struct IPv4Header
-    {
-        private byte _versionAndHeaderLength;
-        public byte TypeOfService;
-        private NetInt<ushort> _totalLength;
-        public NetInt<ushort> Id;
-        public NetInt<ushort> FragmentOffset;
-        public byte Ttl;
-        public IPProtocol Protocol;
-        private NetInt<ushort> Checksum;
-        public IPv4Address SourceAddress;
-        public IPv4Address DestinationAddress;
-
-        public byte Version
-        {
-            readonly get => (byte)((_versionAndHeaderLength & 0xF0) >> 4);
-            set => _versionAndHeaderLength = (byte)((_versionAndHeaderLength & 0x0F) | ((value << 4) & 0xF0));
-        }
-
-        public byte HeaderLength
-        {
-            readonly get => (byte)((_versionAndHeaderLength & 0x0F) << 2);
-            set => _versionAndHeaderLength = (byte)((_versionAndHeaderLength & 0xF0) | ((value >> 2) & 0x0F));
-        }
-
-        public ushort TotalLength
-        {
-            readonly get => (ushort)_totalLength;
-            set => _totalLength = (NetInt<ushort>)value;
-        }
-
-        public ref T Layer3Header<T>() where T : unmanaged => ref Unsafe.As<byte, T>(ref Unsafe.Add(ref Unsafe.As<IPv4Header, byte>(ref Unsafe.AsRef(ref this)), HeaderLength));
-
-        public void UpdateChecksum()
-        {
-            Checksum = default;
-            var buffer = MemoryMarshal.CreateReadOnlySpan(ref Unsafe.As<IPv4Header, NetInt<ushort>>(ref this), HeaderLength / 2);
-            var sum32 = 0u;
-            foreach (var item in buffer)
-                sum32 += (ushort)item;
-            sum32 = (sum32 & 0xFFFF) + (sum32 >> 16);
-            sum32 += sum32 >> 16;
-            Checksum = (NetInt<ushort>)(ushort)~sum32;
-        }
-    }
-
-    [StructLayout(LayoutKind.Sequential, Pack = 1)]
-    private struct UDPHeader
-    {
-        private NetInt<ushort> _sourcePort;
-        private NetInt<ushort> _destinationPort;
-        private NetInt<ushort> _size;
-        public NetInt<ushort> Checksum;
-
-        public ushort SourcePort
-        {
-            readonly get => (ushort)_sourcePort;
-            set => _sourcePort = (NetInt<ushort>)value;
-        }
-
-        public ushort DestinationPort
-        {
-            readonly get => (ushort)_destinationPort;
-            set => _destinationPort = (NetInt<ushort>)value;
-        }
-
-        public ushort Size
-        {
-            readonly get => (ushort)_size;
-            set => _size = (NetInt<ushort>)value;
-        }
-
-        public unsafe Span<byte> Payload => MemoryMarshal.CreateSpan(ref Unsafe.As<UDPHeader, byte>(ref this), Size)[sizeof(UDPHeader)..];
     }
 }
