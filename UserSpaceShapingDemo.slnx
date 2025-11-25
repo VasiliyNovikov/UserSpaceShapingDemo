@@ -1,11 +1,11 @@
 <Solution>
   <Folder Name="/native/">
-    <File Path="native\xdp_shaper.c" />
-    <File Path="native\run_with_veth.sh" />
-    <File Path="native\Makefile" />
-    <File Path="native\install_deps_ubuntu.sh" />
-    <File Path="native\CMakeLists.txt" />
-    <File Path="native\build_and_run.sh" />
+    <File Path="native/xdp_shaper.c" />
+    <File Path="native/run_with_veth.sh" />
+    <File Path="native/Makefile" />
+    <File Path="native/install_deps_ubuntu.sh" />
+    <File Path="native/CMakeLists.txt" />
+    <File Path="native/build_and_run.sh" />
   </Folder>
   <Folder Name="/Solution Items/">
     <File Path="Directory.Packages.props" />
@@ -13,6 +13,7 @@
     <File Path=".editorconfig" />
     <File Path="LinuxOnly.cs" />
   </Folder>
-  <Project Path="UserSpaceShapingDemo.Lib\UserSpaceShapingDemo.Lib.csproj" />
-  <Project Path="UserSpaceShapingDemo.Tests\UserSpaceShapingDemo.Tests.csproj" Type="Classic C#" />
+  <Project Path="UserSpaceShapingDemo.Lib/UserSpaceShapingDemo.Lib.csproj" />
+  <Project Path="UserSpaceShapingDemo.Tests/UserSpaceShapingDemo.Tests.csproj" />
+  <Project Path="UserSpaceShapingDemo.Benchmarks/UserSpaceShapingDemo.Benchmarks.csproj" />
 </Solution>
