@@ -70,6 +70,18 @@ internal static unsafe partial class LibBpf
     [LibraryImport(Lib, EntryPoint = "xsk_setup_xdp_prog")]
     public static partial xsk_api_result xsk_setup_xdp_prog(int ifindex, out FileDescriptor xsks_map_fd);
 
+    // int bpf_get_link_xdp_id(int ifindex, __u32 *prog_id, __u32 flags);
+    [LibraryImport(Lib, EntryPoint = "bpf_get_link_xdp_id")]
+    public static partial xsk_api_result bpf_get_link_xdp_id(int ifindex, out uint prog_id, uint flags);
+
+    // int bpf_prog_get_fd_by_id(__u32 id);
+    [LibraryImport(Lib, EntryPoint = "bpf_prog_get_fd_by_id")]
+    public static partial FileDescriptor bpf_prog_get_fd_by_id(uint id);
+
+    // int bpf_set_link_xdp_fd(int ifindex, int fd, __u32 flags);
+    [LibraryImport(Lib, EntryPoint = "bpf_set_link_xdp_fd")]
+    public static partial xsk_api_result bpf_set_link_xdp_fd(int ifindex, FileDescriptor fd, uint flags);
+
     // LIBBPF_API int xsk_socket__create(struct xsk_socket **xsk,
     //                                   const char *ifname, __u32 queue_id,
     //                                   struct xsk_umem *umem,

@@ -22,6 +22,6 @@ public static class NativeExceptionExtensions
 
     public static FileDescriptor ThrowIfError(this FileDescriptor result)
     {
-        return Unsafe.As<FileDescriptor, int>(ref result) == -1 ? throw NativeException.FromLastError() : result;
+        return Unsafe.BitCast<FileDescriptor, int>(result) == -1 ? throw NativeException.FromLastError() : result;
     }
 }

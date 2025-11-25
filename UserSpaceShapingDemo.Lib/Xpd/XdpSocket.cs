@@ -59,7 +59,7 @@ public sealed unsafe class XdpSocket : NativeObject, IFileObject
             LibBpf.xsk_socket__create(out _xsk, ifName, queueId, umem.UMem, out RxRing.Ring, out TxRing.Ring, config).ThrowIfError();
         }
 
-        XdpProgram.GetMap(ifIndex, out var mapDescriptor);
+        XdpProgram.GetMap(ifIndex, mode, out var mapDescriptor);
         LibBpf.xsk_socket__update_xskmap(_xsk, mapDescriptor).ThrowIfError();
     }
 
