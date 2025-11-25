@@ -47,7 +47,6 @@ public sealed class XdpSocketTests
         var replyMessageBytes = Encoding.ASCII.GetBytes(replyMessage);
         const int senderPort = 54321;
         const int receiverPort = 12345;
-        const byte ipv4HeaderVersionAndLength = 0b01000101; // Version 4, Header Length 5
 
         using var setup = new TrafficSetup();
         using var sender = setup.CreateSenderSocket(SocketType.Dgram, ProtocolType.Udp, senderPort);
@@ -99,7 +98,8 @@ public sealed class XdpSocketTests
                 Assert.AreEqual(TrafficSetup.ReceiverMacAddress, ethernetHeader.DestinationAddress);
 
                 ref var ipv4Header = ref Unsafe.As<byte, IPv4Header>(ref packetData[sizeof(EthernetHeader)]);
-                Assert.AreEqual(ipv4HeaderVersionAndLength, ipv4Header.VersionAndHeaderLength);
+                Assert.AreEqual(4, ipv4Header.Version);
+                Assert.AreEqual(sizeof(IPv4Header), ipv4Header.HeaderLength);
                 Assert.AreEqual(IPProtocol.UDP, ipv4Header.Protocol);
                 Assert.AreEqual(TrafficSetup.SenderAddress, ipv4Header.SourceAddress);
                 Assert.AreEqual(TrafficSetup.ReceiverAddress, ipv4Header.DestinationAddress);
@@ -129,7 +129,8 @@ public sealed class XdpSocketTests
                 ethernetHeader.EtherType = EthernetType.IPv4;
 
                 ref var ipv4Header = ref Unsafe.As<byte, IPv4Header>(ref packetData[sizeof(EthernetHeader)]);
-                ipv4Header.VersionAndHeaderLength = ipv4HeaderVersionAndLength;
+                ipv4Header.Version = 4;
+                ipv4Header.HeaderLength = (byte)sizeof(IPv4Header);
                 ipv4Header.TypeOfService = 0;
                 ipv4Header.TotalLength = (ushort)(sizeof(IPv4Header) + sizeof(UDPHeader) + replyMessageBytes.Length);
                 ipv4Header.Id = default;
@@ -429,7 +430,7 @@ public sealed class XdpSocketTests
     [StructLayout(LayoutKind.Sequential, Pack = 1)]
     private struct IPv4Header
     {
-        public byte VersionAndHeaderLength;
+        private byte _versionAndHeaderLength;
         public byte TypeOfService;
         private NetInt<ushort> _totalLength;
         public NetInt<ushort> Id;
@@ -440,6 +441,18 @@ public sealed class XdpSocketTests
         public IPv4Address SourceAddress;
         public IPv4Address DestinationAddress;
 
+        public byte Version
+        {
+            readonly get => (byte)((_versionAndHeaderLength & 0xF0) >> 4);
+            set => _versionAndHeaderLength = (byte)((_versionAndHeaderLength & 0x0F) | ((value << 4) & 0xF0));
+        }
+
+        public byte HeaderLength
+        {
+            readonly get => (byte)((_versionAndHeaderLength & 0x0F) << 2);
+            set => _versionAndHeaderLength = (byte)((_versionAndHeaderLength & 0xF0) | ((value >> 2) & 0x0F));
+        }
+
         public ushort TotalLength
         {
             readonly get => (ushort)_totalLength;
@@ -449,7 +462,7 @@ public sealed class XdpSocketTests
         public void UpdateChecksum()
         {
             Checksum = default;
-            var buffer = MemoryMarshal.Cast<IPv4Header, NetInt<ushort>>(MemoryMarshal.CreateReadOnlySpan(in this, 1));
+            var buffer = MemoryMarshal.CreateReadOnlySpan(ref Unsafe.As<IPv4Header, NetInt<ushort>>(ref this), HeaderLength / 2);
             var sum32 = 0u;
             foreach (var item in buffer)
                 sum32 += (ushort)item;
