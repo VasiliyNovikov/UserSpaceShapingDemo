@@ -173,12 +173,12 @@ public sealed class XdpSocketTests
     [Timeout(5000, CooperativeCancellation = true)]
     public async Task XdpSocket_Forward()
     {
-        const string message = "Hello from XDP client!!!";
-        const string replyMessage = "Hello from XDP server!!!";
-        var messageBytes = Encoding.ASCII.GetBytes(message);
-        var replyMessageBytes = Encoding.ASCII.GetBytes(replyMessage);
-        const int senderPort = 54321;
-        const int receiverPort = 12345;
+        const string clientMessage = "Hello from XDP client!!!";
+        const string serverMessage = "Hello from XDP server!!!";
+        var clientMessageBytes = Encoding.ASCII.GetBytes(clientMessage);
+        var serverMessageBytes = Encoding.ASCII.GetBytes(serverMessage);
+        const int clientPort = 54321;
+        const int serverPort = 12345;
 
         using var setup1 = new TrafficSetup();
         using var setup2 = new TrafficSetup(sharedSenderNs: setup1.ReceiverNs);
@@ -240,18 +240,31 @@ public sealed class XdpSocketTests
         if (forwarderTask.IsCompleted)
             await forwarderTask;
 
-        using var sender = setup1.CreateSenderSocket(SocketType.Dgram, ProtocolType.Udp, senderPort);
-        using var receiver = setup2.CreateReceiverSocket(SocketType.Dgram, ProtocolType.Udp, receiverPort);
+        using var client = setup1.CreateSenderSocket(SocketType.Dgram, ProtocolType.Udp, clientPort);
+        using var server = setup2.CreateReceiverSocket(SocketType.Dgram, ProtocolType.Udp, serverPort);
 
-        await sender.SendToAsync(messageBytes, new IPEndPoint(TrafficSetup.ReceiverAddress, receiverPort), TestContext.CancellationTokenSource.Token);
-        
+        await client.SendToAsync(clientMessageBytes, new IPEndPoint(TrafficSetup.ReceiverAddress, serverPort), TestContext.CancellationTokenSource.Token);
+
         if (forwarderTask.IsCompleted)
             await forwarderTask;
 
-        var receivedMessageBytes = new byte[message.Length];
-        await receiver.ReceiveFromAsync(receivedMessageBytes, new IPEndPoint(IPAddress.Any, 0), TestContext.CancellationTokenSource.Token);
-        var receivedMessage = Encoding.ASCII.GetString(receivedMessageBytes);
-        Assert.AreEqual(message, receivedMessage);
+        var receivedClientMessageBytes = new byte[clientMessage.Length];
+        await server.ReceiveFromAsync(receivedClientMessageBytes, new IPEndPoint(IPAddress.Any, 0), TestContext.CancellationTokenSource.Token);
+        var receivedClientMessage = Encoding.ASCII.GetString(receivedClientMessageBytes);
+        Assert.AreEqual(clientMessage, receivedClientMessage);
+
+        await server.SendToAsync(serverMessageBytes, new IPEndPoint(TrafficSetup.SenderAddress, clientPort), TestContext.CancellationTokenSource.Token);
+
+        if (forwarderTask.IsCompleted)
+            await forwarderTask;
+
+        var receivedServerMessageBytes = new byte[serverMessage.Length];
+        await client.ReceiveFromAsync(receivedServerMessageBytes, new IPEndPoint(IPAddress.Any, 0), TestContext.CancellationTokenSource.Token);
+        var receivedServerMessage = Encoding.ASCII.GetString(receivedServerMessageBytes);
+        Assert.AreEqual(serverMessage, receivedServerMessage);
+
+        if (forwarderTask.IsCompleted)
+            await forwarderTask;
 
         await forwardCancellation.CancelAsync();
 
@@ -305,6 +318,7 @@ public sealed class XdpSocketTests
                 fill[i] = addressesToFill.Dequeue();
                 TestContext.WriteLine($"{DateTime.UtcNow:O}: Refilled frame on socket {sourceSocket.IfName}");
             }
+
         return activityCounter > 0;
     }
 
