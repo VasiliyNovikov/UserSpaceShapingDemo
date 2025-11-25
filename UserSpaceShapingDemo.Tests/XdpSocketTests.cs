@@ -170,7 +170,10 @@ public sealed class XdpSocketTests
 
     [TestMethod]
     [Timeout(5000, CooperativeCancellation = true)]
-    public async Task XdpSocket_Forward()
+    [DataRow(XdpForwarderMode.GenericSharedMemory)]
+    [DataRow(XdpForwarderMode.GenericCopy)]
+    [DataRow(XdpForwarderMode.DriverZeroCopy)]
+    public async Task XdpSocket_Forward(XdpForwarderMode mode)
     {
         const string clientMessage = "Hello from XDP client!!!";
         const string serverMessage = "Hello back from XDP server!!!";
@@ -191,7 +194,7 @@ public sealed class XdpSocketTests
         {
             using var forwardNs = setup1.EnterReceiver();
             TestContext.WriteLine($"{DateTime.UtcNow:O}: Starting forwarding loop");
-            XdpForwarder.Run(setup1.ReceiverName, setup2.SenderName, true,
+            XdpForwarder.Run(setup1.ReceiverName, setup2.SenderName, mode,
                              (eth, data) => TestContext.WriteLine($"{DateTime.UtcNow:O}: {eth}: received packet {PacketToString(data)}"),
                              (eth, data) => TestContext.WriteLine($"{DateTime.UtcNow:O}: {eth}: sent packet {PacketToString(data)}"),
                              linkedCancellation.Token);

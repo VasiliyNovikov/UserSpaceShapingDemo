@@ -7,9 +7,6 @@ namespace UserSpaceShapingDemo.Lib.Xpd;
 
 public static class XdpProgram
 {
-    public static void GetMap(int ifIndex, out FileDescriptor mapDescriptor) 
-        => GetMap(ifIndex, XdpSocketMode.Default, out mapDescriptor);
-
     public static void GetMap(int ifIndex, XdpSocketMode mode, out FileDescriptor mapDescriptor)
     {
         // 1. Load the default program using the helper (attaches with flags=0, likely Generic)
