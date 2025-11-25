@@ -13,6 +13,7 @@ public enum XdpForwarderMode
 {
     GenericSharedMemory,
     GenericCopy,
+    DriverCopy,
     DriverZeroCopy,
 }
 

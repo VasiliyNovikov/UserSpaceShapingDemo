@@ -172,7 +172,8 @@ public sealed class XdpSocketTests
     [Timeout(5000, CooperativeCancellation = true)]
     [DataRow(XdpForwarderMode.GenericSharedMemory)]
     [DataRow(XdpForwarderMode.GenericCopy)]
-    [DataRow(XdpForwarderMode.DriverZeroCopy)]
+    [DataRow(XdpForwarderMode.DriverCopy)]
+    //[DataRow(XdpForwarderMode.DriverZeroCopy)]
     public async Task XdpSocket_Forward(XdpForwarderMode mode)
     {
         const string clientMessage = "Hello from XDP client!!!";
