@@ -13,20 +13,23 @@ public static class XdpForwarder
 {
     public delegate void PacketCallback(string eth, Span<byte> data);
 
-    public static void Run(string eth1, string eth2, PacketCallback? receivedCallback = null, PacketCallback? sentCallback = null, CancellationToken cancellationToken = default)
+    public static void Run(string eth1, string eth2, bool shared = true, PacketCallback? receivedCallback = null, PacketCallback? sentCallback = null, CancellationToken cancellationToken = default)
     {
         using var umem = new UMemory();
-        Span<ulong> addresses = stackalloc ulong[(int)umem.FrameCount];
-        umem.GetAddresses(addresses);
 
-        using var socket1 = new XdpSocket(umem, eth1, mode: XdpSocketMode.Generic, bindMode: XdpSocketBindMode.Copy);
-        using var socket2 = new XdpSocket(umem, eth2, mode: XdpSocketMode.Generic, bindMode: XdpSocketBindMode.Copy, shared: true);
+        var mode = shared ? XdpSocketMode.Generic : XdpSocketMode.Driver;
+        var bindMode = shared ? XdpSocketBindMode.Copy : XdpSocketBindMode.ZeroCopy;
+
+        using var socket1 = new XdpSocket(umem, eth1, mode: mode, bindMode: bindMode | XdpSocketBindMode.UseNeedWakeup);
+        using var socket2 = new XdpSocket(umem, eth2, mode: mode, bindMode: bindMode | XdpSocketBindMode.UseNeedWakeup, shared: shared);
         
         Queue<XdpDescriptor> packetsToSend1 = [];
         Queue<XdpDescriptor> packetsToSend2 = [];
         Queue<ulong> addressesToFill1 = [];
         Queue<ulong> addressesToFill2 = [];
 
+        Span<ulong> addresses = stackalloc ulong[(int)umem.FrameCount];
+        umem.GetAddresses(addresses);
         foreach(var address in addresses[..(addresses.Length / 2)])
             addressesToFill1.Enqueue(address);
         foreach(var address in addresses[(addresses.Length / 2)..])
@@ -51,6 +54,7 @@ public static class XdpForwarder
         }
     }
 
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     private static bool FillOnce(XdpSocket socket, Queue<ulong> addressesToFill)
     {
         var filled = false;
@@ -63,6 +67,7 @@ public static class XdpForwarder
         return filled;
     }
 
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     private static bool ForwardOnce(XdpSocket sourceSocket, XdpSocket destinationSocket, Queue<XdpDescriptor> packetsToSend, Queue<ulong> addressesToFill, PacketCallback? receivedCallback, PacketCallback? sentCallback)
     {
         var hasActivity = false;
@@ -108,6 +113,7 @@ public static class XdpForwarder
         return hasActivity;
     }
 
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     private static void UpdateChecksums(Span<byte> packetData)
     {
         ref var ethernetHeader = ref Unsafe.As<byte, EthernetHeader>(ref packetData[0]);

@@ -191,7 +191,7 @@ public sealed class XdpSocketTests
         {
             using var forwardNs = setup1.EnterReceiver();
             TestContext.WriteLine($"{DateTime.UtcNow:O}: Starting forwarding loop");
-            XdpForwarder.Run(setup1.ReceiverName, setup2.SenderName,
+            XdpForwarder.Run(setup1.ReceiverName, setup2.SenderName, true,
                              (eth, data) => TestContext.WriteLine($"{DateTime.UtcNow:O}: {eth}: received packet {PacketToString(data)}"),
                              (eth, data) => TestContext.WriteLine($"{DateTime.UtcNow:O}: {eth}: sent packet {PacketToString(data)}"),
                              linkedCancellation.Token);
