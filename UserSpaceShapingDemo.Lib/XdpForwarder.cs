@@ -19,8 +19,8 @@ public static class XdpForwarder
         Span<ulong> addresses = stackalloc ulong[(int)umem.FrameCount];
         umem.GetAddresses(addresses);
 
-        using var socket1 = new XdpSocket(umem, eth1);
-        using var socket2 = new XdpSocket(umem, eth2, shared: true);
+        using var socket1 = new XdpSocket(umem, eth1, mode: XdpSocketMode.Generic, bindMode: XdpSocketBindMode.Copy);
+        using var socket2 = new XdpSocket(umem, eth2, mode: XdpSocketMode.Generic, bindMode: XdpSocketBindMode.Copy, shared: true);
         
         Queue<XdpDescriptor> packetsToSend1 = [];
         Queue<XdpDescriptor> packetsToSend2 = [];

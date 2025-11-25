@@ -53,10 +53,10 @@ public class XdpForwarderBenchmarks : IDisposable
             {
             }
         }, TaskCreationOptions.LongRunning);
-        _directSender = _directSetup.CreateSenderSocket(SocketType.Dgram, ProtocolType.IPv4, SenderPort);
-        _directReceiver = _directSetup.CreateReceiverSocket(SocketType.Dgram, ProtocolType.IPv4, ReceiverPort);
-        _forwardSender = _forwarderSetup1.CreateSenderSocket(SocketType.Dgram, ProtocolType.IPv4, SenderPort);
-        _forwardReceiver = _forwarderSetup2.CreateReceiverSocket(SocketType.Dgram, ProtocolType.IPv4, ReceiverPort);
+        _directSender = _directSetup.CreateSenderSocket(SocketType.Dgram, ProtocolType.Udp, SenderPort);
+        _directReceiver = _directSetup.CreateReceiverSocket(SocketType.Dgram, ProtocolType.Udp, ReceiverPort);
+        _forwardSender = _forwarderSetup1.CreateSenderSocket(SocketType.Dgram, ProtocolType.Udp, SenderPort);
+        _forwardReceiver = _forwarderSetup2.CreateReceiverSocket(SocketType.Dgram, ProtocolType.Udp, ReceiverPort);
         RandomNumberGenerator.Fill(_packet);
     }
 
@@ -85,7 +85,7 @@ public class XdpForwarderBenchmarks : IDisposable
 
     private void Send(Socket sender, Socket receiver)
     {
-        sender.SendTo(_packet, _senderEndPoint);
+        sender.SendTo(_packet, _receiverEndPoint);
         receiver.ReceiveFrom(_packetBuffer, ref _endPointBuffer);
     }
 }
