@@ -97,18 +97,18 @@ public sealed class XdpSocketTests
                 Assert.AreEqual(TrafficSetup.SenderMacAddress, ethernetHeader.SourceAddress);
                 Assert.AreEqual(TrafficSetup.ReceiverMacAddress, ethernetHeader.DestinationAddress);
 
-                ref var ipv4Header = ref Unsafe.As<byte, IPv4Header>(ref packetData[sizeof(EthernetHeader)]);
+                ref var ipv4Header = ref ethernetHeader.Layer2Header<IPv4Header>();
                 Assert.AreEqual(4, ipv4Header.Version);
                 Assert.AreEqual(sizeof(IPv4Header), ipv4Header.HeaderLength);
                 Assert.AreEqual(IPProtocol.UDP, ipv4Header.Protocol);
                 Assert.AreEqual(TrafficSetup.SenderAddress, ipv4Header.SourceAddress);
                 Assert.AreEqual(TrafficSetup.ReceiverAddress, ipv4Header.DestinationAddress);
 
-                ref var udpHeader = ref Unsafe.As<byte, UDPHeader>(ref packetData[sizeof(EthernetHeader) + sizeof(IPv4Header)]);
+                ref var udpHeader = ref ipv4Header.Layer3Header<UDPHeader>();
                 Assert.AreEqual(receiverPort, udpHeader.DestinationPort);
                 Assert.AreEqual(senderPort, udpHeader.SourcePort);
 
-                var payload = packetData[(sizeof(EthernetHeader) + sizeof(IPv4Header) + sizeof(UDPHeader))..];
+                var payload = udpHeader.Payload;
                 Assert.AreEqual(message.Length, payload.Length);
                 var payloadString = Encoding.ASCII.GetString(payload);
                 Assert.AreEqual(message, payloadString);
@@ -128,7 +128,7 @@ public sealed class XdpSocketTests
                 ethernetHeader.SourceAddress = TrafficSetup.ReceiverMacAddress;
                 ethernetHeader.EtherType = EthernetType.IPv4;
 
-                ref var ipv4Header = ref Unsafe.As<byte, IPv4Header>(ref packetData[sizeof(EthernetHeader)]);
+                ref var ipv4Header = ref ethernetHeader.Layer2Header<IPv4Header>();
                 ipv4Header.Version = 4;
                 ipv4Header.HeaderLength = (byte)sizeof(IPv4Header);
                 ipv4Header.TypeOfService = 0;
@@ -141,14 +141,13 @@ public sealed class XdpSocketTests
                 ipv4Header.DestinationAddress = TrafficSetup.SenderAddress;
                 ipv4Header.UpdateChecksum();
 
-                ref var udpHeader = ref Unsafe.As<byte, UDPHeader>(ref packetData[sizeof(EthernetHeader) + sizeof(IPv4Header)]);
+                ref var udpHeader = ref ipv4Header.Layer3Header<UDPHeader>();
                 udpHeader.SourcePort = receiverPort;
                 udpHeader.DestinationPort = senderPort;
                 udpHeader.Size = (ushort)(sizeof(UDPHeader) + replyMessageBytes.Length);
                 udpHeader.Checksum = default;
 
-                var payload = packetData[(sizeof(EthernetHeader) + sizeof(IPv4Header) + sizeof(UDPHeader))..];
-                replyMessageBytes.CopyTo(payload);
+                replyMessageBytes.CopyTo(udpHeader.Payload);
             }
 
             if (socket.TxRing.NeedsWakeup)
@@ -311,17 +310,14 @@ public sealed class XdpSocketTests
         return activityCounter > 0;
     }
 
-    private static unsafe void UpdateChecksums(Span<byte> packetData)
+    private static void UpdateChecksums(Span<byte> packetData)
     {
         ref var ethernetHeader = ref Unsafe.As<byte, EthernetHeader>(ref packetData[0]);
         if (ethernetHeader.EtherType == EthernetType.IPv4)
         {
-            ref var ipv4Header = ref Unsafe.As<byte, IPv4Header>(ref packetData[sizeof(EthernetHeader)]);
+            ref var ipv4Header = ref ethernetHeader.Layer2Header<IPv4Header>();
             if (ipv4Header.Protocol == IPProtocol.UDP)
-            {
-                ref var udpHeader = ref Unsafe.As<byte, UDPHeader>(ref packetData[sizeof(EthernetHeader) + sizeof(IPv4Header)]);
-                udpHeader.Checksum = default;
-            }
+                ipv4Header.Layer3Header<UDPHeader>().Checksum = default;
         }
     }
 
@@ -331,24 +327,22 @@ public sealed class XdpSocketTests
         sb.Append(CultureInfo.InvariantCulture, $"len: {packetData.Length}");
         ref var ethernetHeader = ref Unsafe.As<byte, EthernetHeader>(ref packetData[0]);
         sb.Append(CultureInfo.InvariantCulture, $", type={ethernetHeader.EtherType}, src_mac={ethernetHeader.SourceAddress}, dst_mac={ethernetHeader.DestinationAddress}");
-        var layer2data = packetData[sizeof(EthernetHeader)..];
         switch (ethernetHeader.EtherType)
         {
             case EthernetType.IPv4:
             {
-                ref var ipv4Header = ref Unsafe.As<byte, IPv4Header>(ref layer2data[0]);
+                ref var ipv4Header = ref ethernetHeader.Layer2Header<IPv4Header>();
                 sb.Append(CultureInfo.InvariantCulture, $", src_ip={ipv4Header.SourceAddress}, dst_ip={ipv4Header.DestinationAddress}, proto={ipv4Header.Protocol}");
-                var layer3data = layer2data[sizeof(IPv4Header)..];
                 if (ipv4Header.Protocol == IPProtocol.UDP)
                 {
-                    ref var udpHeader = ref Unsafe.As<byte, UDPHeader>(ref layer3data[0]);
+                    ref var udpHeader = ref ipv4Header.Layer3Header<UDPHeader>();
                     sb.Append(CultureInfo.InvariantCulture, $", src_port={udpHeader.SourcePort}, dst_port={udpHeader.DestinationPort}");
                 }
                 break;
             }
             case EthernetType.ARP:
             {
-                ref var arpHeader = ref Unsafe.As<byte, ARPHeader>(ref layer2data[0]);
+                ref var arpHeader = ref ethernetHeader.Layer2Header<ARPHeader>();
                 sb.Append(CultureInfo.InvariantCulture, $", op={arpHeader.Operation}, src_ip={arpHeader.SenderProtocolAddress}, src_mac={arpHeader.SenderHardwareAddress}, dst_ip={arpHeader.TargetProtocolAddress}, dst_mac={arpHeader.TargetHardwareAddress}");
                 break;
             }
@@ -375,13 +369,15 @@ public sealed class XdpSocketTests
             readonly get => (EthernetType)(ushort)_etherType;
             set => _etherType = (NetInt<ushort>)(ushort)value;
         }
+
+        public ref T Layer2Header<T>() where T : unmanaged => ref Unsafe.As<EthernetHeader, T>(ref Unsafe.Add(ref Unsafe.AsRef(ref this), 1));
     }
 
     private enum ARPHardwareType : ushort
     {
         Ethernet = 1
     }
-    
+
     private enum ARPOperation : ushort
     {
         Request = 1,
@@ -459,6 +455,8 @@ public sealed class XdpSocketTests
             set => _totalLength = (NetInt<ushort>)value;
         }
 
+        public ref T Layer3Header<T>() where T : unmanaged => ref Unsafe.As<byte, T>(ref Unsafe.Add(ref Unsafe.As<IPv4Header, byte>(ref Unsafe.AsRef(ref this)), HeaderLength));
+
         public void UpdateChecksum()
         {
             Checksum = default;
@@ -497,5 +495,7 @@ public sealed class XdpSocketTests
             readonly get => (ushort)_size;
             set => _size = (NetInt<ushort>)value;
         }
+
+        public unsafe Span<byte> Payload => MemoryMarshal.CreateSpan(ref Unsafe.As<UDPHeader, byte>(ref this), Size)[sizeof(UDPHeader)..];
     }
 }
