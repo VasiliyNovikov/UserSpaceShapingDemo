@@ -44,7 +44,7 @@ public sealed unsafe class UMemory : NativeObject, IFileObject
         get => new(this[packet.Address], (int)packet.Length);
     }
 
-    public UMemory(uint frameCount = 4096,
+    public UMemory(uint frameCount = LibBpf.XSK_RING_CONS__DEFAULT_NUM_DESCS * 2,
                    uint frameSize = LibBpf.XSK_UMEM__DEFAULT_FRAME_SIZE,
                    uint fillRingSize = LibBpf.XSK_RING_CONS__DEFAULT_NUM_DESCS,
                    uint completionRingSize = LibBpf.XSK_RING_PROD__DEFAULT_NUM_DESCS,

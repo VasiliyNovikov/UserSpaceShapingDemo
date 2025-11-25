@@ -1,6 +1,5 @@
 #pragma warning disable IDE0063
 using System;
-using System.Collections.Generic;
 using System.Globalization;
 using System.Net;
 using System.Net.Sockets;
@@ -174,7 +173,7 @@ public sealed class XdpSocketTests
     public async Task XdpSocket_Forward()
     {
         const string clientMessage = "Hello from XDP client!!!";
-        const string serverMessage = "Hello from XDP server!!!";
+        const string serverMessage = "Hello back from XDP server!!!";
         var clientMessageBytes = Encoding.ASCII.GetBytes(clientMessage);
         var serverMessageBytes = Encoding.ASCII.GetBytes(serverMessage);
         const int clientPort = 54321;
@@ -191,52 +190,11 @@ public sealed class XdpSocketTests
         var forwarderTask = Task.Factory.StartNew(() =>
         {
             using var forwardNs = setup1.EnterReceiver();
-
-            using var umem = new UMemory(8192);
-            Span<ulong> addresses = stackalloc ulong[(int)umem.FrameCount];
-            umem.GetAddresses(addresses);
-
-            using var socket1 = new XdpSocket(umem, setup1.ReceiverName);
-            using var socket2 = new XdpSocket(umem, setup2.SenderName, shared: true);
-            
-            var addresses1 = addresses[..(int)(umem.FrameCount / 2)];
-            using (var fill = socket1.FillRing.Fill((uint)addresses1.Length))
-            {
-                Assert.AreEqual(umem.FillRingSize, fill.Length);
-                for (var i = 0u; i < fill.Length; ++i)
-                    fill[i] = addresses1[(int)i];
-            }
-
-            var addresses2 = addresses[(int)(umem.FrameCount / 2)..];
-            using (var fill = socket2.FillRing.Fill((uint)addresses2.Length))
-            {
-                Assert.AreEqual(umem.FillRingSize, fill.Length);
-                for (var i = 0u; i < fill.Length; ++i)
-                    fill[i] = addresses2[(int)i];
-            }
-
-            Queue<XdpDescriptor> packetsToSend1 = [];
-            Queue<XdpDescriptor> packetsToSend2 = [];
-            Queue<ulong> addressesToFill1 = [];
-            Queue<ulong> addressesToFill2 = [];
-
-            using var nativeCancellationToken = new NativeCancellationToken(linkedCancellation.Token);
-            
             TestContext.WriteLine($"{DateTime.UtcNow:O}: Starting forwarding loop");
-
-            while (true)
-            {
-                while (ForwardOnce(socket1, socket2, packetsToSend2, addressesToFill1) |
-                       ForwardOnce(socket2, socket1, packetsToSend1, addressesToFill2)) ;
-
-                var events1 = Poll.Event.Readable;
-                if (packetsToSend1.Count > 0)
-                    events1 |= Poll.Event.Writable;
-                var events2 = Poll.Event.Readable;
-                if (packetsToSend2.Count > 0)
-                    events2 |= Poll.Event.Writable;
-                Assert.IsTrue(XdpSocket.WaitFor([socket1, socket2], [events1, events2], nativeCancellationToken));
-            }
+            XdpForwarder.Run(setup1.ReceiverName, setup2.SenderName,
+                             (eth, data) => TestContext.WriteLine($"{DateTime.UtcNow:O}: {eth}: received packet {PacketToString(data)}"),
+                             (eth, data) => TestContext.WriteLine($"{DateTime.UtcNow:O}: {eth}: sent packet {PacketToString(data)}"),
+                             linkedCancellation.Token);
         }, TaskCreationOptions.LongRunning);
 
         if (forwarderTask.IsCompleted)
@@ -273,69 +231,7 @@ public sealed class XdpSocketTests
         await Assert.ThrowsExactlyAsync<OperationCanceledException>(() => forwarderTask);
     }
 
-    private bool ForwardOnce(XdpSocket sourceSocket, XdpSocket destinationSocket, Queue<XdpDescriptor> packetsToSend, Queue<ulong> addressesToFill)
-    {
-        ulong activityCounter = 0;
-        using (var receivePackets = sourceSocket.RxRing.Receive())
-        {
-            for (var i = 0u; i < receivePackets.Length; ++i)
-            {
-                ++activityCounter;
-                ref readonly var packet = ref receivePackets[i];
-                packetsToSend.Enqueue(packet);
-                TestContext.WriteLine($"{DateTime.UtcNow:O}: Received packet ({PacketToString(sourceSocket.Umem[packet])}) from socket {sourceSocket.IfName}");
-            }
-        }
-
-        using (var sendPackets = destinationSocket.TxRing.Send((uint)packetsToSend.Count))
-        {
-            for (var i = 0u; i < sendPackets.Length; ++i)
-            {
-                ++activityCounter;
-                var descriptor = packetsToSend.Dequeue();
-                ref var packet = ref sendPackets[i];
-                packet.Address = descriptor.Address;
-                packet.Length = descriptor.Length;
-                var packetData = sourceSocket.Umem[descriptor];
-                UpdateChecksums(packetData);
-                TestContext.WriteLine($"{DateTime.UtcNow:O}: Forwarding packet ({PacketToString(packetData)}) to socket {destinationSocket.IfName}");
-            }
-        }
-
-        if (destinationSocket.TxRing.NeedsWakeup)
-            destinationSocket.WakeUp();
-
-        using (var completed = destinationSocket.CompletionRing.Complete())
-            for (var i = 0u; i < completed.Length; ++i)
-            {
-                ++activityCounter;
-                addressesToFill.Enqueue(completed[i]);
-                TestContext.WriteLine($"{DateTime.UtcNow:O}: Completed frame on socket {destinationSocket.IfName}");
-            }
-
-        using (var fill = sourceSocket.FillRing.Fill((uint)addressesToFill.Count))
-            for (var i = 0u; i < fill.Length; ++i)
-            {
-                ++activityCounter;
-                fill[i] = addressesToFill.Dequeue();
-                TestContext.WriteLine($"{DateTime.UtcNow:O}: Refilled frame on socket {sourceSocket.IfName}");
-            }
-
-        return activityCounter > 0;
-    }
-
-    private static void UpdateChecksums(Span<byte> packetData)
-    {
-        ref var ethernetHeader = ref Unsafe.As<byte, EthernetHeader>(ref packetData[0]);
-        if (ethernetHeader.EtherType == EthernetType.IPv4)
-        {
-            ref var ipv4Header = ref ethernetHeader.Layer2Header<IPv4Header>();
-            if (ipv4Header.Protocol == IPProtocol.UDP)
-                ipv4Header.Layer3Header<UDPHeader>().Checksum = default;
-        }
-    }
-
-    private static unsafe string PacketToString(Span<byte> packetData)
+    private static string PacketToString(Span<byte> packetData)
     {
         var sb = new StringBuilder();
         sb.Append(CultureInfo.InvariantCulture, $"len: {packetData.Length}");
