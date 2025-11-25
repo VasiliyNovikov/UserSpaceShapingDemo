@@ -148,7 +148,7 @@ internal static unsafe partial class LibBpf
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    private static uint xsk_cons_nb_avail(ref xsk_ring r, uint nb)
+    private static uint xsk_cons_nb_avail(ref xsk_ring r)
     {
         // entries = r.cached_prod - r.cached_cons; (mod 2^32 arithmetic)
         var entries = r.cached_prod - r.cached_cons;
@@ -158,6 +158,13 @@ internal static unsafe partial class LibBpf
             r.cached_prod = libbpf_smp_load_acquire(ref *r.producer);
             entries = r.cached_prod - r.cached_cons;
         }
+        return entries;
+    }
+
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    private static uint xsk_cons_nb_avail(ref xsk_ring r, uint nb)
+    {
+        var entries = xsk_cons_nb_avail(ref r);
         return entries > nb ? nb : entries;
     }
 
@@ -179,18 +186,28 @@ internal static unsafe partial class LibBpf
 
         return entries;
     }
+    
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public static uint xsk_ring_cons__peek_all(ref xsk_ring cons, out uint idx)
+    {
+        var entries = xsk_cons_nb_avail(ref cons);
+        if (entries > 0)
+        {
+            idx = cons.cached_cons;
+            cons.cached_cons += entries;
+        }
+        else
+            Unsafe.SkipInit(out idx);
+
+        return entries;
+    }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static bool xsk_ring_prod__needs_wakeup(in xsk_ring r) => (*r.flags & XDP_RING_NEED_WAKEUP) != 0;
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    private static uint xsk_prod_nb_free(ref xsk_ring r, uint nb)
+    private static uint xsk_prod_nb_free(ref xsk_ring r)
     {
-        var free_entries = r.cached_cons - r.cached_prod;
-
-        if (free_entries >= nb)
-            return free_entries;
-
         /* Refresh the local tail pointer.
          * cached_cons is r->size bigger than the real consumer pointer so
          * that this addition can be avoided in the more frequently
@@ -202,6 +219,13 @@ internal static unsafe partial class LibBpf
         r.cached_cons += r.size;
 
         return r.cached_cons - r.cached_prod;
+    }
+
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    private static uint xsk_prod_nb_free(ref xsk_ring r, uint nb)
+    {
+        var free_entries = r.cached_cons - r.cached_prod;
+        return free_entries >= nb ? free_entries : xsk_prod_nb_free(ref r);
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]

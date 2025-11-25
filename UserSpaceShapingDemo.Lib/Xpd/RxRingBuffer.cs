@@ -12,6 +12,13 @@ public sealed class RxRingBuffer : ConsumerRingBuffer
         return count == 0 ? default : new PacketRange(this, startIdx, count);
     }
 
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public PacketRange Receive()
+    {
+        var count = Peek(out var startIdx);
+        return count == 0 ? default : new PacketRange(this, startIdx, count);
+    }
+
     [method: MethodImpl(MethodImplOptions.AggressiveInlining)]
     public readonly struct PacketRange(RxRingBuffer ringBuffer, uint index, uint length) : IDisposable
     {

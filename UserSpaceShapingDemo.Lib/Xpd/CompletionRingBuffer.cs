@@ -12,6 +12,13 @@ public sealed class CompletionRingBuffer : ConsumerRingBuffer
         return count == 0 ? default : new AddressRange(this, startIdx, count);
     }
 
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public AddressRange Complete()
+    {
+        var count = Peek(out var startIdx);
+        return count == 0 ? default : new AddressRange(this, startIdx, count);
+    }
+
     [method: MethodImpl(MethodImplOptions.AggressiveInlining)]
     public readonly struct AddressRange(CompletionRingBuffer ringBuffer, uint index, uint length) : IDisposable
     {
