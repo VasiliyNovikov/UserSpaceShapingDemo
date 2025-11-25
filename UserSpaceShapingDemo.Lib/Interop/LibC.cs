@@ -32,6 +32,13 @@ internal static unsafe partial class LibC
 
     public const int MSG_DONTWAIT = 0x40;
 
+    public const int SCHED_OTHER    = 0;
+    public const int SCHED_FIFO     = 1;
+    public const int SCHED_RR       = 2;
+    public const int SCHED_BATCH    = 3;
+    public const int SCHED_IDLE     = 5;
+    public const int SCHED_DEADLINE = 6;
+
     // int * __errno_location(void);
     [LibraryImport(Lib, EntryPoint = "__errno_location")]
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -108,6 +115,10 @@ internal static unsafe partial class LibC
     [LibraryImport(Lib, EntryPoint = "sendto")]
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static partial nint sendto(FileDescriptor socket, void* message, nuint length, int flags, void* dest_addr, uint dest_len);
+    
+    // int sched_setscheduler(pid_t pid, int policy, const struct sched_param *param);
+    [LibraryImport("libc", EntryPoint = "sched_setscheduler")]
+    public static partial int sched_setscheduler(int pid, int policy, in sched_param param);
 
     [StructLayout(LayoutKind.Sequential)]
     public readonly struct pollfd
@@ -116,4 +127,10 @@ internal static unsafe partial class LibC
         public readonly short events; // Types of events poller cares about
         public readonly short revents; // Types of events that actually occurred
     };
+
+    [StructLayout(LayoutKind.Sequential)]
+    public struct sched_param
+    {
+        public int sched_priority;
+    }
 }
