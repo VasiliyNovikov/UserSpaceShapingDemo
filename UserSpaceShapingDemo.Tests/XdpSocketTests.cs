@@ -317,14 +317,26 @@ public sealed class XdpSocketTests
         sb.Append(CultureInfo.InvariantCulture, $"len: {packetData.Length}");
         ref var ethernetHeader = ref Unsafe.As<byte, EthernetHeader>(ref packetData[0]);
         sb.Append(CultureInfo.InvariantCulture, $", type={ethernetHeader.EtherType}, src_mac={ethernetHeader.SourceAddress}, dst_mac={ethernetHeader.DestinationAddress}");
-        if (ethernetHeader.EtherType == EthernetType.IPv4)
+        var layer2data = packetData[sizeof(EthernetHeader)..];
+        switch (ethernetHeader.EtherType)
         {
-            ref var ipv4Header = ref Unsafe.As<byte, IPv4Header>(ref packetData[sizeof(EthernetHeader)]);
-            sb.Append(CultureInfo.InvariantCulture, $", src_ip={ipv4Header.SourceAddress}, dst_ip={ipv4Header.DestinationAddress}, proto={ipv4Header.Protocol}");
-            if (ipv4Header.Protocol == IPProtocol.UDP)
+            case EthernetType.IPv4:
             {
-                ref var udpHeader = ref Unsafe.As<byte, UDPHeader>(ref packetData[sizeof(EthernetHeader) + sizeof(IPv4Header)]);
-                sb.Append(CultureInfo.InvariantCulture, $", src_port={udpHeader.SourcePort}, dst_port={udpHeader.DestinationPort}");
+                ref var ipv4Header = ref Unsafe.As<byte, IPv4Header>(ref layer2data[0]);
+                sb.Append(CultureInfo.InvariantCulture, $", src_ip={ipv4Header.SourceAddress}, dst_ip={ipv4Header.DestinationAddress}, proto={ipv4Header.Protocol}");
+                var layer3data = layer2data[sizeof(IPv4Header)..];
+                if (ipv4Header.Protocol == IPProtocol.UDP)
+                {
+                    ref var udpHeader = ref Unsafe.As<byte, UDPHeader>(ref layer3data[0]);
+                    sb.Append(CultureInfo.InvariantCulture, $", src_port={udpHeader.SourcePort}, dst_port={udpHeader.DestinationPort}");
+                }
+                break;
+            }
+            case EthernetType.ARP:
+            {
+                ref var arpHeader = ref Unsafe.As<byte, ARPHeader>(ref layer2data[0]);
+                sb.Append(CultureInfo.InvariantCulture, $", op={arpHeader.Operation}, src_ip={arpHeader.SenderProtocolAddress}, src_mac={arpHeader.SenderHardwareAddress}, dst_ip={arpHeader.TargetProtocolAddress}, dst_mac={arpHeader.TargetHardwareAddress}");
+                break;
             }
         }
         return sb.ToString();
@@ -348,6 +360,49 @@ public sealed class XdpSocketTests
         {
             readonly get => (EthernetType)(ushort)_etherType;
             set => _etherType = (NetInt<ushort>)(ushort)value;
+        }
+    }
+
+    private enum ARPHardwareType : ushort
+    {
+        Ethernet = 1
+    }
+    
+    private enum ARPOperation : ushort
+    {
+        Request = 1,
+        Reply = 2
+    }
+
+    [StructLayout(LayoutKind.Sequential, Pack = 1)]
+    private struct ARPHeader
+    {
+        private NetInt<ushort> _hardwareType;
+        private NetInt<ushort> _protocolType;
+        public byte HardwareAddressLength;
+        public byte ProtocolAddressLength;
+        private NetInt<ushort> _operation;
+        public MACAddress SenderHardwareAddress;
+        public IPv4Address SenderProtocolAddress;
+        public MACAddress TargetHardwareAddress;
+        public IPv4Address TargetProtocolAddress;
+
+        public ushort HardwareType
+        {
+            readonly get => (ushort)_hardwareType;
+            set => _hardwareType = (NetInt<ushort>)value;
+        }
+
+        public EthernetType ProtocolType
+        {
+            readonly get => (EthernetType)(ushort)_protocolType;
+            set => _protocolType = (NetInt<ushort>)(ushort)value;
+        }
+
+        public ARPOperation Operation
+        {
+            readonly get => (ARPOperation)(ushort)_operation;
+            set => _operation = (NetInt<ushort>)(ushort)value;
         }
     }
 
