@@ -6,7 +6,7 @@ namespace UserSpaceShapingDemo.Lib.Interop;
 
 internal static partial class LibBpf
 {
-    private const string Lib = "libbpf";
+    internal const string Lib = "libbpf";
 
     // int bpf_get_link_xdp_id(int ifindex, __u32 *prog_id, __u32 flags);
     [LibraryImport(Lib, EntryPoint = "bpf_get_link_xdp_id")]
