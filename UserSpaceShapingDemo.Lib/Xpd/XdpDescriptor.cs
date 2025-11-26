@@ -7,5 +7,5 @@ public struct XdpDescriptor
 {
     public ulong Address;
     public uint Length;
-    public uint Options;
+    public readonly uint Options;
 }
