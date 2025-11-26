@@ -37,7 +37,7 @@ public static class XdpForwarder
 
         using var socket1 = new XdpSocket(umem1, eth1, mode: socketMode, bindMode: bindMode | XdpSocketBindMode.UseNeedWakeup);
         using var socket2 = new XdpSocket(umem2, eth2, mode: socketMode, bindMode: bindMode | XdpSocketBindMode.UseNeedWakeup, shared: shared);
-        
+
         Queue<XdpDescriptor> packetsToSend1 = [];
         Queue<XdpDescriptor> packetsToSend2 = [];
         Queue<ulong> freeAddresses1 = [];

@@ -72,6 +72,7 @@ public sealed unsafe class UMemory : NativeObject, IFileObject
         catch
         {
             NativeMemory.AlignedFree(_umem_area);
+            _umem_area = null;
             throw;
         }
     }
