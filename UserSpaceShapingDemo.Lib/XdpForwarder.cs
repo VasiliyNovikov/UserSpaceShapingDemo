@@ -13,6 +13,7 @@ public enum XdpForwarderMode
 {
     GenericSharedMemory,
     GenericCopy,
+    DriverSharedMemory,
     DriverCopy,
     DriverZeroCopy,
 }
@@ -24,7 +25,7 @@ public static class XdpForwarder
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static void Run(string eth1, string eth2, XdpForwarderMode mode = XdpForwarderMode.GenericSharedMemory, PacketCallback? receivedCallback = null, PacketCallback? sentCallback = null, CancellationToken cancellationToken = default)
     {
-        var shared = mode == XdpForwarderMode.GenericSharedMemory;
+        var shared = mode is XdpForwarderMode.GenericSharedMemory or XdpForwarderMode.DriverSharedMemory;
 
         using var umem = new UMemory(8192);
         using var otherUmem = new UMemory(8192);
