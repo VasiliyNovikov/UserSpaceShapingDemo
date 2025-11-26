@@ -30,11 +30,11 @@ public class XdpForwarderBenchmarks : IDisposable
     private readonly Socket _directReceiver;
     private readonly Socket _forwardSender;
     private readonly Socket _forwardReceiver;
-    private readonly IPEndPoint _senderEndPoint = new(TrafficSetup.SenderAddress, SenderPort);
-    private readonly IPEndPoint _receiverEndPoint = new(TrafficSetup.ReceiverAddress, ReceiverPort);
+    private readonly SocketAddress _senderAddress = new IPEndPoint(TrafficSetup.SenderAddress, SenderPort).Serialize();
+    private readonly SocketAddress _receiverAddress = new IPEndPoint(TrafficSetup.ReceiverAddress, ReceiverPort).Serialize();
+    private readonly SocketAddress _addressBuffer = new IPEndPoint(IPAddress.Loopback, 0).Serialize();
     private readonly byte[] _packet = new byte[1500];
     private readonly byte[] _packetBuffer = new byte[1500];
-    private EndPoint _endPointBuffer = new IPEndPoint(IPAddress.Loopback, 0);
 
     public XdpForwarderBenchmarks()
     {
@@ -93,16 +93,16 @@ public class XdpForwarderBenchmarks : IDisposable
 
     private void Send(Socket sender, Socket receiver)
     {
-        sender.SendTo(_packet, _receiverEndPoint);
-        receiver.ReceiveFrom(_packetBuffer, ref _endPointBuffer);
+        sender.SendTo(_packet, SocketFlags.None, _receiverAddress);
+        receiver.ReceiveFrom(_packetBuffer, SocketFlags.None, _addressBuffer);
     }
 
     private void SendBatch(Socket sender, Socket receiver)
     {
         const int batchSize = 16;
         for (var i = 0; i < batchSize; ++i)
-            sender.SendTo(_packet, _receiverEndPoint);
+            sender.SendTo(_packet, SocketFlags.None, _receiverAddress);
         for (var i = 0; i < batchSize; ++i)
-            receiver.ReceiveFrom(_packetBuffer, ref _endPointBuffer);
+            receiver.ReceiveFrom(_packetBuffer, SocketFlags.None, _addressBuffer);
     }
 }
