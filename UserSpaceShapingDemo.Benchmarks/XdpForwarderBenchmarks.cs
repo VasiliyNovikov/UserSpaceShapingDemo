@@ -47,7 +47,7 @@ public class XdpForwarderBenchmarks : IDisposable
             using var forwardNs = _forwarderSetup1.EnterReceiver();
             try
             {
-                XdpForwarder.Run(_forwarderSetup1.ReceiverName, _forwarderSetup2.SenderName, XdpForwarderMode.GenericSharedMemory, cancellationToken: _forwarderCancellation.Token);
+                XdpForwarder.Run(_forwarderSetup1.ReceiverName, _forwarderSetup2.SenderName, XdpForwarderMode.Generic, cancellationToken: _forwarderCancellation.Token);
             }
             catch (OperationCanceledException)
             {

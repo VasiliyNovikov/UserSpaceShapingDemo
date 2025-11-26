@@ -11,10 +11,8 @@ namespace UserSpaceShapingDemo.Lib;
 
 public enum XdpForwarderMode
 {
-    GenericSharedMemory,
-    GenericCopy,
-    DriverSharedMemory,
-    DriverCopy,
+    Generic,
+    Driver,
     DriverZeroCopy,
 }
 
@@ -23,55 +21,33 @@ public static class XdpForwarder
     public delegate void PacketCallback(string eth, Span<byte> data);
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public static void Run(string eth1, string eth2, XdpForwarderMode mode = XdpForwarderMode.GenericSharedMemory, PacketCallback? receivedCallback = null, PacketCallback? sentCallback = null, CancellationToken cancellationToken = default)
+    public static void Run(string eth1, string eth2, XdpForwarderMode mode = XdpForwarderMode.Generic, PacketCallback? receivedCallback = null, PacketCallback? sentCallback = null, CancellationToken cancellationToken = default)
     {
-        var shared = mode is XdpForwarderMode.GenericSharedMemory or XdpForwarderMode.DriverSharedMemory;
+        using var umem = new UMemory(UMemory.DefaultFrameCount * 2);
 
-        using var umem = new UMemory(8192);
-        using var otherUmem = new UMemory(8192);
-
-        var umem1 = umem;
-        var umem2 = shared ? umem : otherUmem;
-
-        var socketMode = mode is XdpForwarderMode.GenericSharedMemory or XdpForwarderMode.GenericCopy ? XdpSocketMode.Generic : XdpSocketMode.Driver;
+        var socketMode = mode is XdpForwarderMode.Generic ? XdpSocketMode.Default : XdpSocketMode.Driver;
         var bindMode = mode is XdpForwarderMode.DriverZeroCopy ? XdpSocketBindMode.ZeroCopy : XdpSocketBindMode.Copy;
 
-        using var socket1 = new XdpSocket(umem1, eth1, mode: socketMode, bindMode: bindMode | XdpSocketBindMode.UseNeedWakeup);
-        using var socket2 = new XdpSocket(umem2, eth2, mode: socketMode, bindMode: bindMode | XdpSocketBindMode.UseNeedWakeup, shared: shared);
+        using var socket1 = new XdpSocket(umem, eth1, mode: socketMode, bindMode: bindMode | XdpSocketBindMode.UseNeedWakeup);
+        using var socket2 = new XdpSocket(umem, eth2, mode: socketMode, bindMode: bindMode | XdpSocketBindMode.UseNeedWakeup, shared: true);
 
         Queue<XdpDescriptor> packetsToSend1 = [];
         Queue<XdpDescriptor> packetsToSend2 = [];
-        Queue<ulong> freeAddresses1 = [];
-        var freeAddresses2 = shared ? freeAddresses1 : [];
+        Queue<ulong> freeAddresses = [];
 
-        if (shared)
-        {
-            Span<ulong> addresses = stackalloc ulong[(int)umem.FrameCount];
-            umem.GetAddresses(addresses);
-            foreach (var address in addresses)
-                freeAddresses1.Enqueue(address);
-        }
-        else
-        {
-            Span<ulong> addresses1 = stackalloc ulong[(int)umem1.FrameCount];
-            umem1.GetAddresses(addresses1);
-            foreach (var address in addresses1)
-                freeAddresses1.Enqueue(address);
+        Span<ulong> addresses = stackalloc ulong[(int)umem.FrameCount];
+        umem.GetAddresses(addresses);
+        foreach (var address in addresses)
+            freeAddresses.Enqueue(address);
 
-            Span<ulong> addresses2 = stackalloc ulong[(int)umem2.FrameCount];
-            umem2.GetAddresses(addresses2);
-            foreach (var address in addresses2)
-                freeAddresses2.Enqueue(address);
-        }
-
-        FillOnce(socket1, freeAddresses1);
-        FillOnce(socket2, freeAddresses2);
+        FillOnce(socket1, freeAddresses);
+        FillOnce(socket2, freeAddresses);
 
         using var nativeCancellationToken = new NativeCancellationToken(cancellationToken);
         while (true)
         {
-            while (ForwardOnce(socket1, socket2, packetsToSend2, freeAddresses1, freeAddresses2, shared, receivedCallback, sentCallback) |
-                   ForwardOnce(socket2, socket1, packetsToSend1, freeAddresses2, freeAddresses1, shared, receivedCallback, sentCallback)) ;
+            while (ForwardOnce(socket1, socket2, packetsToSend2, freeAddresses, receivedCallback, sentCallback) |
+                   ForwardOnce(socket2, socket1, packetsToSend1, freeAddresses, receivedCallback, sentCallback)) ;
 
             var events1 = Poll.Event.Readable;
             if (packetsToSend1.Count > 0)
@@ -97,12 +73,7 @@ public static class XdpForwarder
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    private static bool ForwardOnce(XdpSocket sourceSocket, XdpSocket destinationSocket,
-                                    Queue<XdpDescriptor> packetsToSend,
-                                    Queue<ulong> sourceFreeAddresses,
-                                    Queue<ulong> destinationFreeAddresses,
-                                    bool shared,
-                                    PacketCallback? receivedCallback, PacketCallback? sentCallback)
+    private static bool ForwardOnce(XdpSocket sourceSocket, XdpSocket destinationSocket, Queue<XdpDescriptor> packetsToSend, Queue<ulong> freeAddresses, PacketCallback? receivedCallback, PacketCallback? sentCallback)
     {
         var hasActivity = false;
         using (var receivePackets = sourceSocket.RxRing.Receive())
@@ -126,14 +97,7 @@ public static class XdpForwarder
                 var descriptor = packetsToSend.Dequeue();
                 ref var packet = ref sendPackets[i];
                 packet.Length = descriptor.Length;
-                if (shared)
-                    packet.Address = descriptor.Address;
-                else
-                {
-                    packet.Address = destinationFreeAddresses.Dequeue();
-                    sourceSocket.Umem[descriptor].CopyTo(destinationSocket.Umem[packet]);
-                    sourceFreeAddresses.Enqueue(descriptor.Address);
-                }
+                packet.Address = descriptor.Address;
                 sentCallback?.Invoke(destinationSocket.IfName, destinationSocket.Umem[packet]);
             }
         }
@@ -145,13 +109,10 @@ public static class XdpForwarder
             for (var i = 0u; i < completed.Length; ++i)
             {
                 hasActivity = true;
-                destinationFreeAddresses.Enqueue(completed[i]);
+                freeAddresses.Enqueue(completed[i]);
             }
 
-        if (FillOnce(sourceSocket, sourceFreeAddresses))
-            hasActivity = true;
-
-        if (FillOnce(destinationSocket, destinationFreeAddresses))
+        if (FillOnce(sourceSocket, freeAddresses))
             hasActivity = true;
 
         return hasActivity;

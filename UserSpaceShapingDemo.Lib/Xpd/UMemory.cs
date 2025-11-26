@@ -9,6 +9,12 @@ namespace UserSpaceShapingDemo.Lib.Xpd;
 
 public sealed unsafe class UMemory : NativeObject, IFileObject
 {
+    public const uint DefaultFrameCount = LibXdp.XSK_RING_CONS__DEFAULT_NUM_DESCS * 2;
+    public const uint DefaultFrameSize = LibXdp.XSK_UMEM__DEFAULT_FRAME_SIZE;
+    public const uint DefaultFillRingSize = LibXdp.XSK_RING_CONS__DEFAULT_NUM_DESCS;
+    public const uint DefaultCompletionRingSize = LibXdp.XSK_RING_PROD__DEFAULT_NUM_DESCS;
+    public const uint DefaultFrameHeadRoom = LibXdp.XSK_UMEM__DEFAULT_FRAME_HEADROOM;
+
     private readonly void* _umem_area;
     private readonly LibXdp.xsk_umem* _umem;
 
@@ -44,11 +50,11 @@ public sealed unsafe class UMemory : NativeObject, IFileObject
         get => new(this[packet.Address], (int)packet.Length);
     }
 
-    public UMemory(uint frameCount = LibXdp.XSK_RING_CONS__DEFAULT_NUM_DESCS * 2,
-                   uint frameSize = LibXdp.XSK_UMEM__DEFAULT_FRAME_SIZE,
-                   uint fillRingSize = LibXdp.XSK_RING_CONS__DEFAULT_NUM_DESCS,
-                   uint completionRingSize = LibXdp.XSK_RING_PROD__DEFAULT_NUM_DESCS,
-                   uint frameHeadRoom = LibXdp.XSK_UMEM__DEFAULT_FRAME_HEADROOM)
+    public UMemory(uint frameCount = DefaultFrameCount,
+                   uint frameSize = DefaultFrameSize,
+                   uint fillRingSize = DefaultFillRingSize,
+                   uint completionRingSize = DefaultCompletionRingSize,
+                   uint frameHeadRoom = DefaultFrameHeadRoom)
     {
         FrameCount = frameCount;
         FrameSize = frameSize;

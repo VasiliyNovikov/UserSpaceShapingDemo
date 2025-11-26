@@ -170,10 +170,8 @@ public sealed class XdpSocketTests
 
     [TestMethod]
     [Timeout(5000, CooperativeCancellation = true)]
-    [DataRow(XdpForwarderMode.GenericSharedMemory)]
-    [DataRow(XdpForwarderMode.GenericCopy)]
-    [DataRow(XdpForwarderMode.DriverSharedMemory)]
-    [DataRow(XdpForwarderMode.DriverCopy)]
+    [DataRow(XdpForwarderMode.Generic)]
+    [DataRow(XdpForwarderMode.Driver)]
     [DataRow(XdpForwarderMode.DriverZeroCopy)]
     public async Task XdpSocket_Forward(XdpForwarderMode mode)
     {
