@@ -60,14 +60,14 @@ public static class XdpForwarder
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    private static bool FillOnce(XdpSocket socket, Stack<ulong> addressesToFill)
+    private static bool FillOnce(XdpSocket socket, Stack<ulong> freeAddresses)
     {
         var filled = false;
-        using var fill = socket.FillRing.Fill((uint)addressesToFill.Count);
+        using var fill = socket.FillRing.Fill((uint)freeAddresses.Count);
         for (var i = 0u; i < fill.Length; ++i)
         {
             filled = true;
-            fill[i] = addressesToFill.Pop();
+            fill[i] = freeAddresses.Pop();
         }
         return filled;
     }
@@ -81,7 +81,7 @@ public static class XdpForwarder
             for (var i = 0u; i < receivePackets.Length; ++i)
             {
                 hasActivity = true;
-                ref readonly var packet = ref receivePackets[i];
+                var packet = receivePackets[i];
                 packetsToSend.Enqueue(packet);
                 var packetData = sourceSocket.Umem[packet];
                 UpdateChecksums(packetData);
@@ -95,10 +95,8 @@ public static class XdpForwarder
             {
                 hasActivity = true;
                 var descriptor = packetsToSend.Dequeue();
-                ref var packet = ref sendPackets[i];
-                packet.Length = descriptor.Length;
-                packet.Address = descriptor.Address;
-                sentCallback?.Invoke(destinationSocket.IfName, destinationSocket.Umem[packet]);
+                sendPackets[i] = descriptor;
+                sentCallback?.Invoke(destinationSocket.IfName, destinationSocket.Umem[descriptor]);
             }
         }
 

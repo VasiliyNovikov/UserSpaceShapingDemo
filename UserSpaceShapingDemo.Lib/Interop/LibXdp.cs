@@ -263,19 +263,11 @@ internal static unsafe partial class LibXdp
 
     // Address helpers (ports of libbpf's xsk_ring_cons__comp_addr() and xsk_ring_prod__fill_addr())
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public static ref ulong xsk_ring__addr(ref xsk_ring ring, uint idx)
-    {
-        ulong* addrs = (ulong*)ring.ring;
-        return ref addrs[idx & ring.mask];
-    }
+    public static ref ulong xsk_ring__addr(ref xsk_ring ring, uint idx) => ref ((ulong*)ring.ring)[idx & ring.mask];
 
     // Port of libbpf's xsk_ring_cons__rx_desc() and xsk_ring_prod__tx_desc()
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public static ref xdp_desc xsk_ring__desc(ref xsk_ring ring, uint idx)
-    {
-        xdp_desc* descs = (xdp_desc*)ring.ring;
-        return ref descs[idx & ring.mask];
-    }
+    public static ref xdp_desc xsk_ring__desc(ref xsk_ring ring, uint idx) => ref ((xdp_desc*)ring.ring)[idx & ring.mask];
 
     [StructLayout(LayoutKind.Sequential)]
     public readonly struct xsk_api_result { public readonly int error_code; }
