@@ -8,7 +8,7 @@ namespace UserSpaceShapingDemo.Lib.Xpd;
 
 public sealed unsafe class XdpSocket : NativeObject, IFileObject
 {
-    private readonly LibBpf.xsk_socket* _xsk;
+    private readonly LibXdp.xsk_socket* _xsk;
     private FileDescriptor? _descriptor;
 
     public UMemory Umem { get; }
@@ -22,14 +22,14 @@ public sealed unsafe class XdpSocket : NativeObject, IFileObject
     public FileDescriptor Descriptor
     {
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        get => _descriptor ??= LibBpf.xsk_socket__fd(_xsk);
+        get => _descriptor ??= LibXdp.xsk_socket__fd(_xsk);
     }
 
     public XdpSocket(UMemory umem,
                      string ifName,
                      uint queueId = 0,
-                     uint rxSize = LibBpf.XSK_RING_CONS__DEFAULT_NUM_DESCS,
-                     uint txSize = LibBpf.XSK_RING_PROD__DEFAULT_NUM_DESCS,
+                     uint rxSize = LibXdp.XSK_RING_CONS__DEFAULT_NUM_DESCS,
+                     uint txSize = LibXdp.XSK_RING_PROD__DEFAULT_NUM_DESCS,
                      XdpSocketMode mode = XdpSocketMode.Default,
                      XdpSocketBindMode bindMode = XdpSocketBindMode.Copy | XdpSocketBindMode.UseNeedWakeup,
                      bool shared = false)
@@ -37,7 +37,7 @@ public sealed unsafe class XdpSocket : NativeObject, IFileObject
         Umem = umem;
         IfName = ifName;
         var ifIndex = InterfaceNameHelper.GetIndex(ifName);
-        var config = new LibBpf.xsk_socket_config
+        var config = new LibXdp.xsk_socket_config
         {
             rx_size = rxSize,
             tx_size = txSize,
@@ -47,20 +47,20 @@ public sealed unsafe class XdpSocket : NativeObject, IFileObject
         };
         if (shared)
         {
-            config.bind_flags |= LibBpf.XDP_SHARED_UMEM;
+            config.bind_flags |= LibXdp.XDP_SHARED_UMEM;
             FillRing = new();
             CompletionRing = new();
-            LibBpf.xsk_socket__create_shared(out _xsk, ifName, queueId, umem.UMem, out RxRing.Ring, out TxRing.Ring, out FillRing.Ring, out CompletionRing.Ring, config).ThrowIfError();
+            LibXdp.xsk_socket__create_shared(out _xsk, ifName, queueId, umem.UMem, out RxRing.Ring, out TxRing.Ring, out FillRing.Ring, out CompletionRing.Ring, config).ThrowIfError();
         }
         else
         {
             FillRing = umem.FillRing;
             CompletionRing = umem.CompletionRing;
-            LibBpf.xsk_socket__create(out _xsk, ifName, queueId, umem.UMem, out RxRing.Ring, out TxRing.Ring, config).ThrowIfError();
+            LibXdp.xsk_socket__create(out _xsk, ifName, queueId, umem.UMem, out RxRing.Ring, out TxRing.Ring, config).ThrowIfError();
         }
 
         XdpProgram.GetMap(ifIndex, mode, out var mapDescriptor);
-        LibBpf.xsk_socket__update_xskmap(_xsk, mapDescriptor).ThrowIfError();
+        LibXdp.xsk_socket__update_xskmap(_xsk, mapDescriptor).ThrowIfError();
     }
 
     public bool WaitFor(Poll.Event events, NativeCancellationToken cancellationToken) => cancellationToken.Wait(this, events);
@@ -72,6 +72,6 @@ public sealed unsafe class XdpSocket : NativeObject, IFileObject
     protected override void ReleaseUnmanagedResources()
     {
         if (_xsk is not null)
-            LibBpf.xsk_socket__delete(_xsk);
+            LibXdp.xsk_socket__delete(_xsk);
     }
 }

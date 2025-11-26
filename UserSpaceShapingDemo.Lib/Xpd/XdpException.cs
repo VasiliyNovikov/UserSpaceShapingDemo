@@ -7,7 +7,7 @@ public sealed class XdpException(int error) : NativeException((NativeErrorNumber
 
 internal static class XdpExceptionExtensions
 {
-    public static void ThrowIfError(this LibBpf.xsk_api_result result)
+    public static void ThrowIfError(this LibXdp.xsk_api_result result)
     {
         if (result.error_code < 0)
             throw new XdpException(result.error_code);

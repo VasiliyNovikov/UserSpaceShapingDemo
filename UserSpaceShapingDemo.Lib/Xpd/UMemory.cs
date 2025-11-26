@@ -10,9 +10,9 @@ namespace UserSpaceShapingDemo.Lib.Xpd;
 public sealed unsafe class UMemory : NativeObject, IFileObject
 {
     private readonly void* _umem_area;
-    private readonly LibBpf.xsk_umem* _umem;
+    private readonly LibXdp.xsk_umem* _umem;
 
-    internal LibBpf.xsk_umem* UMem
+    internal LibXdp.xsk_umem* UMem
     {
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         get => _umem;
@@ -29,13 +29,13 @@ public sealed unsafe class UMemory : NativeObject, IFileObject
     public FileDescriptor Descriptor
     {
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        get => LibBpf.xsk_umem__fd(_umem);
+        get => LibXdp.xsk_umem__fd(_umem);
     }
 
     public void* this[ulong address]
     {
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        get => LibBpf.xsk_umem__get_data(_umem_area, address);
+        get => LibXdp.xsk_umem__get_data(_umem_area, address);
     }
 
     public Span<byte> this[in XdpDescriptor packet]
@@ -44,11 +44,11 @@ public sealed unsafe class UMemory : NativeObject, IFileObject
         get => new(this[packet.Address], (int)packet.Length);
     }
 
-    public UMemory(uint frameCount = LibBpf.XSK_RING_CONS__DEFAULT_NUM_DESCS * 2,
-                   uint frameSize = LibBpf.XSK_UMEM__DEFAULT_FRAME_SIZE,
-                   uint fillRingSize = LibBpf.XSK_RING_CONS__DEFAULT_NUM_DESCS,
-                   uint completionRingSize = LibBpf.XSK_RING_PROD__DEFAULT_NUM_DESCS,
-                   uint frameHeadRoom = LibBpf.XSK_UMEM__DEFAULT_FRAME_HEADROOM)
+    public UMemory(uint frameCount = LibXdp.XSK_RING_CONS__DEFAULT_NUM_DESCS * 2,
+                   uint frameSize = LibXdp.XSK_UMEM__DEFAULT_FRAME_SIZE,
+                   uint fillRingSize = LibXdp.XSK_RING_CONS__DEFAULT_NUM_DESCS,
+                   uint completionRingSize = LibXdp.XSK_RING_PROD__DEFAULT_NUM_DESCS,
+                   uint frameHeadRoom = LibXdp.XSK_UMEM__DEFAULT_FRAME_HEADROOM)
     {
         FrameCount = frameCount;
         FrameSize = frameSize;
@@ -57,17 +57,17 @@ public sealed unsafe class UMemory : NativeObject, IFileObject
         var size = (ulong)frameCount * frameSize;
         _umem_area = NativeMemory.AlignedAlloc((nuint)size, (nuint)Environment.SystemPageSize);
 
-        var config = new LibBpf.xsk_umem_config
+        var config = new LibXdp.xsk_umem_config
         {
             fill_size = fillRingSize,
             comp_size = completionRingSize,
             frame_size = frameSize,
             frame_headroom = frameHeadRoom,
-            flags = LibBpf.XSK_UMEM__DEFAULT_FLAGS
+            flags = LibXdp.XSK_UMEM__DEFAULT_FLAGS
         };
         try
         {
-            LibBpf.xsk_umem__create(out _umem, _umem_area, size, out FillRing.Ring, out CompletionRing.Ring, config).ThrowIfError();
+            LibXdp.xsk_umem__create(out _umem, _umem_area, size, out FillRing.Ring, out CompletionRing.Ring, config).ThrowIfError();
         }
         catch
         {
@@ -94,7 +94,7 @@ public sealed unsafe class UMemory : NativeObject, IFileObject
         try
         {
             if (_umem is not null)
-                LibBpf.xsk_umem__delete(_umem).ThrowIfError();
+                LibXdp.xsk_umem__delete(_umem).ThrowIfError();
         }
         finally
         {

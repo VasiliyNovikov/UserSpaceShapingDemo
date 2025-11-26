@@ -9,12 +9,12 @@ public abstract class ProducerRingBuffer : RingBuffer
     public bool NeedsWakeup
     {
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        get => LibBpf.xsk_ring_prod__needs_wakeup(Ring);
+        get => LibXdp.xsk_ring_prod__needs_wakeup(Ring);
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    protected uint Reserve(uint count, out uint idx) => LibBpf.xsk_ring_prod__reserve(ref Ring, count, out idx);
+    protected uint Reserve(uint count, out uint idx) => LibXdp.xsk_ring_prod__reserve(ref Ring, count, out idx);
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    protected void Submit(uint count) => LibBpf.xsk_ring_prod__submit(ref Ring, count);
+    protected void Submit(uint count) => LibXdp.xsk_ring_prod__submit(ref Ring, count);
 }

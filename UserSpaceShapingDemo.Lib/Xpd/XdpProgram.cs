@@ -10,7 +10,7 @@ public static class XdpProgram
     public static void GetMap(int ifIndex, XdpSocketMode mode, out FileDescriptor mapDescriptor)
     {
         // 1. Load the default program using the helper (attaches with flags=0, likely Generic)
-        LibBpf.xsk_setup_xdp_prog(ifIndex, out mapDescriptor).ThrowIfError();
+        LibXdp.xsk_setup_xdp_prog(ifIndex, out mapDescriptor).ThrowIfError();
 
         // If we just wanted default/generic, we are done.
         if (mode is XdpSocketMode.Default or XdpSocketMode.Generic)
