@@ -23,7 +23,7 @@ public static class XdpForwarder
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static void Run(string eth1, string eth2, XdpForwarderMode mode = XdpForwarderMode.Generic, PacketCallback? receivedCallback = null, PacketCallback? sentCallback = null, CancellationToken cancellationToken = default)
     {
-        using var umem = new UMemory(UMemory.DefaultFrameCount * 2);
+        using var umem = new UMemory();
 
         var socketMode = mode is XdpForwarderMode.Generic ? XdpSocketMode.Default : XdpSocketMode.Driver;
         var bindMode = mode is XdpForwarderMode.DriverZeroCopy ? XdpSocketBindMode.ZeroCopy : XdpSocketBindMode.Copy;
@@ -33,12 +33,12 @@ public static class XdpForwarder
 
         Queue<XdpDescriptor> packetsToSend1 = [];
         Queue<XdpDescriptor> packetsToSend2 = [];
-        Queue<ulong> freeAddresses = [];
+        Stack<ulong> freeAddresses = [];
 
         Span<ulong> addresses = stackalloc ulong[(int)umem.FrameCount];
         umem.GetAddresses(addresses);
         foreach (var address in addresses)
-            freeAddresses.Enqueue(address);
+            freeAddresses.Push(address);
 
         FillOnce(socket1, freeAddresses);
         FillOnce(socket2, freeAddresses);
@@ -60,20 +60,20 @@ public static class XdpForwarder
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    private static bool FillOnce(XdpSocket socket, Queue<ulong> addressesToFill)
+    private static bool FillOnce(XdpSocket socket, Stack<ulong> addressesToFill)
     {
         var filled = false;
         using var fill = socket.FillRing.Fill((uint)addressesToFill.Count);
         for (var i = 0u; i < fill.Length; ++i)
         {
             filled = true;
-            fill[i] = addressesToFill.Dequeue();
+            fill[i] = addressesToFill.Pop();
         }
         return filled;
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    private static bool ForwardOnce(XdpSocket sourceSocket, XdpSocket destinationSocket, Queue<XdpDescriptor> packetsToSend, Queue<ulong> freeAddresses, PacketCallback? receivedCallback, PacketCallback? sentCallback)
+    private static bool ForwardOnce(XdpSocket sourceSocket, XdpSocket destinationSocket, Queue<XdpDescriptor> packetsToSend, Stack<ulong> freeAddresses, PacketCallback? receivedCallback, PacketCallback? sentCallback)
     {
         var hasActivity = false;
         using (var receivePackets = sourceSocket.RxRing.Receive())
@@ -109,7 +109,7 @@ public static class XdpForwarder
             for (var i = 0u; i < completed.Length; ++i)
             {
                 hasActivity = true;
-                freeAddresses.Enqueue(completed[i]);
+                freeAddresses.Push(completed[i]);
             }
 
         if (FillOnce(sourceSocket, freeAddresses))
