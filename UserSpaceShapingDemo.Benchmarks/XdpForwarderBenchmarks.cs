@@ -60,7 +60,7 @@ public class XdpForwarderBenchmarks
             using var forwardNs = ForwarderDriverSetup1.EnterReceiver();
             try
             {
-                XdpForwarder.Run(ForwarderDriverSetup1.ReceiverName, ForwarderDriverSetup2.SenderName, XdpForwarderMode.Generic);
+                XdpForwarder.Run(ForwarderDriverSetup1.ReceiverName, ForwarderDriverSetup2.SenderName, XdpForwarderMode.Driver);
             }
             catch (OperationCanceledException)
             {
@@ -111,25 +111,25 @@ public class XdpForwarderBenchmarks
     [BenchmarkCategory("SendFlow")]
     public void SendFlow_Forwarded_Driver() => SendFlow(ForwardDriverSender, ForwardDriverReceiver);
 
-    private void Send(Socket sender, Socket receiver)
+    private static void Send(Socket sender, Socket receiver)
     {
         sender.SendTo(Packet, SocketFlags.None, ReceiverAddress);
         receiver.ReceiveFrom(PacketBuffer, SocketFlags.None, AddressBuffer);
     }
 
-    private void SendBatch(Socket sender, Socket receiver)
+    private static void SendBatch(Socket sender, Socket receiver)
     {
-        const int batchSize = 15;
+        const int batchSize = 10;
         for (var i = 0; i < batchSize; ++i)
             sender.SendTo(Packet, SocketFlags.None, ReceiverAddress);
         for (var i = 0; i < batchSize; ++i)
             receiver.ReceiveFrom(PacketBuffer, SocketFlags.None, AddressBuffer);
     }
 
-    private void SendFlow(Socket sender, Socket receiver)
+    private static void SendFlow(Socket sender, Socket receiver)
     {
         const int flowSize = 1024;
-        const int socketBufferSize = 15;
+        const int socketBufferSize = 10;
         var sendIndex = 0;
         var receiveIndex = 0;
         while (sendIndex < flowSize || receiveIndex < flowSize)
