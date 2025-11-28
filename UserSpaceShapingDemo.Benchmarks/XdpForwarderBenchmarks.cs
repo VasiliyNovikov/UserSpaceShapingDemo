@@ -91,6 +91,14 @@ public class XdpForwarderBenchmarks : IDisposable
     [BenchmarkCategory("SendBatch")]
     public void SendBatch_Forwarded() => SendBatch(_forwardSender, _forwardReceiver);
 
+    [Benchmark(Baseline = true)]
+    [BenchmarkCategory("SendFlow")]
+    public void SendFlow_Direct() => SendFlow(_directSender, _directReceiver);
+
+    [Benchmark]
+    [BenchmarkCategory("SendFlow")]
+    public void SendFlow_Forwarded() => SendFlow(_forwardSender, _forwardReceiver);
+
     private void Send(Socket sender, Socket receiver)
     {
         sender.SendTo(_packet, SocketFlags.None, _receiverAddress);
@@ -104,5 +112,20 @@ public class XdpForwarderBenchmarks : IDisposable
             sender.SendTo(_packet, SocketFlags.None, _receiverAddress);
         for (var i = 0; i < batchSize; ++i)
             receiver.ReceiveFrom(_packetBuffer, SocketFlags.None, _addressBuffer);
+    }
+
+    private void SendFlow(Socket sender, Socket receiver)
+    {
+        const int flowSize = 1024;
+        const int socketBufferSize = 16;
+        var sendIndex = 0;
+        var receiveIndex = 0;
+        while (sendIndex < flowSize || receiveIndex < flowSize)
+        {
+            if (sendIndex++ < flowSize)
+                sender.SendTo(_packet, SocketFlags.None, _receiverAddress);
+            if (sendIndex >= socketBufferSize && receiveIndex++ < flowSize)
+                receiver.ReceiveFrom(_packetBuffer, SocketFlags.None, _addressBuffer);
+        }
     }
 }
