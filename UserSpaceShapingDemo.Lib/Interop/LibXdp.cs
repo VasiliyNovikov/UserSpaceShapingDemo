@@ -131,135 +131,97 @@ internal static unsafe partial class LibXdp
     [SuppressGCTransition]
     public static partial FileDescriptor xsk_socket__fd(xsk_socket* xsk);
 
-    // C# ports of libbpf's smp_load_acquire() and smp_store_release()
-    // Source: tools/lib/bpf/xsk.h
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    private static uint libbpf_smp_load_acquire(ref uint p) => Volatile.Read(ref p);
+    private static uint xsk_cons_nb_avail_cached(ref xsk_ring r) => r.cached_prod - r.cached_cons; // (mod 2^32 arithmetic)
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    private static void libbpf_smp_store_release(ref uint p, uint v) => Volatile.Write(ref p, v);
+    private static uint xsk_cons_nb_avail_aggressive(ref xsk_ring r) => (r.cached_prod = Volatile.Read(ref *r.producer)) - r.cached_cons; // Refresh cached_prod with acquire semantics
 
-    // C# port of:
-    // static inline __u32 xsk_cons_nb_avail(struct xsk_ring_cons *r, __u32 nb)
-    // and
-    // static inline __u32 xsk_ring_cons__peek(struct xsk_ring_cons *cons, __u32 nb, __u32 *idx)
-    //
-    // Source: tools/lib/bpf/xsk.h (libbpf)
-    // - xsk_cons_nb_avail(): entries = cached_prod - cached_cons; refresh cached_prod with load-acquire when 0
-    // - xsk_ring_cons__peek(): returns min(nb, avail), writes *idx = cached_cons, bumps cached_cons by entries
-
-    // If you also want to port xsk_ring_cons__release():
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public static void xsk_ring_cons__release(ref xsk_ring cons, uint nb)
+    private static uint xsk_cons_nb_avail_relaxed(ref xsk_ring r)
     {
-        libbpf_smp_store_release(ref *cons.consumer, *cons.consumer + nb);
+        var entries = xsk_cons_nb_avail_cached(ref r);
+        return entries == 0 ? xsk_cons_nb_avail_aggressive(ref r) : entries;
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    private static uint xsk_cons_nb_avail(ref xsk_ring r)
-    {
-        // entries = r.cached_prod - r.cached_cons; (mod 2^32 arithmetic)
-        var entries = r.cached_prod - r.cached_cons;
-        if (entries == 0)
-        {
-            // Refresh cached_prod with acquire semantics
-            r.cached_prod = libbpf_smp_load_acquire(ref *r.producer);
-            entries = r.cached_prod - r.cached_cons;
-        }
-        return entries;
-    }
+    private static uint xsk_cons_nb_avail_relaxed(ref xsk_ring r, uint nb) => Math.Min(xsk_cons_nb_avail_relaxed(ref r), nb);
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    private static uint xsk_cons_nb_avail(ref xsk_ring r, uint nb)
-    {
-        var entries = xsk_cons_nb_avail(ref r);
-        return entries > nb ? nb : entries;
-    }
+    private static uint xsk_cons_nb_avail_aggressive(ref xsk_ring r, uint nb) => xsk_cons_nb_avail_cached(ref r) >= nb ? nb : Math.Min(xsk_cons_nb_avail_aggressive(ref r), nb);
 
     // Port of libbpf's xsk_ring_cons__peek().
-    // Returns number of entries granted (<= nb). When > 0, idx is set to the starting ring index.
-    // NOTE: idx here is the absolute ring index (cached_cons). Masking to the ring is done by the
-    // address helpers (e.g., xsk_ring_cons__comp_addr / __rx_desc) just like libbpf.
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public static uint xsk_ring_cons__peek(ref xsk_ring cons, uint nb, out uint idx)
+    private static uint xsk_ring_cons__peek_complete(ref xsk_ring cons, uint entries, out uint idx)
     {
-        var entries = xsk_cons_nb_avail(ref cons, nb);
-        if (entries > 0)
+        if (entries == 0)
+            Unsafe.SkipInit(out idx);
+        else
         {
             idx = cons.cached_cons;
             cons.cached_cons += entries;
         }
-        else
-            Unsafe.SkipInit(out idx);
-
         return entries;
     }
-    
+
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public static uint xsk_ring_cons__peek_all(ref xsk_ring cons, out uint idx)
-    {
-        var entries = xsk_cons_nb_avail(ref cons);
-        if (entries > 0)
-        {
-            idx = cons.cached_cons;
-            cons.cached_cons += entries;
-        }
-        else
-            Unsafe.SkipInit(out idx);
+    public static uint xsk_ring_cons__peek_relaxed(ref xsk_ring cons, uint nb, out uint idx) => xsk_ring_cons__peek_complete(ref cons, xsk_cons_nb_avail_relaxed(ref cons, nb), out idx);
 
-        return entries;
-    }
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public static uint xsk_ring_cons__peek_aggressive(ref xsk_ring cons, uint nb, out uint idx) => xsk_ring_cons__peek_complete(ref cons, xsk_cons_nb_avail_aggressive(ref cons, nb), out idx);
+
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public static uint xsk_ring_cons__peek_relaxed(ref xsk_ring cons, out uint idx) => xsk_ring_cons__peek_complete(ref cons, xsk_cons_nb_avail_relaxed(ref cons), out idx);
+
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public static uint xsk_ring_cons__peek_aggressive(ref xsk_ring cons, out uint idx) => xsk_ring_cons__peek_complete(ref cons, xsk_cons_nb_avail_aggressive(ref cons), out idx);
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static bool xsk_ring_prod__needs_wakeup(in xsk_ring r) => (*r.flags & XDP_RING_NEED_WAKEUP) != 0;
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    private static uint xsk_prod_nb_free(ref xsk_ring r)
-    {
-        /* Refresh the local tail pointer.
-         * cached_cons is r->size bigger than the real consumer pointer so
-         * that this addition can be avoided in the more frequently
-         * executed code that computs free_entries in the beginning of
-         * this function. Without this optimization it whould have been
-         * free_entries = r->cached_prod - r->cached_cons + r->size.
-         */
-        r.cached_cons = libbpf_smp_load_acquire(ref *r.consumer);
-        r.cached_cons += r.size;
+    private static uint xsk_prod_nb_free_cached(ref xsk_ring r) => r.cached_cons - r.cached_prod;
 
-        return r.cached_cons - r.cached_prod;
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    private static uint xsk_prod_nb_free_aggressive(ref xsk_ring r) => (r.cached_cons = Volatile.Read(ref *r.consumer) + r.size) - r.cached_prod;
+
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    private static uint xsk_prod_nb_free_aggressive(ref xsk_ring r, uint nb) => xsk_prod_nb_free_cached(ref r) >= nb ? nb : Math.Min(xsk_prod_nb_free_aggressive(ref r), nb);
+
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    private static uint xsk_prod_nb_free_relaxed(ref xsk_ring r, uint nb)
+    {
+        var free_entries = xsk_prod_nb_free_cached(ref r);
+        return Math.Min(free_entries >= 0 ? free_entries : xsk_prod_nb_free_aggressive(ref r), nb);
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    private static uint xsk_prod_nb_free(ref xsk_ring r, uint nb)
+    public static uint xsk_ring_prod__reserve_complete(ref xsk_ring prod, uint free_entries, out uint idx)
     {
-        var free_entries = r.cached_cons - r.cached_prod;
-        return free_entries >= nb ? free_entries : xsk_prod_nb_free(ref r);
-    }
-
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public static uint xsk_ring_prod__reserve(ref xsk_ring prod, uint nb, out uint idx)
-    {
-        var entries = Math.Min(xsk_prod_nb_free(ref prod, nb), nb);
-        if (entries == 0)
-        {
+        if (free_entries == 0)
             Unsafe.SkipInit(out idx);
-            return 0;
+        else
+        {
+            idx = prod.cached_prod;
+            prod.cached_prod += free_entries;
         }
-
-        idx = prod.cached_prod;
-        prod.cached_prod += entries;
-
-        return entries;
+        return free_entries;
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public static void xsk_ring_prod__submit(ref xsk_ring prod, uint nb)
-    {
-        /* Make sure everything has been written to the ring before indicating
-         * this to the kernel by writing the producer pointer.
-         */
-        libbpf_smp_store_release(ref *prod.producer, *prod.producer + nb);
-    }
+    public static uint xsk_ring_prod__reserve_relaxed(ref xsk_ring prod, uint nb, out uint idx) => xsk_ring_prod__reserve_complete(ref prod, xsk_prod_nb_free_relaxed(ref prod, nb), out idx);
+
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public static uint xsk_ring_prod__reserve_aggressive(ref xsk_ring prod, uint nb, out uint idx) => xsk_ring_prod__reserve_complete(ref prod, xsk_prod_nb_free_aggressive(ref prod, nb), out idx);
+
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public static void xsk_ring_advance(uint* ring, uint nb) => Volatile.Write(ref *ring, *ring + nb);
+
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public static void xsk_ring_cons__release(ref xsk_ring cons, uint nb) => xsk_ring_advance(cons.consumer, nb);
+
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public static void xsk_ring_prod__submit(ref xsk_ring prod, uint nb) => xsk_ring_advance(prod.producer, nb);
 
     // Address helpers (ports of libbpf's xsk_ring_cons__comp_addr() and xsk_ring_prod__fill_addr())
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
