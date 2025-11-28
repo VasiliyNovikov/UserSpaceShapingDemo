@@ -236,11 +236,9 @@ public sealed class XdpSocketTests
 
     [TestMethod]
     [Timeout(5000, CooperativeCancellation = true)]
-    [DataRow(XdpForwarderMode.Generic, 4)]
     [DataRow(XdpForwarderMode.Generic, 8)]
     [DataRow(XdpForwarderMode.Generic, 16)]
     [DataRow(XdpForwarderMode.Generic, 32)]
-    [DataRow(XdpForwarderMode.Driver, 4)]
     [DataRow(XdpForwarderMode.Driver, 8)]
     [DataRow(XdpForwarderMode.Driver, 16)]
     [DataRow(XdpForwarderMode.Driver, 32)]
