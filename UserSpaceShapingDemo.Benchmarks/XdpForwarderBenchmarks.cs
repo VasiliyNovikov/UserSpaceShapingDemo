@@ -2,7 +2,6 @@ using System;
 using System.Net;
 using System.Net.Sockets;
 using System.Security.Cryptography;
-using System.Threading;
 using System.Threading.Tasks;
 
 using BenchmarkDotNet.Attributes;
@@ -16,102 +15,115 @@ namespace UserSpaceShapingDemo.Benchmarks;
 [MemoryDiagnoser]
 [ShortRunJob]
 [GroupBenchmarksBy(BenchmarkLogicalGroupRule.ByCategory)]
-public class XdpForwarderBenchmarks : IDisposable
+public class XdpForwarderBenchmarks
 {
     private const int SenderPort = 5000;
     private const int ReceiverPort = 6000;
 
-    private readonly TrafficSetup _directSetup;
-    private readonly TrafficSetup _forwarderSetup1;
-    private readonly TrafficSetup _forwarderSetup2;
-    private readonly CancellationTokenSource _forwarderCancellation;
-    private readonly Task _forwarderTask;
-    private readonly Socket _directSender;
-    private readonly Socket _directReceiver;
-    private readonly Socket _forwardSender;
-    private readonly Socket _forwardReceiver;
-    private readonly SocketAddress _senderAddress = new IPEndPoint(TrafficSetup.SenderAddress, SenderPort).Serialize();
-    private readonly SocketAddress _receiverAddress = new IPEndPoint(TrafficSetup.ReceiverAddress, ReceiverPort).Serialize();
-    private readonly SocketAddress _addressBuffer = new IPEndPoint(IPAddress.Loopback, 0).Serialize();
-    private readonly byte[] _packet = new byte[1500];
-    private readonly byte[] _packetBuffer = new byte[1500];
+    private static readonly TrafficSetup DirectSetup;
+    private static readonly TrafficSetup ForwarderGenericSetup1;
+    private static readonly TrafficSetup ForwarderGenericSetup2;
+    private static readonly TrafficSetup ForwarderDriverSetup1;
+    private static readonly TrafficSetup ForwarderDriverSetup2;
+    private static readonly Socket DirectSender;
+    private static readonly Socket DirectReceiver;
+    private static readonly Socket ForwardGenericSender;
+    private static readonly Socket ForwardGenericReceiver;
+    private static readonly Socket ForwardDriverSender;
+    private static readonly Socket ForwardDriverReceiver;
+    private static readonly SocketAddress SenderAddress = new IPEndPoint(TrafficSetup.SenderAddress, SenderPort).Serialize();
+    private static readonly SocketAddress ReceiverAddress = new IPEndPoint(TrafficSetup.ReceiverAddress, ReceiverPort).Serialize();
+    private static readonly SocketAddress AddressBuffer = new IPEndPoint(IPAddress.Loopback, 0).Serialize();
+    private static readonly byte[] Packet = new byte[1500];
+    private static readonly byte[] PacketBuffer = new byte[1500];
 
-    public XdpForwarderBenchmarks()
+    static  XdpForwarderBenchmarks()
     {
-        _directSetup = new();
-        _forwarderSetup1 = new();
-        _forwarderSetup2 = new(sharedSenderNs: _forwarderSetup1.ReceiverNs);
-        _forwarderCancellation = new();
-        _forwarderTask = Task.Factory.StartNew(() =>
+        DirectSetup = new();
+        ForwarderGenericSetup1 = new();
+        ForwarderGenericSetup2 = new(sharedSenderNs: ForwarderGenericSetup1.ReceiverNs);
+        Task.Factory.StartNew(() =>
         {
-            using var forwardNs = _forwarderSetup1.EnterReceiver();
+            using var forwardNs = ForwarderGenericSetup1.EnterReceiver();
             try
             {
-                XdpForwarder.Run(_forwarderSetup1.ReceiverName, _forwarderSetup2.SenderName, XdpForwarderMode.Generic, cancellationToken: _forwarderCancellation.Token);
+                XdpForwarder.Run(ForwarderGenericSetup1.ReceiverName, ForwarderGenericSetup2.SenderName, XdpForwarderMode.Generic);
             }
             catch (OperationCanceledException)
             {
             }
         }, TaskCreationOptions.LongRunning);
-        _directSender = _directSetup.CreateSenderSocket(SocketType.Dgram, ProtocolType.Udp, SenderPort);
-        _directReceiver = _directSetup.CreateReceiverSocket(SocketType.Dgram, ProtocolType.Udp, ReceiverPort);
-        _forwardSender = _forwarderSetup1.CreateSenderSocket(SocketType.Dgram, ProtocolType.Udp, SenderPort);
-        _forwardReceiver = _forwarderSetup2.CreateReceiverSocket(SocketType.Dgram, ProtocolType.Udp, ReceiverPort);
-        RandomNumberGenerator.Fill(_packet);
-    }
-
-    public void Dispose()
-    {
-        _directSender.Dispose();
-        _directReceiver.Dispose();
-        _forwardSender.Dispose();
-        _forwardReceiver.Dispose();
-        _forwarderCancellation.Cancel();
-        _forwarderTask.Wait();
-        _forwarderTask.Dispose();
-        _directSetup.Dispose();
-        _forwarderSetup1.Dispose();
-        _forwarderSetup2.Dispose();
-        GC.SuppressFinalize(this);
+        ForwarderDriverSetup1 = new();
+        ForwarderDriverSetup2 = new(sharedSenderNs: ForwarderDriverSetup1.ReceiverNs);
+        Task.Factory.StartNew(() =>
+        {
+            using var forwardNs = ForwarderDriverSetup1.EnterReceiver();
+            try
+            {
+                XdpForwarder.Run(ForwarderDriverSetup1.ReceiverName, ForwarderDriverSetup2.SenderName, XdpForwarderMode.Generic);
+            }
+            catch (OperationCanceledException)
+            {
+            }
+        }, TaskCreationOptions.LongRunning);
+        DirectSender = DirectSetup.CreateSenderSocket(SocketType.Dgram, ProtocolType.Udp, SenderPort);
+        DirectReceiver = DirectSetup.CreateReceiverSocket(SocketType.Dgram, ProtocolType.Udp, ReceiverPort);
+        ForwardGenericSender = ForwarderGenericSetup1.CreateSenderSocket(SocketType.Dgram, ProtocolType.Udp, SenderPort);
+        ForwardGenericReceiver = ForwarderGenericSetup2.CreateReceiverSocket(SocketType.Dgram, ProtocolType.Udp, ReceiverPort);
+        ForwardDriverSender = ForwarderDriverSetup1.CreateSenderSocket(SocketType.Dgram, ProtocolType.Udp, SenderPort);
+        ForwardDriverReceiver = ForwarderDriverSetup2.CreateReceiverSocket(SocketType.Dgram, ProtocolType.Udp, ReceiverPort);
+        RandomNumberGenerator.Fill(Packet);
     }
 
     [Benchmark(Baseline = true)]
     [BenchmarkCategory("Send")]
-    public void Send_Direct() => Send(_directSender, _directReceiver);
+    public void Send_Direct() => Send(DirectSender, DirectReceiver);
 
     [Benchmark]
     [BenchmarkCategory("Send")]
-    public void Send_Forwarded() => Send(_forwardSender, _forwardReceiver);
+    public void Send_Forwarded_Generic() => Send(ForwardGenericSender, ForwardGenericReceiver);
+
+    [Benchmark]
+    [BenchmarkCategory("Send")]
+    public void Send_Forwarded_Driver() => Send(ForwardDriverSender, ForwardDriverReceiver);
 
     [Benchmark(Baseline = true)]
     [BenchmarkCategory("SendBatch")]
-    public void SendBatch_Direct() => SendBatch(_directSender, _directReceiver);
+    public void SendBatch_Direct() => SendBatch(DirectSender, DirectReceiver);
 
     [Benchmark]
     [BenchmarkCategory("SendBatch")]
-    public void SendBatch_Forwarded() => SendBatch(_forwardSender, _forwardReceiver);
+    public void SendBatch_Forwarded_Generic() => SendBatch(ForwardGenericSender, ForwardGenericReceiver);
+
+    [Benchmark]
+    [BenchmarkCategory("SendBatch")]
+    public void SendBatch_Forwarded_Driver() => SendBatch(ForwardDriverSender, ForwardDriverReceiver);
 
     [Benchmark(Baseline = true)]
     [BenchmarkCategory("SendFlow")]
-    public void SendFlow_Direct() => SendFlow(_directSender, _directReceiver);
+    public void SendFlow_Direct() => SendFlow(DirectSender, DirectReceiver);
 
     [Benchmark]
     [BenchmarkCategory("SendFlow")]
-    public void SendFlow_Forwarded() => SendFlow(_forwardSender, _forwardReceiver);
+    public void SendFlow_Forwarded_Generic() => SendFlow(ForwardGenericSender, ForwardGenericReceiver);
+
+    [Benchmark]
+    [BenchmarkCategory("SendFlow")]
+    public void SendFlow_Forwarded_Driver() => SendFlow(ForwardDriverSender, ForwardDriverReceiver);
 
     private void Send(Socket sender, Socket receiver)
     {
-        sender.SendTo(_packet, SocketFlags.None, _receiverAddress);
-        receiver.ReceiveFrom(_packetBuffer, SocketFlags.None, _addressBuffer);
+        sender.SendTo(Packet, SocketFlags.None, ReceiverAddress);
+        receiver.ReceiveFrom(PacketBuffer, SocketFlags.None, AddressBuffer);
     }
 
     private void SendBatch(Socket sender, Socket receiver)
     {
         const int batchSize = 15;
         for (var i = 0; i < batchSize; ++i)
-            sender.SendTo(_packet, SocketFlags.None, _receiverAddress);
+            sender.SendTo(Packet, SocketFlags.None, ReceiverAddress);
         for (var i = 0; i < batchSize; ++i)
-            receiver.ReceiveFrom(_packetBuffer, SocketFlags.None, _addressBuffer);
+            receiver.ReceiveFrom(PacketBuffer, SocketFlags.None, AddressBuffer);
     }
 
     private void SendFlow(Socket sender, Socket receiver)
@@ -123,9 +135,9 @@ public class XdpForwarderBenchmarks : IDisposable
         while (sendIndex < flowSize || receiveIndex < flowSize)
         {
             if (sendIndex++ < flowSize)
-                sender.SendTo(_packet, SocketFlags.None, _receiverAddress);
+                sender.SendTo(Packet, SocketFlags.None, ReceiverAddress);
             if (sendIndex >= socketBufferSize && receiveIndex++ < flowSize)
-                receiver.ReceiveFrom(_packetBuffer, SocketFlags.None, _addressBuffer);
+                receiver.ReceiveFrom(PacketBuffer, SocketFlags.None, AddressBuffer);
         }
     }
 }

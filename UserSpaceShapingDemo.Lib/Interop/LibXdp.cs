@@ -10,6 +10,7 @@ namespace UserSpaceShapingDemo.Lib.Interop;
 internal static unsafe partial class LibXdp
 {
     private const string Lib = "libxdp";
+    private const string LegacyLib = "libbpf";
 
     public const ushort XDP_SHARED_UMEM = 0b0001;
     public const ushort XDP_COPY        = 0b0010; // Force copy-mode
@@ -40,9 +41,9 @@ internal static unsafe partial class LibXdp
     static LibXdp() => NativeLibrary.SetDllImportResolver(typeof(LibXdp).Assembly, (libraryName, assembly, searchPath) =>
         libraryName == Lib
             ? NativeLibrary.TryLoad(Lib, assembly, searchPath, out var handle) ||
-              NativeLibrary.TryLoad(LibBpf.Lib, assembly, searchPath, out handle)
+              NativeLibrary.TryLoad(LegacyLib, assembly, searchPath, out handle)
                 ? handle
-                : throw new DllNotFoundException($"Could not load {Lib} or {LibBpf.Lib} for AF_XDP")
+                : throw new DllNotFoundException($"Could not load {Lib} or {LegacyLib} for AF_XDP")
             : IntPtr.Zero);
 
     // Raw P/Invoke where config may be NULL (defaults applied by libbpf)
