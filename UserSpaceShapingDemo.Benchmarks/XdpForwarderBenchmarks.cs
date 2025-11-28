@@ -107,7 +107,7 @@ public class XdpForwarderBenchmarks : IDisposable
 
     private void SendBatch(Socket sender, Socket receiver)
     {
-        const int batchSize = 16;
+        const int batchSize = 15;
         for (var i = 0; i < batchSize; ++i)
             sender.SendTo(_packet, SocketFlags.None, _receiverAddress);
         for (var i = 0; i < batchSize; ++i)
@@ -117,7 +117,7 @@ public class XdpForwarderBenchmarks : IDisposable
     private void SendFlow(Socket sender, Socket receiver)
     {
         const int flowSize = 1024;
-        const int socketBufferSize = 16;
+        const int socketBufferSize = 15;
         var sendIndex = 0;
         var receiveIndex = 0;
         while (sendIndex < flowSize || receiveIndex < flowSize)
