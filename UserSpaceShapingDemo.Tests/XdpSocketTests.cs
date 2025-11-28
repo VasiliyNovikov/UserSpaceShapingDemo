@@ -234,6 +234,77 @@ public sealed class XdpSocketTests
         await Assert.ThrowsExactlyAsync<OperationCanceledException>(() => forwarderTask);
     }
 
+    [TestMethod]
+    [Timeout(5000, CooperativeCancellation = true)]
+    [DataRow(XdpForwarderMode.Generic, 4)]
+    [DataRow(XdpForwarderMode.Generic, 8)]
+    [DataRow(XdpForwarderMode.Generic, 16)]
+    [DataRow(XdpForwarderMode.Generic, 32)]
+    [DataRow(XdpForwarderMode.Driver, 4)]
+    [DataRow(XdpForwarderMode.Driver, 8)]
+    [DataRow(XdpForwarderMode.Driver, 16)]
+    [DataRow(XdpForwarderMode.Driver, 32)]
+    public async Task XdpSocket_Forward_Batch(XdpForwarderMode mode, int batchSize)
+    {
+        const string clientMessage = "Hello from XDP client!!!";
+        var clientMessageBytes = Encoding.ASCII.GetBytes(clientMessage);
+        const int clientPort = 54321;
+        const int serverPort = 12345;
+
+        var cancellationToken = TestContext.CancellationTokenSource.Token;
+
+        using var setup1 = new TrafficSetup();
+        using var setup2 = new TrafficSetup(sharedSenderNs: setup1.ReceiverNs);
+
+        using var forwardCancellation = new CancellationTokenSource();
+        using var linkedCancellation = CancellationTokenSource.CreateLinkedTokenSource(forwardCancellation.Token, cancellationToken);
+
+        var forwarderTask = Task.Factory.StartNew(() =>
+        {
+            using var forwardNs = setup1.EnterReceiver();
+            TestContext.WriteLine($"{DateTime.UtcNow:O}: Starting forwarding loop");
+            XdpForwarder.Run(setup1.ReceiverName, setup2.SenderName, mode,
+                             (eth, data) => TestContext.WriteLine($"{DateTime.UtcNow:O}: {eth}: received packet {PacketToString(data)}"),
+                             (eth, data) => TestContext.WriteLine($"{DateTime.UtcNow:O}: {eth}: sent packet {PacketToString(data)}"),
+                             linkedCancellation.Token);
+        }, TaskCreationOptions.LongRunning);
+
+        if (forwarderTask.IsCompleted)
+            await forwarderTask;
+
+        using var client = setup1.CreateSenderSocket(SocketType.Dgram, ProtocolType.Udp, clientPort);
+        using var server = setup2.CreateReceiverSocket(SocketType.Dgram, ProtocolType.Udp, serverPort);
+
+        var receiveTask = ReceiveBatchAsync();
+
+        for (var i = 0; i < batchSize; ++i)
+        {
+            await client.SendToAsync(clientMessageBytes, new IPEndPoint(TrafficSetup.ReceiverAddress, serverPort),
+                cancellationToken);
+            if (forwarderTask.IsCompleted)
+                await forwarderTask;
+        }
+
+        await receiveTask;
+
+        await forwardCancellation.CancelAsync();
+
+        await Assert.ThrowsExactlyAsync<OperationCanceledException>(() => forwarderTask);
+
+        return;
+
+        async Task ReceiveBatchAsync()
+        {
+            var receivedClientMessageBytes = new byte[clientMessage.Length];
+            for (var i = 0; i < batchSize; ++i)
+            {
+                await server.ReceiveFromAsync(receivedClientMessageBytes, new IPEndPoint(IPAddress.Any, 0), cancellationToken);
+                var receivedClientMessage = Encoding.ASCII.GetString(receivedClientMessageBytes);
+                Assert.AreEqual(clientMessage, receivedClientMessage);
+            }
+        }
+    }
+
     private static string PacketToString(Span<byte> packetData)
     {
         var sb = new StringBuilder();
