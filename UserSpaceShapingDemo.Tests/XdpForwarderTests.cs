@@ -62,10 +62,12 @@ public sealed class XdpForwarderTests
     [DataRow(XdpForwarderMode.Generic, 16)]
     [DataRow(XdpForwarderMode.Generic, 32)]
     [DataRow(XdpForwarderMode.Generic, 64)]
+    [DataRow(XdpForwarderMode.Generic, 128)]
     [DataRow(XdpForwarderMode.Driver, 8)]
     [DataRow(XdpForwarderMode.Driver, 16)]
     [DataRow(XdpForwarderMode.Driver, 32)]
     [DataRow(XdpForwarderMode.Driver, 64)]
+    [DataRow(XdpForwarderMode.Driver, 128)]
     public async Task XdpSocket_Forward_Batch(XdpForwarderMode mode, int batchSize)
     {
         const string clientMessageTemplate = "Hello from XDP client: {0}";
