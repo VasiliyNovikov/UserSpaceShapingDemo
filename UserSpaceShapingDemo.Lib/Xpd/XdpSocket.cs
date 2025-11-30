@@ -67,7 +67,15 @@ public sealed unsafe class XdpSocket : NativeObject, IFileObject
 
     public static bool WaitFor(ReadOnlySpan<XdpSocket> sockets, ReadOnlySpan<Poll.Event> events, NativeCancellationToken cancellationToken) => cancellationToken.Wait(sockets, events);
 
-    public void WakeUp() => LibC.sendto(Descriptor, null, 0, LibC.MSG_DONTWAIT, null, 0).ThrowIfError();
+    public void WakeUp()
+    {
+        if (!LibC.sendto(Descriptor, null, 0, LibC.MSG_DONTWAIT, null, 0).IsError())
+            return;
+
+        var error = NativeErrorNumber.Last;
+        if (error != NativeErrorNumber.TryAgain)
+            throw new NativeException(error);
+    }
 
     protected override void ReleaseUnmanagedResources()
     {
