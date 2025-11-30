@@ -80,6 +80,8 @@ public static class XdpForwarder
             filled = true;
             fill[i] = freeAddresses.Pop();
         }
+        if (filled && socket.FillRing.NeedsWakeup)
+            socket.WakeUp();
         return filled;
     }
 
@@ -100,8 +102,10 @@ public static class XdpForwarder
             }
         }
 
+        bool packetsSent;
         using (var sendPackets = destinationSocket.TxRing.Send((uint)packetsToSend.Count))
         {
+            packetsSent = sendPackets.Length > 0;
             for (var i = 0u; i < sendPackets.Length; ++i)
             {
                 hasActivity = true;
@@ -111,7 +115,7 @@ public static class XdpForwarder
             }
         }
 
-        if (destinationSocket.TxRing.NeedsWakeup)
+        if (packetsSent || destinationSocket.TxRing.NeedsWakeup)
             destinationSocket.WakeUp();
 
         using (var completed = destinationSocket.CompletionRing.Complete())
