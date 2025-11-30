@@ -1,8 +1,6 @@
-using System;
 using System.Net;
 using System.Net.Sockets;
 using System.Security.Cryptography;
-using System.Threading.Tasks;
 
 using BenchmarkDotNet.Attributes;
 using BenchmarkDotNet.Configs;
@@ -20,18 +18,15 @@ public class XdpForwarderBenchmarks
     private const int SenderPort = 5000;
     private const int ReceiverPort = 6000;
 
-    private static readonly TrafficSetup DirectSetup;
-    private static readonly TrafficSetup ForwarderGenericSetup1;
-    private static readonly TrafficSetup ForwarderGenericSetup2;
-    private static readonly TrafficSetup ForwarderDriverSetup1;
-    private static readonly TrafficSetup ForwarderDriverSetup2;
+    private static readonly TrafficSetup DirectSetup = new();
+    private static readonly TrafficForwardingSetup ForwardingGenericSetup = new();
+    private static readonly TrafficForwardingSetup ForwardingDriverSetup = new(XdpForwarderMode.Driver);
     private static readonly Socket DirectSender;
     private static readonly Socket DirectReceiver;
-    private static readonly Socket ForwardGenericSender;
-    private static readonly Socket ForwardGenericReceiver;
-    private static readonly Socket ForwardDriverSender;
-    private static readonly Socket ForwardDriverReceiver;
-    private static readonly SocketAddress SenderAddress = new IPEndPoint(TrafficSetup.SenderAddress, SenderPort).Serialize();
+    private static readonly Socket ForwardingGenericSender;
+    private static readonly Socket ForwardingGenericReceiver;
+    private static readonly Socket ForwardingDriverSender;
+    private static readonly Socket ForwardingDriverReceiver;
     private static readonly SocketAddress ReceiverAddress = new IPEndPoint(TrafficSetup.ReceiverAddress, ReceiverPort).Serialize();
     private static readonly SocketAddress AddressBuffer = new IPEndPoint(IPAddress.Loopback, 0).Serialize();
     private static readonly byte[] Packet = new byte[1500];
@@ -39,39 +34,12 @@ public class XdpForwarderBenchmarks
 
     static XdpForwarderBenchmarks()
     {
-        DirectSetup = new();
-        ForwarderGenericSetup1 = new();
-        ForwarderGenericSetup2 = new(sharedSenderNs: ForwarderGenericSetup1.ReceiverNs);
-        Task.Factory.StartNew(() =>
-        {
-            using var forwardNs = ForwarderGenericSetup1.EnterReceiver();
-            try
-            {
-                XdpForwarder.Run(ForwarderGenericSetup1.ReceiverName, ForwarderGenericSetup2.SenderName, XdpForwarderMode.Generic);
-            }
-            catch (OperationCanceledException)
-            {
-            }
-        }, TaskCreationOptions.LongRunning);
-        ForwarderDriverSetup1 = new();
-        ForwarderDriverSetup2 = new(sharedSenderNs: ForwarderDriverSetup1.ReceiverNs);
-        Task.Factory.StartNew(() =>
-        {
-            using var forwardNs = ForwarderDriverSetup1.EnterReceiver();
-            try
-            {
-                XdpForwarder.Run(ForwarderDriverSetup1.ReceiverName, ForwarderDriverSetup2.SenderName, XdpForwarderMode.Driver);
-            }
-            catch (OperationCanceledException)
-            {
-            }
-        }, TaskCreationOptions.LongRunning);
         DirectSender = DirectSetup.CreateSenderSocket(SocketType.Dgram, ProtocolType.Udp, SenderPort);
         DirectReceiver = DirectSetup.CreateReceiverSocket(SocketType.Dgram, ProtocolType.Udp, ReceiverPort);
-        ForwardGenericSender = ForwarderGenericSetup1.CreateSenderSocket(SocketType.Dgram, ProtocolType.Udp, SenderPort);
-        ForwardGenericReceiver = ForwarderGenericSetup2.CreateReceiverSocket(SocketType.Dgram, ProtocolType.Udp, ReceiverPort);
-        ForwardDriverSender = ForwarderDriverSetup1.CreateSenderSocket(SocketType.Dgram, ProtocolType.Udp, SenderPort);
-        ForwardDriverReceiver = ForwarderDriverSetup2.CreateReceiverSocket(SocketType.Dgram, ProtocolType.Udp, ReceiverPort);
+        ForwardingGenericSender = ForwardingGenericSetup.CreateSenderSocket(SocketType.Dgram, ProtocolType.Udp, SenderPort);
+        ForwardingGenericReceiver = ForwardingGenericSetup.CreateReceiverSocket(SocketType.Dgram, ProtocolType.Udp, ReceiverPort);
+        ForwardingDriverSender = ForwardingDriverSetup.CreateSenderSocket(SocketType.Dgram, ProtocolType.Udp, SenderPort);
+        ForwardingDriverReceiver = ForwardingDriverSetup.CreateReceiverSocket(SocketType.Dgram, ProtocolType.Udp, ReceiverPort);
         RandomNumberGenerator.Fill(Packet);
     }
 
@@ -81,11 +49,11 @@ public class XdpForwarderBenchmarks
 
     [Benchmark]
     [BenchmarkCategory("Send")]
-    public void Send_Forwarded_Generic() => Send(ForwardGenericSender, ForwardGenericReceiver);
+    public void Send_Forwarded_Generic() => Send(ForwardingGenericSender, ForwardingGenericReceiver);
 
     [Benchmark]
     [BenchmarkCategory("Send")]
-    public void Send_Forwarded_Driver() => Send(ForwardDriverSender, ForwardDriverReceiver);
+    public void Send_Forwarded_Driver() => Send(ForwardingDriverSender, ForwardingDriverReceiver);
 
     [Benchmark(Baseline = true)]
     [BenchmarkCategory("SendBatch")]
@@ -93,11 +61,11 @@ public class XdpForwarderBenchmarks
 
     [Benchmark]
     [BenchmarkCategory("SendBatch")]
-    public void SendBatch_Forwarded_Generic() => SendBatch(ForwardGenericSender, ForwardGenericReceiver);
+    public void SendBatch_Forwarded_Generic() => SendBatch(ForwardingGenericSender, ForwardingGenericReceiver);
 
     [Benchmark]
     [BenchmarkCategory("SendBatch")]
-    public void SendBatch_Forwarded_Driver() => SendBatch(ForwardDriverSender, ForwardDriverReceiver);
+    public void SendBatch_Forwarded_Driver() => SendBatch(ForwardingDriverSender, ForwardingDriverReceiver);
 
     [Benchmark(Baseline = true)]
     [BenchmarkCategory("SendFlow")]
@@ -105,11 +73,11 @@ public class XdpForwarderBenchmarks
 
     [Benchmark]
     [BenchmarkCategory("SendFlow")]
-    public void SendFlow_Forwarded_Generic() => SendFlow(ForwardGenericSender, ForwardGenericReceiver);
+    public void SendFlow_Forwarded_Generic() => SendFlow(ForwardingGenericSender, ForwardingGenericReceiver);
 
     [Benchmark]
     [BenchmarkCategory("SendFlow")]
-    public void SendFlow_Forwarded_Driver() => SendFlow(ForwardDriverSender, ForwardDriverReceiver);
+    public void SendFlow_Forwarded_Driver() => SendFlow(ForwardingDriverSender, ForwardingDriverReceiver);
 
     private static void Send(Socket sender, Socket receiver)
     {
