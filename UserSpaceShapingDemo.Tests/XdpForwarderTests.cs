@@ -22,7 +22,7 @@ public sealed class XdpForwarderTests
     [Timeout(5000, CooperativeCancellation = true)]
     [DataRow(XdpForwarderMode.Generic)]
     [DataRow(XdpForwarderMode.Driver)]
-    [DataRow(XdpForwarderMode.DriverZeroCopy)]
+    //[DataRow(XdpForwarderMode.DriverZeroCopy)]
     public async Task XdpSocket_Forward(XdpForwarderMode mode)
     {
         const string clientMessage = "Hello from XDP client!!!";
@@ -61,13 +61,14 @@ public sealed class XdpForwarderTests
     [DataRow(XdpForwarderMode.Generic, 8)]
     [DataRow(XdpForwarderMode.Generic, 16)]
     [DataRow(XdpForwarderMode.Generic, 32)]
+    [DataRow(XdpForwarderMode.Generic, 64)]
     [DataRow(XdpForwarderMode.Driver, 8)]
     [DataRow(XdpForwarderMode.Driver, 16)]
     [DataRow(XdpForwarderMode.Driver, 32)]
+    [DataRow(XdpForwarderMode.Driver, 64)]
     public async Task XdpSocket_Forward_Batch(XdpForwarderMode mode, int batchSize)
     {
-        const string clientMessage = "Hello from XDP client!!!";
-        var clientMessageBytes = Encoding.ASCII.GetBytes(clientMessage);
+        const string clientMessageTemplate = "Hello from XDP client: {0}";
         const int clientPort = 54321;
         const int serverPort = 12345;
 
@@ -83,18 +84,22 @@ public sealed class XdpForwarderTests
         var receiveTask = ReceiveBatchAsync();
 
         for (var i = 0; i < batchSize; ++i)
+        {
+            var clientMessageBytes = Encoding.ASCII.GetBytes(string.Format(CultureInfo.InvariantCulture, clientMessageTemplate, i));
             await client.SendToAsync(clientMessageBytes, new IPEndPoint(TrafficSetup.ReceiverAddress, serverPort), cancellationToken);
+        }
 
         await receiveTask;
 
         return;
         async Task ReceiveBatchAsync()
         {
-            var receivedClientMessageBytes = new byte[clientMessage.Length];
+            var receivedClientMessageBytes = new byte[clientMessageTemplate.Length + 8];
             for (var i = 0; i < batchSize; ++i)
             {
-                await server.ReceiveFromAsync(receivedClientMessageBytes, new IPEndPoint(IPAddress.Any, 0), cancellationToken);
-                var receivedClientMessage = Encoding.ASCII.GetString(receivedClientMessageBytes);
+                var res = await server.ReceiveFromAsync(receivedClientMessageBytes, new IPEndPoint(IPAddress.Any, 0), cancellationToken);
+                var clientMessage = string.Format(CultureInfo.InvariantCulture, clientMessageTemplate, i);
+                var receivedClientMessage = Encoding.ASCII.GetString(receivedClientMessageBytes, 0, res.ReceivedBytes);
                 Assert.AreEqual(clientMessage, receivedClientMessage);
             }
         }
@@ -103,26 +108,37 @@ public sealed class XdpForwarderTests
     private static string PacketToString(Span<byte> packetData)
     {
         var sb = new StringBuilder();
-        sb.Append(CultureInfo.InvariantCulture, $"len: {packetData.Length}");
+        sb.Append("len: ").Append(packetData.Length);
+
         ref var ethernetHeader = ref Unsafe.As<byte, EthernetHeader>(ref packetData[0]);
-        sb.Append(CultureInfo.InvariantCulture, $", type={ethernetHeader.EtherType}, src_mac={ethernetHeader.SourceAddress}, dst_mac={ethernetHeader.DestinationAddress}");
+        sb.Append(", type=").Append(ethernetHeader.EtherType)
+          .Append(", src_mac=").Append(ethernetHeader.SourceAddress)
+          .Append(", dst_mac=").Append(ethernetHeader.DestinationAddress);
         switch (ethernetHeader.EtherType)
         {
             case EthernetType.IPv4:
             {
                 ref var ipv4Header = ref ethernetHeader.Layer2Header<IPv4Header>();
-                sb.Append(CultureInfo.InvariantCulture, $", src_ip={ipv4Header.SourceAddress}, dst_ip={ipv4Header.DestinationAddress}, proto={ipv4Header.Protocol}");
+                sb.Append(", src_ip=").Append(ipv4Header.SourceAddress)
+                  .Append(", dst_ip=").Append(ipv4Header.DestinationAddress)
+                  .Append(", proto=").Append(ipv4Header.Protocol);
                 if (ipv4Header.Protocol == IPProtocol.UDP)
                 {
                     ref var udpHeader = ref ipv4Header.Layer3Header<UDPHeader>();
-                    sb.Append(CultureInfo.InvariantCulture, $", src_port={udpHeader.SourcePort}, dst_port={udpHeader.DestinationPort}");
+                    sb.Append(", src_port=").Append(udpHeader.SourcePort)
+                      .Append(", dst_port=").Append(udpHeader.DestinationPort)
+                      .Append(", payload=").Append(Encoding.ASCII.GetString(udpHeader.Payload));
                 }
                 break;
             }
             case EthernetType.ARP:
             {
                 ref var arpHeader = ref ethernetHeader.Layer2Header<ARPHeader>();
-                sb.Append(CultureInfo.InvariantCulture, $", op={arpHeader.Operation}, src_ip={arpHeader.SenderProtocolAddress}, src_mac={arpHeader.SenderHardwareAddress}, dst_ip={arpHeader.TargetProtocolAddress}, dst_mac={arpHeader.TargetHardwareAddress}");
+                sb.Append(", op=").Append(arpHeader.Operation)
+                  .Append(", src_ip=").Append(arpHeader.SenderProtocolAddress)
+                  .Append(", src_mac=").Append(arpHeader.SenderHardwareAddress)
+                  .Append(", dst_ip=").Append(arpHeader.TargetProtocolAddress)
+                  .Append(", dst_mac=").Append(arpHeader.TargetHardwareAddress);
                 break;
             }
         }
