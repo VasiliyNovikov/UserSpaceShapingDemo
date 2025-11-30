@@ -2,14 +2,12 @@ using System;
 using System.Globalization;
 using System.Net;
 using System.Net.Sockets;
-using System.Runtime.CompilerServices;
 using System.Text;
 using System.Threading.Tasks;
 
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 
 using UserSpaceShapingDemo.Lib;
-using UserSpaceShapingDemo.Lib.Headers;
 
 namespace UserSpaceShapingDemo.Tests;
 
@@ -35,8 +33,8 @@ public sealed class XdpForwarderTests
         var cancellationToken = TestContext.CancellationTokenSource.Token;
 
         using var setup = new TrafficForwardingSetup(mode,
-            (eth, data) => TestContext.WriteLine($"{DateTime.UtcNow:O}: {eth}: received packet:\n{PacketToString(data)}"),
-            (eth, data) => TestContext.WriteLine($"{DateTime.UtcNow:O}: {eth}: sent packet:\n{PacketToString(data)}"));
+            (eth, data) => TestContext.WriteLine($"{DateTime.UtcNow:O}: {eth}: received packet:\n{data.PacketToString()}"),
+            (eth, data) => TestContext.WriteLine($"{DateTime.UtcNow:O}: {eth}: sent packet:\n{data.PacketToString()}"));
 
         using var client = setup.CreateSenderSocket(SocketType.Dgram, ProtocolType.Udp, clientPort);
         using var server = setup.CreateReceiverSocket(SocketType.Dgram, ProtocolType.Udp, serverPort);
@@ -77,8 +75,8 @@ public sealed class XdpForwarderTests
         var cancellationToken = TestContext.CancellationTokenSource.Token;
 
         using var setup = new TrafficForwardingSetup(mode,
-            (eth, data) => TestContext.WriteLine($"{DateTime.UtcNow:O}: {eth}: received packet:\n{PacketToString(data)}"),
-            (eth, data) => TestContext.WriteLine($"{DateTime.UtcNow:O}: {eth}: sent packet:\n{PacketToString(data)}"));
+            (eth, data) => TestContext.WriteLine($"{DateTime.UtcNow:O}: {eth}: received packet:\n{data.PacketToString()}"),
+            (eth, data) => TestContext.WriteLine($"{DateTime.UtcNow:O}: {eth}: sent packet:\n{data.PacketToString()}"));
 
         using var client = setup.CreateSenderSocket(SocketType.Dgram, ProtocolType.Udp, clientPort);
         using var server = setup.CreateReceiverSocket(SocketType.Dgram, ProtocolType.Udp, serverPort);
@@ -107,48 +105,5 @@ public sealed class XdpForwarderTests
         }
     }
 
-    private static string PacketToString(Span<byte> packetData)
-    {
-        var sb = new StringBuilder();
-        sb.AppendLine("Frame:");
-        sb.Append("    len: ").Append(packetData.Length).AppendLine();
-
-        ref var ethernetHeader = ref Unsafe.As<byte, EthernetHeader>(ref packetData[0]);
-        sb.AppendLine("Ethernet:");
-        sb.Append("    type=").Append(ethernetHeader.EtherType).AppendLine()
-          .Append("    src_mac=").Append(ethernetHeader.SourceAddress).AppendLine()
-          .Append("    dst_mac=").Append(ethernetHeader.DestinationAddress).AppendLine();
-        switch (ethernetHeader.EtherType)
-        {
-            case EthernetType.IPv4:
-            {
-                ref var ipv4Header = ref ethernetHeader.Layer2Header<IPv4Header>();
-                sb.AppendLine("IPv4:");
-                sb.Append("    src_ip=").Append(ipv4Header.SourceAddress).AppendLine()
-                  .Append("    dst_ip=").Append(ipv4Header.DestinationAddress).AppendLine()
-                  .Append("    proto=").Append(ipv4Header.Protocol).AppendLine();
-                if (ipv4Header.Protocol == IPProtocol.UDP)
-                {
-                    ref var udpHeader = ref ipv4Header.Layer3Header<UDPHeader>();
-                    sb.AppendLine("UDP:");
-                    sb.Append("    src_port=").Append(udpHeader.SourcePort).AppendLine()
-                      .Append("    dst_port=").Append(udpHeader.DestinationPort).AppendLine()
-                      .Append("    payload=").Append(Encoding.ASCII.GetString(udpHeader.Payload)).AppendLine();
-                }
-                break;
-            }
-            case EthernetType.ARP:
-            {
-                ref var arpHeader = ref ethernetHeader.Layer2Header<ARPHeader>();
-                sb.AppendLine("ARP:");
-                sb.Append("    op=").Append(arpHeader.Operation).AppendLine()
-                  .Append("    src_ip=").Append(arpHeader.SenderProtocolAddress).AppendLine()
-                  .Append("    src_mac=").Append(arpHeader.SenderHardwareAddress).AppendLine()
-                  .Append("    dst_ip=").Append(arpHeader.TargetProtocolAddress).AppendLine()
-                  .Append("    dst_mac=").Append(arpHeader.TargetHardwareAddress).AppendLine();
-                break;
-            }
-        }
-        return sb.ToString();
-    }
+    
 }
