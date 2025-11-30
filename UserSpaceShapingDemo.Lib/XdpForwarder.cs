@@ -21,41 +21,52 @@ public static class XdpForwarder
     public delegate void PacketCallback(string eth, Span<byte> data);
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public static void Run(string eth1, string eth2, XdpForwarderMode mode = XdpForwarderMode.Generic, PacketCallback? receivedCallback = null, PacketCallback? sentCallback = null, CancellationToken cancellationToken = default)
+    public static void Run(string eth1, string eth2, XdpForwarderMode mode = XdpForwarderMode.Generic,
+                           PacketCallback? receivedCallback = null, PacketCallback? sentCallback = null,
+                           Action<Exception>? errorCallback = null,
+                           CancellationToken cancellationToken = default)
     {
-        using var umem = new UMemory();
-
-        var socketMode = mode is XdpForwarderMode.Generic ? XdpSocketMode.Default : XdpSocketMode.Driver;
-        var bindMode = mode is XdpForwarderMode.DriverZeroCopy ? XdpSocketBindMode.ZeroCopy : XdpSocketBindMode.Copy;
-
-        using var socket1 = new XdpSocket(umem, eth1, mode: socketMode, bindMode: bindMode | XdpSocketBindMode.UseNeedWakeup);
-        using var socket2 = new XdpSocket(umem, eth2, mode: socketMode, bindMode: bindMode | XdpSocketBindMode.UseNeedWakeup, shared: true);
-
-        Queue<XdpDescriptor> packetsToSend1 = [];
-        Queue<XdpDescriptor> packetsToSend2 = [];
-        Stack<ulong> freeAddresses = [];
-
-        Span<ulong> addresses = stackalloc ulong[(int)umem.FrameCount];
-        umem.GetAddresses(addresses);
-        foreach (var address in addresses)
-            freeAddresses.Push(address);
-
-        FillOnce(socket1, freeAddresses);
-        FillOnce(socket2, freeAddresses);
-
-        using var nativeCancellationToken = new NativeCancellationToken(cancellationToken);
-        while (true)
+        try
         {
-            while (ForwardOnce(socket1, socket2, packetsToSend2, freeAddresses, receivedCallback, sentCallback) |
-                   ForwardOnce(socket2, socket1, packetsToSend1, freeAddresses, receivedCallback, sentCallback)) ;
+            using var umem = new UMemory();
 
-            var events1 = Poll.Event.Readable;
-            if (packetsToSend1.Count > 0)
-                events1 |= Poll.Event.Writable;
-            var events2 = Poll.Event.Readable;
-            if (packetsToSend2.Count > 0)
-                events2 |= Poll.Event.Writable;
-            XdpSocket.WaitFor([socket1, socket2], [events1, events2], nativeCancellationToken);
+            var socketMode = mode is XdpForwarderMode.Generic ? XdpSocketMode.Default : XdpSocketMode.Driver;
+            var bindMode = mode is XdpForwarderMode.DriverZeroCopy ? XdpSocketBindMode.ZeroCopy : XdpSocketBindMode.Copy;
+
+            using var socket1 = new XdpSocket(umem, eth1, mode: socketMode, bindMode: bindMode | XdpSocketBindMode.UseNeedWakeup);
+            using var socket2 = new XdpSocket(umem, eth2, mode: socketMode, bindMode: bindMode | XdpSocketBindMode.UseNeedWakeup, shared: true);
+
+            Queue<XdpDescriptor> packetsToSend1 = [];
+            Queue<XdpDescriptor> packetsToSend2 = [];
+            Stack<ulong> freeAddresses = [];
+
+            Span<ulong> addresses = stackalloc ulong[(int)umem.FrameCount];
+            umem.GetAddresses(addresses);
+            foreach (var address in addresses)
+                freeAddresses.Push(address);
+
+            FillOnce(socket1, freeAddresses);
+            FillOnce(socket2, freeAddresses);
+
+            using var nativeCancellationToken = new NativeCancellationToken(cancellationToken);
+            while (true)
+            {
+                while (ForwardOnce(socket1, socket2, packetsToSend2, freeAddresses, receivedCallback, sentCallback) |
+                       ForwardOnce(socket2, socket1, packetsToSend1, freeAddresses, receivedCallback, sentCallback)) ;
+
+                var events1 = Poll.Event.Readable;
+                if (packetsToSend1.Count > 0)
+                    events1 |= Poll.Event.Writable;
+                var events2 = Poll.Event.Readable;
+                if (packetsToSend2.Count > 0)
+                    events2 |= Poll.Event.Writable;
+                XdpSocket.WaitFor([socket1, socket2], [events1, events2], nativeCancellationToken);
+            }
+        }
+        catch (Exception ex)
+        {
+            errorCallback?.Invoke(ex);
+            throw;
         }
     }
 

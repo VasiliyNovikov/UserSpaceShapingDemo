@@ -14,7 +14,9 @@ public sealed class TrafficForwardingSetup : IDisposable
     private readonly Task _forwardingTask;
     private readonly CancellationTokenSource _forwardingCancellation;
 
-    public TrafficForwardingSetup(XdpForwarderMode mode = XdpForwarderMode.Generic, XdpForwarder.PacketCallback? receivedCallback = null, XdpForwarder.PacketCallback? sentCallback = null)
+    public TrafficForwardingSetup(XdpForwarderMode mode = XdpForwarderMode.Generic,
+                                  XdpForwarder.PacketCallback? receivedCallback = null, XdpForwarder.PacketCallback? sentCallback = null,
+                                  Action<Exception>? errorCallback = null)
     {
         _setup1 = new TrafficSetup();
         _setup2 = new TrafficSetup(sharedSenderNs: _setup1.ReceiverNs);
@@ -25,7 +27,7 @@ public sealed class TrafficForwardingSetup : IDisposable
             using var forwardNs = _setup1.EnterReceiver();
             try
             {
-                XdpForwarder.Run(_setup1.ReceiverName, _setup2.SenderName, mode, receivedCallback, sentCallback, _forwardingCancellation.Token);
+                XdpForwarder.Run(_setup1.ReceiverName, _setup2.SenderName, mode, receivedCallback, sentCallback, errorCallback, _forwardingCancellation.Token);
             }
             catch (OperationCanceledException)
             {

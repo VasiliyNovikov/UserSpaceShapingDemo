@@ -1,3 +1,4 @@
+using System;
 using System.Net;
 using System.Net.Sockets;
 using System.Security.Cryptography;
@@ -19,8 +20,8 @@ public class XdpForwarderBenchmarks
     private const int ReceiverPort = 6000;
 
     private static readonly TrafficSetup DirectSetup = new();
-    private static readonly TrafficForwardingSetup ForwardingGenericSetup = new();
-    private static readonly TrafficForwardingSetup ForwardingDriverSetup = new(XdpForwarderMode.Driver);
+    private static readonly TrafficForwardingSetup ForwardingGenericSetup = new(errorCallback: e => Console.Error.WriteLine(e));
+    private static readonly TrafficForwardingSetup ForwardingDriverSetup = new(XdpForwarderMode.Driver, errorCallback: e => Console.Error.WriteLine(e));
     private static readonly Socket DirectSender;
     private static readonly Socket DirectReceiver;
     private static readonly Socket ForwardingGenericSender;
