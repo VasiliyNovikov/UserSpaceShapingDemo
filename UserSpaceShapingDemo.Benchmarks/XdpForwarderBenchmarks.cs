@@ -37,7 +37,7 @@ public class XdpForwarderBenchmarks
     private static readonly byte[] Packet = new byte[1500];
     private static readonly byte[] PacketBuffer = new byte[1500];
 
-    static  XdpForwarderBenchmarks()
+    static XdpForwarderBenchmarks()
     {
         DirectSetup = new();
         ForwarderGenericSetup1 = new();
