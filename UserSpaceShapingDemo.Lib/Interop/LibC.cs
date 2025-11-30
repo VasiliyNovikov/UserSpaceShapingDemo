@@ -39,6 +39,9 @@ internal static unsafe partial class LibC
     public const int SCHED_IDLE     = 5;
     public const int SCHED_DEADLINE = 6;
 
+    public const int RLIMIT_MEMLOCK = 8;
+    public const long RLIM_INFINITY = -1;
+
     // int * __errno_location(void);
     [LibraryImport(Lib, EntryPoint = "__errno_location")]
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -115,10 +118,14 @@ internal static unsafe partial class LibC
     [LibraryImport(Lib, EntryPoint = "sendto")]
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static partial nint sendto(FileDescriptor socket, void* message, nuint length, int flags, void* dest_addr, uint dest_len);
-    
+
     // int sched_setscheduler(pid_t pid, int policy, const struct sched_param *param);
-    [LibraryImport("libc", EntryPoint = "sched_setscheduler")]
+    [LibraryImport(Lib, EntryPoint = "sched_setscheduler")]
     public static partial int sched_setscheduler(int pid, int policy, in sched_param param);
+
+    // int setrlimit(int resource, const struct rlimit *rlim);
+    [LibraryImport(Lib, EntryPoint = "setrlimit")]
+    public static partial int setrlimit(int resource, in rlimit rlim);
 
     [StructLayout(LayoutKind.Sequential)]
     public readonly struct pollfd
@@ -132,5 +139,11 @@ internal static unsafe partial class LibC
     public struct sched_param
     {
         public int sched_priority;
+    }
+
+    [StructLayout(LayoutKind.Sequential)]
+    public struct rlimit {
+        public long rlim_cur;
+        public long rlim_max;
     }
 }
