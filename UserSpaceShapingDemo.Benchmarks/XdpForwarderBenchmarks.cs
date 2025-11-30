@@ -30,8 +30,8 @@ public class XdpForwarderBenchmarks
     private static readonly Socket ForwardingDriverReceiver;
     private static readonly SocketAddress ReceiverAddress = new IPEndPoint(TrafficSetup.ReceiverAddress, ReceiverPort).Serialize();
     private static readonly SocketAddress AddressBuffer = new IPEndPoint(IPAddress.Loopback, 0).Serialize();
-    private static readonly byte[] Packet = new byte[1500];
-    private static readonly byte[] PacketBuffer = new byte[1500];
+    private static readonly byte[] Packet = new byte[1400];
+    private static readonly byte[] PacketBuffer = new byte[2048];
 
     static XdpForwarderBenchmarks()
     {
