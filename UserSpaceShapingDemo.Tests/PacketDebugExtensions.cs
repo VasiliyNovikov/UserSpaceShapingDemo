@@ -8,7 +8,7 @@ namespace UserSpaceShapingDemo.Tests;
 
 public static class PacketDebugExtensions
 {
-    public static string PacketToString(this Span<byte> packetData)
+    public static string PacketToString(this Span<byte> packetData, bool payloadAsString = true)
     {
         var sb = new StringBuilder();
         sb.AppendLine("Frame:");
@@ -33,8 +33,9 @@ public static class PacketDebugExtensions
                     ref var udpHeader = ref ipv4Header.Layer3Header<UDPHeader>();
                     sb.AppendLine("UDP:");
                     sb.Append("    src_port=").Append(udpHeader.SourcePort).AppendLine()
-                      .Append("    dst_port=").Append(udpHeader.DestinationPort).AppendLine()
-                      .Append("    payload=").Append(Encoding.ASCII.GetString(udpHeader.Payload)).AppendLine();
+                      .Append("    dst_port=").Append(udpHeader.DestinationPort).AppendLine();
+                  if (payloadAsString)
+                    sb.Append("    payload=").Append(Encoding.ASCII.GetString(udpHeader.Payload)).AppendLine();
                 }
                 break;
             }
