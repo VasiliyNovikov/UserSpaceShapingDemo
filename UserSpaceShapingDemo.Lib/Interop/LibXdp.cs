@@ -12,6 +12,8 @@ internal static unsafe partial class LibXdp
     private const string Lib = "libxdp";
     private const string LegacyLib = "libbpf";
 
+    private static bool? IsLegacyLibValue;
+
     public const ushort XDP_SHARED_UMEM = 0b0001;
     public const ushort XDP_COPY        = 0b0010; // Force copy-mode
     public const ushort XDP_ZEROCOPY    = 0b0100; // Force zero-copy mode
@@ -38,13 +40,41 @@ internal static unsafe partial class LibXdp
     public const uint XDP_FLAGS_DRV_MODE          = 0b0100;
     public const uint XDP_FLAGS_HW_MODE           = 0b1000;
 
-    static LibXdp() => NativeLibrary.SetDllImportResolver(typeof(LibXdp).Assembly, (libraryName, assembly, searchPath) =>
-        libraryName == Lib
-            ? NativeLibrary.TryLoad(Lib, assembly, searchPath, out var handle) ||
-              NativeLibrary.TryLoad(LegacyLib, assembly, searchPath, out handle)
-                ? handle
-                : throw new DllNotFoundException($"Could not load {Lib} or {LegacyLib} for AF_XDP")
-            : IntPtr.Zero);
+    public static bool IsLegacyLib
+    {
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        get
+        {
+            if (IsLegacyLibValue is { } value)
+                return value;
+
+            xsk_umem__delete(null);
+            return IsLegacyLibValue!.Value;
+        }
+    }
+
+    static LibXdp()
+    {
+        NativeLibrary.SetDllImportResolver(typeof(LibXdp).Assembly, (libraryName, assembly, searchPath) =>
+        {
+            if (libraryName != Lib)
+                return IntPtr.Zero;
+
+            if (NativeLibrary.TryLoad(Lib, assembly, searchPath, out var handle))
+            {
+                IsLegacyLibValue = false;
+                return handle;
+            }
+
+            if (NativeLibrary.TryLoad(LegacyLib, assembly, searchPath, out handle))
+            {
+                IsLegacyLibValue = true;
+                return handle;
+            }
+
+            throw new DllNotFoundException($"Could not load {Lib} or {LegacyLib} for AF_XDP");
+        });
+    }
 
     // Raw P/Invoke where config may be NULL (defaults applied by libbpf)
     // int xsk_umem__create(struct xsk_umem **umem, void *area, __u64 size,

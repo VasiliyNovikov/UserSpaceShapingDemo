@@ -9,6 +9,7 @@ using BenchmarkDotNet.Configs;
 
 using UserSpaceShapingDemo.Lib;
 using UserSpaceShapingDemo.Lib.Std;
+using UserSpaceShapingDemo.Lib.Xpd;
 using UserSpaceShapingDemo.Tests;
 
 namespace UserSpaceShapingDemo.Benchmarks;
@@ -20,8 +21,8 @@ public class XdpForwarderBenchmarks
 {
     private const int SenderPort = 5000;
     private const int ReceiverPort = 6000;
-    private const string ForwarderNs = "fw-bench";
 
+    private static readonly string? ForwarderNs = XdpSocket.IsLegacyApi ? "fw-bench" : null;
     private static readonly TrafficSetup DirectSetup = new();
     private static readonly TrafficForwardingSetup ForwardingGenericSetup;
     private static readonly TrafficForwardingSetup ForwardingDriverSetup;
@@ -38,7 +39,8 @@ public class XdpForwarderBenchmarks
 
     static XdpForwarderBenchmarks()
     {
-        NetNs.ReCreate(ForwarderNs);
+        if (ForwarderNs is not null)
+            NetNs.ReCreate(ForwarderNs);
         ForwardingGenericSetup = new(XdpForwarderMode.Generic, ForwarderNs, errorCallback: e => Console.Error.WriteLine(e));
         Thread.Sleep(100);
         ForwardingDriverSetup = new(XdpForwarderMode.Driver, ForwarderNs, errorCallback: e => Console.Error.WriteLine(e));

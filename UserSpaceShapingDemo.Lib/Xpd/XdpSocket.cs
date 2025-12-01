@@ -8,6 +8,8 @@ namespace UserSpaceShapingDemo.Lib.Xpd;
 
 public sealed unsafe class XdpSocket : NativeObject, IFileObject
 {
+    public static bool IsLegacyApi => LibXdp.IsLegacyLib;
+
     private readonly LibXdp.xsk_socket* _xsk;
     private FileDescriptor? _descriptor;
 
