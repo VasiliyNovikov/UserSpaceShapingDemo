@@ -2,11 +2,13 @@ using System;
 using System.Net;
 using System.Net.Sockets;
 using System.Security.Cryptography;
+using System.Threading;
 
 using BenchmarkDotNet.Attributes;
 using BenchmarkDotNet.Configs;
 
 using UserSpaceShapingDemo.Lib;
+using UserSpaceShapingDemo.Lib.Std;
 using UserSpaceShapingDemo.Tests;
 
 namespace UserSpaceShapingDemo.Benchmarks;
@@ -18,10 +20,11 @@ public class XdpForwarderBenchmarks
 {
     private const int SenderPort = 5000;
     private const int ReceiverPort = 6000;
+    private const string ForwarderNs = "fw-bench";
 
     private static readonly TrafficSetup DirectSetup = new();
-    private static readonly TrafficForwardingSetup ForwardingGenericSetup = new(errorCallback: e => Console.Error.WriteLine(e));
-    private static readonly TrafficForwardingSetup ForwardingDriverSetup = new(XdpForwarderMode.Driver, errorCallback: e => Console.Error.WriteLine(e));
+    private static readonly TrafficForwardingSetup ForwardingGenericSetup;
+    private static readonly TrafficForwardingSetup ForwardingDriverSetup;
     private static readonly Socket DirectSender;
     private static readonly Socket DirectReceiver;
     private static readonly Socket ForwardingGenericSender;
@@ -35,6 +38,10 @@ public class XdpForwarderBenchmarks
 
     static XdpForwarderBenchmarks()
     {
+        NetNs.ReCreate(ForwarderNs);
+        ForwardingGenericSetup = new(XdpForwarderMode.Generic, ForwarderNs, errorCallback: e => Console.Error.WriteLine(e));
+        Thread.Sleep(100);
+        ForwardingDriverSetup = new(XdpForwarderMode.Driver, ForwarderNs, errorCallback: e => Console.Error.WriteLine(e));
         DirectSender = DirectSetup.CreateSenderSocket(SocketType.Dgram, ProtocolType.Udp, SenderPort);
         DirectReceiver = DirectSetup.CreateReceiverSocket(SocketType.Dgram, ProtocolType.Udp, ReceiverPort);
         ForwardingGenericSender = ForwardingGenericSetup.CreateSenderSocket(SocketType.Dgram, ProtocolType.Udp, SenderPort);
@@ -88,7 +95,7 @@ public class XdpForwarderBenchmarks
 
     private static void SendBatch(Socket sender, Socket receiver)
     {
-        const int batchSize = 16;
+        const int batchSize = 32;
         for (var i = 0; i < batchSize; ++i)
             sender.SendTo(Packet, SocketFlags.None, ReceiverAddress);
         for (var i = 0; i < batchSize; ++i)
@@ -98,7 +105,7 @@ public class XdpForwarderBenchmarks
     private static void SendFlow(Socket sender, Socket receiver)
     {
         const int flowSize = 1024;
-        const int socketBufferSize = 16;
+        const int socketBufferSize = 32;
         var sendIndex = 0;
         var receiveIndex = 0;
         while (sendIndex < flowSize || receiveIndex < flowSize)

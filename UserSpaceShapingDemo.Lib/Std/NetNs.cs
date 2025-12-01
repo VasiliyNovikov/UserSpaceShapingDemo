@@ -63,6 +63,15 @@ public static unsafe class NetNs
 
     public static bool Exists(string name) => File.Exists(Path.Combine(NetNsBasePath, name));
 
+    public static bool ReCreate(string name)
+    {
+        var existed = Exists(name);
+        if (existed)
+            Delete(name);
+        Add(name);
+        return existed;
+    }
+
     public static string[] List() => Directory.Exists(NetNsBasePath) ? Directory.GetFiles(NetNsBasePath) : [];
 
     public static Scope Enter(string name) => new(Path.Combine(NetNsBasePath, name));

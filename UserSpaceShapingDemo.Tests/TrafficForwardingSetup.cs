@@ -15,10 +15,12 @@ public sealed class TrafficForwardingSetup : IDisposable
     private readonly CancellationTokenSource _forwardingCancellation;
 
     public TrafficForwardingSetup(XdpForwarderMode mode = XdpForwarderMode.Generic,
-                                  XdpForwarder.PacketCallback? receivedCallback = null, XdpForwarder.PacketCallback? sentCallback = null,
+                                  string? sharedForwarderNs = null, 
+                                  XdpForwarder.PacketCallback? receivedCallback = null,
+                                  XdpForwarder.PacketCallback? sentCallback = null,
                                   Action<Exception>? errorCallback = null)
     {
-        _setup1 = new TrafficSetup();
+        _setup1 = new TrafficSetup(sharedReceiverNs: sharedForwarderNs);
         _setup2 = new TrafficSetup(sharedSenderNs: _setup1.ReceiverNs);
         _forwardingCancellation = new();
         _forwardingTask = Task.Factory.StartNew(() =>

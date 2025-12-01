@@ -32,7 +32,7 @@ public sealed class XdpForwarderTests
 
         var cancellationToken = TestContext.CancellationTokenSource.Token;
 
-        using var setup = new TrafficForwardingSetup(mode,
+        using var setup = new TrafficForwardingSetup(mode, null,
             (eth, data) => TestContext.WriteLine($"{DateTime.UtcNow:O}: {eth}: received packet:\n{data.PacketToString()}"),
             (eth, data) => TestContext.WriteLine($"{DateTime.UtcNow:O}: {eth}: sent packet:\n{data.PacketToString()}"));
 
@@ -74,7 +74,7 @@ public sealed class XdpForwarderTests
 
         var cancellationToken = TestContext.CancellationTokenSource.Token;
 
-        using var setup = new TrafficForwardingSetup(mode,
+        using var setup = new TrafficForwardingSetup(mode, null,
             (eth, data) => TestContext.WriteLine($"{DateTime.UtcNow:O}: {eth}: received packet:\n{data.PacketToString()}"),
             (eth, data) => TestContext.WriteLine($"{DateTime.UtcNow:O}: {eth}: sent packet:\n{data.PacketToString()}"));
 

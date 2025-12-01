@@ -27,13 +27,14 @@ public sealed class TrafficSetup : IDisposable
 
     private readonly int _id;
     private readonly bool _isSharedSenderNs;
+    private readonly bool _isSharedReceiverNs;
 
     public string SenderNs { get; }
     public string SenderName { get; }
     public string ReceiverNs { get; }
     public string ReceiverName { get; }
 
-    public TrafficSetup(string? sharedSenderNs = null)
+    public TrafficSetup(string? sharedSenderNs = null, string? sharedReceiverNs = null)
     {
         if (!InstanceIds.TryDequeue(out _id))
             throw new InvalidOperationException("Too many instances of TestTrafficSetup");
@@ -44,9 +45,7 @@ public sealed class TrafficSetup : IDisposable
         {
             _isSharedSenderNs = false;
             SenderNs = SenderName;
-            if (NetNs.Exists(SenderNs))
-                NetNs.Delete(SenderNs);
-            NetNs.Add(SenderNs);
+            NetNs.ReCreate(SenderNs);
         }
         else
         {
@@ -56,13 +55,23 @@ public sealed class TrafficSetup : IDisposable
                 throw new InvalidOperationException($"Shared sender namespace '{sharedSenderNs}' does not exist");
         }
 
-        ReceiverNs = ReceiverName;
-        if (NetNs.Exists(ReceiverNs))
-            NetNs.Delete(ReceiverNs);
-        NetNs.Add(ReceiverNs);
+        if (sharedReceiverNs is null)
+        {
+            _isSharedReceiverNs = false;
+            ReceiverNs = ReceiverName;
+            NetNs.ReCreate(ReceiverNs);
+        }
+        else
+        {
+            _isSharedReceiverNs = true;
+            ReceiverNs = sharedReceiverNs;
+            if (!NetNs.Exists(ReceiverNs))
+                throw new InvalidOperationException($"Shared receiver namespace '{sharedReceiverNs}' does not exist");
+        }
+
         {
             using var senderNs = NetNs.Open(SenderNs);
-            using var receiverNs = NetNs.Open(ReceiverName);
+            using var receiverNs = NetNs.Open(ReceiverNs);
             using var vethPair = RtnlVEthPair.Allocate();
             foreach (var (name, link, ns) in new[] { (SenderName, vethPair.Link, senderNs),
                                                      (ReceiverName, vethPair.Peer, receiverNs) })
@@ -116,7 +125,8 @@ public sealed class TrafficSetup : IDisposable
         {
             if (!_isSharedSenderNs)
                 NetNs.Delete(SenderNs);
-            NetNs.Delete(ReceiverNs);
+            if (!_isSharedReceiverNs)
+                NetNs.Delete(ReceiverNs);
         }
         InstanceIds.Enqueue(_id);
     }
