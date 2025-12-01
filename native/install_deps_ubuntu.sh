@@ -10,6 +10,7 @@ apt-get update
 # Toolchain + headers + libbpf and friends
 apt-get install -y \
   build-essential \
+  libxdp-dev \
   libbpf-dev \
   libelf-dev \
   zlib1g-dev \
