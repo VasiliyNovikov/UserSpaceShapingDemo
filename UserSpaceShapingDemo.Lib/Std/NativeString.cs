@@ -14,12 +14,12 @@ public static class NativeString
         Span<byte> buffer = stackalloc byte[bufferSize];
         var bufferPtr = (byte*)Unsafe.AsPointer(ref buffer[0]);
         var written = LibC.vsnprintf(bufferPtr, (UIntPtr)(bufferSize - 1), format, ap);
-        if (written == bufferSize - 1)
+        if (written >= bufferSize - 1)
         {
-            buffer[written - 3] = (byte)'.';
-            buffer[written - 2] = (byte)'.';
-            buffer[written - 1] = (byte)'.';
-            buffer[written] = 0;
+            buffer[bufferSize - 4] = (byte)'.';
+            buffer[bufferSize - 3] = (byte)'.';
+            buffer[bufferSize - 2] = (byte)'.';
+            buffer[bufferSize - 1] = 0;
         }
         return Utf8StringMarshaller.ConvertToManaged(bufferPtr)!;
     }
