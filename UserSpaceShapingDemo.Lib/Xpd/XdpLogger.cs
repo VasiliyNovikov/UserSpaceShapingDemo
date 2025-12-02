@@ -7,12 +7,15 @@ namespace UserSpaceShapingDemo.Lib.Xpd;
 
 public static class XdpLogger
 {
+    private static LibBpf.libbpf_print_fn_t? _nativeLogger;
+
     public static unsafe void SetLogger(Action<XdpLogLevel, string> logger)
     {
-        LibBpf.libbpf_set_print((level, format, args) =>
+        _nativeLogger = (level, format, args) =>
         {
-            logger((XdpLogLevel)level, NativeString.Format(format, args));
+            logger((XdpLogLevel)level, NativeString.Format(format, args).TrimEnd('\n'));
             return 0;
-        });
+        };
+        LibBpf.libbpf_set_print(_nativeLogger);
     }
 }
