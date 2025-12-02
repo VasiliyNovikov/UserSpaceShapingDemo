@@ -70,8 +70,23 @@ internal static unsafe partial class LibNl3
     [LibraryImport(Lib, EntryPoint = "nl_addr_put")]
     public static partial void nl_addr_put(nl_addr* addr);
 
+    // void nl_cache_free(struct nl_cache *cache)
+    [LibraryImport(Lib, EntryPoint = "nl_cache_free")]
+    public static partial void nl_cache_free(nl_cache* cache);
+
+    // struct nl_object *nl_cache_get_first(struct nl_cache *cache)
+    [LibraryImport(Lib, EntryPoint = "nl_cache_get_first")]
+    public static partial nl_object* nl_cache_get_first(nl_cache* cache);
+
+    // struct nl_object *nl_cache_get_next(struct nl_object *obj)
+    [LibraryImport(Lib, EntryPoint = "nl_cache_get_next")]
+    public static partial nl_object* nl_cache_get_next(nl_object* obj);
+
     [StructLayout(LayoutKind.Sequential)]
     public readonly struct nl_api_result { public readonly int error_code; }
+
+    [StructLayout(LayoutKind.Sequential)]
+    public struct nl_object;
 
     [StructLayout(LayoutKind.Sequential)]
     public struct nl_sock;
