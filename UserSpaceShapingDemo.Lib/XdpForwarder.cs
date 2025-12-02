@@ -102,11 +102,9 @@ public static class XdpForwarder
             }
         }
 
-        bool packetsSent;
         using (var sendPackets = destinationSocket.TxRing.Send((uint)packetsToSend.Count))
         {
-            packetsSent = sendPackets.Length > 0;
-            hasActivity |= packetsSent;
+            hasActivity |= sendPackets.Length > 0;
             for (var i = 0u; i < sendPackets.Length; ++i)
             {
                 var descriptor = packetsToSend.Dequeue();
@@ -115,7 +113,7 @@ public static class XdpForwarder
             }
         }
 
-        if (packetsSent || destinationSocket.TxRing.NeedsWakeup)
+        if (destinationSocket.TxRing.NeedsWakeup)
             destinationSocket.WakeUp();
 
         using (var completed = destinationSocket.CompletionRing.Complete())
