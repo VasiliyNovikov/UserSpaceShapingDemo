@@ -9,20 +9,18 @@ namespace UserSpaceShapingDemo.Lib.Std;
 public static class NativeString
 {
     [SkipLocalsInit]
-    public static unsafe string Format(byte* format, void* ap)
+    public static unsafe string Format(byte* format, void* ap, int bufferSize = 256)
     {
-        var bufferSize = LibC.vsnprintf(null, 0, format, ap);
-
-        if (bufferSize < 0)
-            throw new FormatException("String formatting failed.");
-
-        if (bufferSize == 0)
-            return string.Empty;
-
         Span<byte> buffer = stackalloc byte[bufferSize];
         var bufferPtr = (byte*)Unsafe.AsPointer(ref buffer[0]);
-        return LibC.vsnprintf(bufferPtr, (UIntPtr)bufferSize, format, ap) < bufferSize
-            ? Utf8StringMarshaller.ConvertToManaged(bufferPtr)!
-            : throw new FormatException("String formatting failed: buffer too small.");
+        var written = LibC.vsnprintf(bufferPtr, (UIntPtr)(bufferSize - 1), format, ap);
+        if (written == bufferSize - 1)
+        {
+            buffer[written - 3] = (byte)'.';
+            buffer[written - 2] = (byte)'.';
+            buffer[written - 1] = (byte)'.';
+            buffer[written] = 0;
+        }
+        return Utf8StringMarshaller.ConvertToManaged(bufferPtr)!;
     }
 }
