@@ -78,4 +78,7 @@ internal static unsafe partial class LibNl3
 
     [StructLayout(LayoutKind.Sequential)]
     public struct nl_addr;
+
+    [StructLayout(LayoutKind.Sequential)]
+    public struct nl_cache;
 }

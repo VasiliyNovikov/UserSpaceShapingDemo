@@ -159,6 +159,10 @@ internal static unsafe partial class LibNlRoute3
     [LibraryImport(Lib, EntryPoint = "rtnl_addr_delete")]
     public static partial LibNl3.nl_api_result rtnl_addr_delete(LibNl3.nl_sock* sk, rtnl_addr* addr, int flags);
 
+    // int rtnl_link_alloc_cache(struct nl_sock *sk, int family, struct nl_cache **result)
+    [LibraryImport(Lib, EntryPoint = "rtnl_link_alloc_cache")]
+    public static partial LibNl3.nl_api_result rtnl_link_alloc_cache(LibNl3.nl_sock* sk, int family, out LibNl3.nl_cache* result);
+
     [StructLayout(LayoutKind.Sequential)]
     public readonly struct rtnl_link;
 
