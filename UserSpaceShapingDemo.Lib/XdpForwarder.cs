@@ -73,12 +73,12 @@ public static class XdpForwarder
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     private static bool FillOnce(XdpSocket socket, Stack<ulong> freeAddresses)
     {
-        var filled = false;
-        using var fill = socket.FillRing.Fill((uint)freeAddresses.Count);
-        for (var i = 0u; i < fill.Length; ++i)
+        bool filled;
+        using (var fill = socket.FillRing.Fill((uint)freeAddresses.Count))
         {
-            filled = true;
-            fill[i] = freeAddresses.Pop();
+            filled = fill.Length > 0;
+            for (var i = 0u; i < fill.Length; ++i)
+                fill[i] = freeAddresses.Pop();
         }
         if (filled && socket.FillRing.NeedsWakeup)
             socket.WakeUp();
@@ -88,12 +88,12 @@ public static class XdpForwarder
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     private static bool ForwardOnce(XdpSocket sourceSocket, XdpSocket destinationSocket, Queue<XdpDescriptor> packetsToSend, Stack<ulong> freeAddresses, PacketCallback? receivedCallback, PacketCallback? sentCallback)
     {
-        var hasActivity = false;
+        bool hasActivity;
         using (var receivePackets = sourceSocket.RxRing.Receive())
         {
+            hasActivity = receivePackets.Length > 0;
             for (var i = 0u; i < receivePackets.Length; ++i)
             {
-                hasActivity = true;
                 var packet = receivePackets[i];
                 packetsToSend.Enqueue(packet);
                 var packetData = sourceSocket.Umem[packet];
@@ -106,9 +106,9 @@ public static class XdpForwarder
         using (var sendPackets = destinationSocket.TxRing.Send((uint)packetsToSend.Count))
         {
             packetsSent = sendPackets.Length > 0;
+            hasActivity |= packetsSent;
             for (var i = 0u; i < sendPackets.Length; ++i)
             {
-                hasActivity = true;
                 var descriptor = packetsToSend.Dequeue();
                 sendPackets[i] = descriptor;
                 sentCallback?.Invoke(destinationSocket.IfName, destinationSocket.Umem[descriptor]);
@@ -119,14 +119,13 @@ public static class XdpForwarder
             destinationSocket.WakeUp();
 
         using (var completed = destinationSocket.CompletionRing.Complete())
+        {
+            hasActivity |= completed.Length > 0;
             for (var i = 0u; i < completed.Length; ++i)
-            {
-                hasActivity = true;
                 freeAddresses.Push(completed[i]);
-            }
+        }
 
-        if (FillOnce(sourceSocket, freeAddresses))
-            hasActivity = true;
+        hasActivity |= FillOnce(sourceSocket, freeAddresses);
 
         return hasActivity;
     }
