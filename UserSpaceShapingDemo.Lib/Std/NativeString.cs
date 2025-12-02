@@ -9,9 +9,9 @@ namespace UserSpaceShapingDemo.Lib.Std;
 
 public static class NativeString
 {
-    public static unsafe string Format(byte* format, void* ap)
+    public static unsafe string Format(byte* format, void* ap, int initialBufferSize = 256)
     {
-        var bufferSize = 256;
+        var bufferSize = initialBufferSize;
         string? result;
         while (!TryFormat(format, ap, bufferSize, out result))
             bufferSize *= 2;

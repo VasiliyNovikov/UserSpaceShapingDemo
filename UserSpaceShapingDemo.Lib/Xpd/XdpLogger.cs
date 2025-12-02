@@ -13,7 +13,7 @@ public static class XdpLogger
     {
         _nativeLogger = (level, format, args) =>
         {
-            logger((XdpLogLevel)level, NativeString.Format(format, args).TrimEnd('\n'));
+            logger((XdpLogLevel)level, NativeString.Format(format, args, 16).TrimEnd('\n'));
             return 0;
         };
         LibBpf.libbpf_set_print(_nativeLogger);
