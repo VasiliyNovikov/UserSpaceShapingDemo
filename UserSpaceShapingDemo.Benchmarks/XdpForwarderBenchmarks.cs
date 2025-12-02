@@ -39,6 +39,8 @@ public class XdpForwarderBenchmarks
 
     static XdpForwarderBenchmarks()
     {
+        XdpLogger.SetLogger((level, message) => Console.Error.WriteLine($"{DateTime.UtcNow:O}: [XDP {level}] {message}"));
+
         if (ForwarderNs is not null)
             NetNs.ReCreate(ForwarderNs);
         ForwardingGenericSetup = new(XdpForwarderMode.Generic, ForwarderNs, errorCallback: e => Console.Error.WriteLine(e));

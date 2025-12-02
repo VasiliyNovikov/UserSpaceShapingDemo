@@ -10,7 +10,7 @@ namespace UserSpaceShapingDemo.Lib.Interop;
 internal static unsafe partial class LibXdp
 {
     private const string Lib = "libxdp";
-    private const string LegacyLib = "libbpf";
+    private const string LegacyLib = LibBpf.Lib;
 
     private static bool? IsLegacyLibValue;
 

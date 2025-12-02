@@ -127,6 +127,9 @@ internal static unsafe partial class LibC
     [LibraryImport(Lib, EntryPoint = "setrlimit")]
     public static partial int setrlimit(int resource, in rlimit rlim);
 
+    [LibraryImport(Lib, EntryPoint = "vsnprintf")]
+    public static partial int vsnprintf(byte* str, nuint size, byte* format, void* ap);
+
     [StructLayout(LayoutKind.Sequential)]
     public readonly struct pollfd
     {
