@@ -98,12 +98,14 @@ public sealed class TrafficSetup : IDisposable
 
                 using var linkMacChange = RtnlLink.Allocate();
                 using var linkMac = new NlAddress(macAddress.Bytes, AddressFamily.DataLink);
+                linkMacChange.IfIndex = link.IfIndex;
                 linkMacChange.Address = linkMac;
-                socket.UpdateLink(link, linkMacChange);
+                socket.UpdateLink(linkMacChange);
 
                 using var linkUpChange = RtnlLink.Allocate();
+                linkUpChange.IfIndex = link.IfIndex;
                 linkUpChange.Up = true;
-                socket.UpdateLink(link, linkUpChange);
+                socket.UpdateLink(linkUpChange);
             }
     }
 

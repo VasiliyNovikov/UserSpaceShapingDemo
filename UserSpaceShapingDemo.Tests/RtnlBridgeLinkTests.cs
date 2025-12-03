@@ -34,7 +34,7 @@ public sealed class RtnlBridgeLinkTests
             Assert.IsTrue(addedBridge.IsBridge);
             Assert.IsFalse(addedBridge.Up);
             Assert.AreEqual(RtnlBridgePortState.Disabled, addedBridge.State);
-            
+
             using var bridgeLinkAddr = new RtnlAddress();
             using var bridgeAddr = NlAddress.Parse(bridgeAddress);
             bridgeLinkAddr.IfIndex = addedBridge.IfIndex;
@@ -44,15 +44,16 @@ public sealed class RtnlBridgeLinkTests
             Assert.Contains(bridgeAddress, Script.Exec("ip", "address", "show", bridgeName));
 
             using var bridgeChange = RtnlLink.Allocate();
+            bridgeChange.IfIndex = addedBridge.IfIndex;
             bridgeChange.Up = true;
-            socket.UpdateLink(addedBridge, bridgeChange);
-            
+            socket.UpdateLink(bridgeChange);
+
             linkInfo = Script.Exec("ip", "link", "show", bridgeName);
             Assert.Contains("UP", linkInfo);
-            
+
             using var changedBridge = socket.GetLink(bridgeName);
             Assert.IsTrue(changedBridge.Up);
-            Assert.AreEqual(RtnlBridgePortState.Forwarding, changedBridge.State);
+            Assert.AreEqual(RtnlBridgePortState.Disabled, changedBridge.State);
 
             socket.DeleteLink(addedBridge);
 

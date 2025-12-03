@@ -65,12 +65,14 @@ public sealed class RtnlVEthLinkTests
             Assert.Contains(vethPeerAddress, Script.Exec("ip", "address", "show", vethPeerName));
 
             using var vethChange = RtnlLink.Allocate();
+            vethChange.IfIndex = veth.IfIndex;
             vethChange.Up = true;
-            socket.UpdateLink(veth, vethChange);
+            socket.UpdateLink(vethChange);
 
             using var vethPeerChange = RtnlLink.Allocate();
+            vethPeerChange.IfIndex = vethPeer.IfIndex;
             vethPeerChange.Up = true;
-            socket.UpdateLink(vethPeer, vethPeerChange);
+            socket.UpdateLink(vethPeerChange);
 
             Assert.Contains("UP", Script.Exec("ip", "address", "show", vethName));
             Assert.Contains("UP", Script.Exec("ip", "address", "show", vethPeerName));

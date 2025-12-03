@@ -22,9 +22,9 @@ public sealed unsafe class RtnlSocket() : NlSocket(NlProtocol.Route)
         LibNlRoute3.rtnl_link_add(Sock, link.Link, (int)mode).ThrowIfError();
     }
 
-    public void UpdateLink(RtnlLink? oldLink, RtnlLink link, RtnlLinkUpdateMode mode = RtnlLinkUpdateMode.None)
+    public void UpdateLink(RtnlLink link, RtnlLinkUpdateMode mode = RtnlLinkUpdateMode.None)
     {
-        LibNlRoute3.rtnl_link_change(Sock, oldLink is null ? null : oldLink.Link, link.Link, (int)mode).ThrowIfError();
+        LibNlRoute3.rtnl_link_change(Sock, link.Link, link.Link, (int)mode).ThrowIfError();
     }
 
     public void DeleteLink(RtnlLink link) => LibNlRoute3.rtnl_link_delete(Sock, link.Link).ThrowIfError();
