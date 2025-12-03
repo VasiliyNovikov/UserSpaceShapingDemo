@@ -29,8 +29,6 @@ public sealed unsafe class RtnlLink : NativeObject
 
     public RtnlLinkFlags Flags => (RtnlLinkFlags)LibNlRoute3.rtnl_link_get_flags(Link);
 
-    public bool IsVEth => LibNlRoute3.rtnl_link_is_veth(Link) != 0;
-
     public bool Up
     {
         get => (Flags & RtnlLinkFlags.Up) != 0;
@@ -63,6 +61,12 @@ public sealed unsafe class RtnlLink : NativeObject
             return new NlAddress(addrPtr, false);
         }
         set => LibNlRoute3.rtnl_link_set_addr(Link, value.Addr);
+    }
+
+    public int Master
+    {
+        get => LibNlRoute3.rtnl_link_get_master(Link);
+        set => LibNlRoute3.rtnl_link_set_master(Link, value);
     }
 
     internal RtnlLink(LibNlRoute3.rtnl_link* link, bool owned)

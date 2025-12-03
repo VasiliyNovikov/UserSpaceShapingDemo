@@ -35,6 +35,12 @@ internal static unsafe partial class LibNlRoute3
     public const int IFF_DORMANT     = 0x20000;       // Driver signals dormant
     public const int IFF_ECHO        = 0x40000;       // Echo sent packets
 
+    public const byte BR_STATE_DISABLED   = 0;
+    public const byte BR_STATE_LISTENING  = 1;
+    public const byte BR_STATE_LEARNING   = 2;
+    public const byte BR_STATE_FORWARDING = 3;
+    public const byte BR_STATE_BLOCKING   = 4;
+
     // struct rtnl_link* rtnl_link_alloc(void)
     [LibraryImport(Lib, EntryPoint = "rtnl_link_alloc")]
     public static partial rtnl_link* rtnl_link_alloc();
@@ -95,6 +101,14 @@ internal static unsafe partial class LibNlRoute3
     [LibraryImport(Lib, EntryPoint = "rtnl_link_set_addr")]
     public static partial void rtnl_link_set_addr(rtnl_link* link, LibNl3.nl_addr* addr);
 
+    // int rtnl_link_get_master(struct rtnl_link *link)
+    [LibraryImport(Lib, EntryPoint = "rtnl_link_get_master")]
+    public static partial int rtnl_link_get_master(rtnl_link* link);
+
+    // void rtnl_link_set_master(struct rtnl_link *link, int ifindex)
+    [LibraryImport(Lib, EntryPoint = "rtnl_link_set_master")]
+    public static partial void rtnl_link_set_master(rtnl_link* link, int ifindex);
+
     // struct rtnl_link *rtnl_link_veth_alloc(void)
     [LibraryImport(Lib, EntryPoint = "rtnl_link_veth_alloc")]
     public static partial rtnl_link* rtnl_link_veth_alloc();
@@ -110,7 +124,23 @@ internal static unsafe partial class LibNlRoute3
     // int rtnl_link_is_veth(struct rtnl_link *link)
     [LibraryImport(Lib, EntryPoint = "rtnl_link_is_veth")]
     public static partial int rtnl_link_is_veth(rtnl_link* link);
-    
+
+    // struct rtnl_link* rtnl_link_bridge_alloc(void)
+    [LibraryImport(Lib, EntryPoint = "rtnl_link_bridge_alloc")]
+    public static partial rtnl_link* rtnl_link_bridge_alloc();
+
+    // int rtnl_link_bridge_get_port_state(struct rtnl_link *link)
+    [LibraryImport(Lib, EntryPoint = "rtnl_link_bridge_get_port_state")]
+    public static partial int rtnl_link_bridge_get_port_state(rtnl_link* link);
+
+    // int rtnl_link_bridge_set_port_state(struct rtnl_link *link, uint8_t state)
+    [LibraryImport(Lib, EntryPoint = "rtnl_link_bridge_set_port_state")]
+    public static partial LibNl3.nl_api_result rtnl_link_bridge_set_port_state(rtnl_link* link, byte state);
+
+    // int rtnl_link_is_bridge(struct rtnl_link *link)
+    [LibraryImport(Lib, EntryPoint = "rtnl_link_is_bridge")]
+    public static partial int rtnl_link_is_bridge(rtnl_link* link);
+
     // int rtnl_link_add(struct nl_sock *sk, struct rtnl_link *link, int flags)
     [LibraryImport(Lib, EntryPoint = "rtnl_link_add")]
     public static partial LibNl3.nl_api_result rtnl_link_add(LibNl3.nl_sock* sk, rtnl_link* link, int flags);

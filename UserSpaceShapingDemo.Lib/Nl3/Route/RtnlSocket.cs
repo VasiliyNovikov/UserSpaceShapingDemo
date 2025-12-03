@@ -17,12 +17,12 @@ public sealed unsafe class RtnlSocket() : NlSocket(NlProtocol.Route)
 
     public RtnlLinkCollection GetLinks(AddressFamily family = AddressFamily.Unspecified) => new(this, family);
 
-    public void AddLink(RtnlLink link, RntlLinkUpdateMode mode = RntlLinkUpdateMode.Create | RntlLinkUpdateMode.Exclusive)
+    public void AddLink(RtnlLink link, RtnlLinkUpdateMode mode = RtnlLinkUpdateMode.Create | RtnlLinkUpdateMode.Exclusive)
     {
         LibNlRoute3.rtnl_link_add(Sock, link.Link, (int)mode).ThrowIfError();
     }
 
-    public void UpdateLink(RtnlLink? oldLink, RtnlLink link, RntlLinkUpdateMode mode = RntlLinkUpdateMode.None)
+    public void UpdateLink(RtnlLink? oldLink, RtnlLink link, RtnlLinkUpdateMode mode = RtnlLinkUpdateMode.None)
     {
         LibNlRoute3.rtnl_link_change(Sock, oldLink is null ? null : oldLink.Link, link.Link, (int)mode).ThrowIfError();
     }

@@ -5,7 +5,7 @@ using UserSpaceShapingDemo.Lib.Interop;
 namespace UserSpaceShapingDemo.Lib.Nl3.Route;
 
 [Flags]
-public enum RntlLinkUpdateMode
+public enum RtnlLinkUpdateMode
 {
     None = 0,
     Replace = LibNlRoute3.NLM_F_REPLACE,

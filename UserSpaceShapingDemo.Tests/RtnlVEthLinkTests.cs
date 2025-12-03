@@ -49,7 +49,7 @@ public sealed class RtnlVEthLinkTests
             Assert.AreEqual(vethPeerName, vethPeer.Name);
 
             using var vethLinkAddr = new RtnlAddress();
-            using var vethAddr = NlAddress.Parse("10.0.10.1/30");
+            using var vethAddr = NlAddress.Parse(vethAddress);
             vethLinkAddr.IfIndex = veth.IfIndex;
             vethLinkAddr.Address = vethAddr;
             socket.AddAddress(vethLinkAddr);
@@ -57,7 +57,7 @@ public sealed class RtnlVEthLinkTests
             Assert.Contains(vethAddress, Script.Exec("ip", "address", "show", vethName));
 
             using var vethPeerLinkAddr = new RtnlAddress();
-            using var vethPeerAddr = NlAddress.Parse("10.0.10.2/30");
+            using var vethPeerAddr = NlAddress.Parse(vethPeerAddress);
             vethPeerLinkAddr.IfIndex = vethPeer.IfIndex;
             vethPeerLinkAddr.Address = vethPeerAddr;
             socket.AddAddress(vethPeerLinkAddr);
