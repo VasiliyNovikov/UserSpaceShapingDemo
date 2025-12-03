@@ -1,4 +1,3 @@
-using System.Collections.Generic;
 using System.Net.Sockets;
 
 using UserSpaceShapingDemo.Lib.Interop;
@@ -16,22 +15,7 @@ public sealed unsafe class RtnlSocket() : NlSocket(NlProtocol.Route)
     public RtnlLink GetLink(int ifIndex) => GetLink(ifIndex, null);
     public RtnlLink GetLink(string name) => GetLink(0, name);
 
-    public IEnumerable<RtnlLink> GetLinks(AddressFamily family = AddressFamily.Unspecified)
-    {
-        using var cache = Allocate(this, family);
-        foreach (var obj in cache)
-            yield return Cast(obj);
-
-        yield break;
-
-        static unsafe NlCache Allocate(RtnlSocket sock, AddressFamily family)
-        {
-            LibNlRoute3.rtnl_link_alloc_cache(sock.Sock, (int)family, out var c).ThrowIfError();
-            return new NlCache(c);
-        }
-
-        static unsafe RtnlLink Cast(NlObject obj) => new((LibNlRoute3.rtnl_link*)obj.Obj, false);
-    }
+    public RtnlLinkCollection GetLinks(AddressFamily family = AddressFamily.Unspecified) => new(this, family);
 
     public void AddLink(RtnlLink link, RntlLinkUpdateMode mode = RntlLinkUpdateMode.Create | RntlLinkUpdateMode.Exclusive)
     {

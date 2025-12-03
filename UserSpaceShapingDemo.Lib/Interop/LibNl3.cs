@@ -74,6 +74,10 @@ internal static unsafe partial class LibNl3
     [LibraryImport(Lib, EntryPoint = "nl_cache_free")]
     public static partial void nl_cache_free(nl_cache* cache);
 
+    // int nl_cache_nitems(struct nl_cache *cache)
+    [LibraryImport(Lib, EntryPoint = "nl_cache_nitems")]
+    public static partial int nl_cache_nitems(nl_cache* cache);
+
     // struct nl_object *nl_cache_get_first(struct nl_cache *cache)
     [LibraryImport(Lib, EntryPoint = "nl_cache_get_first")]
     public static partial nl_object* nl_cache_get_first(nl_cache* cache);
