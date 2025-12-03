@@ -29,6 +29,8 @@ public sealed unsafe class RtnlSocket() : NlSocket(NlProtocol.Route)
 
     public void DeleteLink(RtnlLink link) => LibNlRoute3.rtnl_link_delete(Sock, link.Link).ThrowIfError();
 
+    public RtnlAddressCollection GetAddresses() => new(this);
+
     public void AddAddress(RtnlAddress addr) => LibNlRoute3.rtnl_addr_add(Sock, addr.Addr, 0).ThrowIfError();
 
     public void DeleteAddress(RtnlAddress addr) => LibNlRoute3.rtnl_addr_delete(Sock, addr.Addr, 0).ThrowIfError();

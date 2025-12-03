@@ -48,7 +48,7 @@ public sealed class RtnlVEthLinkTests
             Assert.AreEqual(vethName, veth.Name);
             Assert.AreEqual(vethPeerName, vethPeer.Name);
 
-            using var vethLinkAddr = new RtnlAddress();
+            using var vethLinkAddr = RtnlAddress.Alloc();
             using var vethAddr = NlAddress.Parse(vethAddress);
             vethLinkAddr.IfIndex = veth.IfIndex;
             vethLinkAddr.Address = vethAddr;
@@ -56,7 +56,7 @@ public sealed class RtnlVEthLinkTests
 
             Assert.Contains(vethAddress, Script.Exec("ip", "address", "show", vethName));
 
-            using var vethPeerLinkAddr = new RtnlAddress();
+            using var vethPeerLinkAddr = RtnlAddress.Alloc();
             using var vethPeerAddr = NlAddress.Parse(vethPeerAddress);
             vethPeerLinkAddr.IfIndex = vethPeer.IfIndex;
             vethPeerLinkAddr.Address = vethPeerAddr;

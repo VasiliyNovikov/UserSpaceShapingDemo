@@ -90,7 +90,7 @@ public sealed class TrafficSetup : IDisposable
                 using var socket = new RtnlSocket();
 
                 using var link = socket.GetLink(name);
-                using var linkAddr = new RtnlAddress();
+                using var linkAddr = RtnlAddress.Alloc();
                 using var addr = NlAddress.Parse($"{address}/{PrefixLength}");
                 linkAddr.IfIndex = link.IfIndex;
                 linkAddr.Address = addr;

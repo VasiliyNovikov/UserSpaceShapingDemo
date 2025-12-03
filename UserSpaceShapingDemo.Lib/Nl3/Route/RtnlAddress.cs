@@ -4,6 +4,8 @@ namespace UserSpaceShapingDemo.Lib.Nl3.Route;
 
 public sealed unsafe class RtnlAddress : NativeObject
 {
+    private readonly bool _owned;
+
     internal LibNlRoute3.rtnl_addr* Addr { get; }
 
     public int IfIndex
@@ -27,17 +29,17 @@ public sealed unsafe class RtnlAddress : NativeObject
         }
     }
 
-    public RtnlAddress()
+    internal RtnlAddress(LibNlRoute3.rtnl_addr* addr, bool owned)
     {
-        var addr = LibNlRoute3.rtnl_addr_alloc();
-        if (addr is null)
-            throw NlException.FromLastNativeError();
         Addr = addr;
+        _owned = owned;
     }
 
     protected override void ReleaseUnmanagedResources()
     {
-        if (Addr is not null)
+        if (Addr is not null && _owned)
             LibNlRoute3.rtnl_addr_put(Addr);
     }
+
+    public static RtnlAddress Alloc() => new(LibNlRoute3.rtnl_addr_alloc(), true);
 }

@@ -35,7 +35,7 @@ public sealed class RtnlBridgeLinkTests
             Assert.IsFalse(addedBridge.Up);
             Assert.AreEqual(RtnlBridgePortState.Disabled, addedBridge.State);
 
-            using var bridgeLinkAddr = new RtnlAddress();
+            using var bridgeLinkAddr = RtnlAddress.Alloc();
             using var bridgeAddr = NlAddress.Parse(bridgeAddress);
             bridgeLinkAddr.IfIndex = addedBridge.IfIndex;
             bridgeLinkAddr.Address = bridgeAddr;
