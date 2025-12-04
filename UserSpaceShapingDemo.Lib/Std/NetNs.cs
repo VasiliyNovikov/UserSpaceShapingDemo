@@ -17,10 +17,11 @@ public sealed unsafe class NetNs : IDisposable, IEquatable<NetNs>, IEqualityOper
 
     private readonly NativeFile _nsFile;
 
-    private NetNs(NativeFile nsFile)
-    {
-        _nsFile = nsFile;
-    }
+    public UInt128 Id => new(_nsFile.DeviceId, _nsFile.INode);
+
+    public FileDescriptor Descriptor => _nsFile.Descriptor;
+
+    private NetNs(string path) => _nsFile = new NativeFile(path, NativeFileFlags.ReadOnly);
 
     public void Dispose() => _nsFile.Dispose();
 
@@ -98,22 +99,20 @@ public sealed unsafe class NetNs : IDisposable, IEquatable<NetNs>, IEqualityOper
 
     public static Scope EnterRoot() => new(RootNsNetPath);
 
-    private static NativeFile OpenPath(string path) => new(path, NativeFileFlags.ReadOnly);
+    public static NetNs OpenCurrent() => new(SelfThreadNsNetPath);
 
-    private static NativeFile OpenCurrent() => OpenPath(SelfThreadNsNetPath);
+    public static NetNs Open(string name) => new(Path.Combine(NetNsBasePath, name));
 
-    public static NativeFile Open(string name) => OpenPath(Path.Combine(NetNsBasePath, name));
-
-    private static void Set(NativeFile ns) => LibC.setns(ns.Descriptor, LibC.CLONE_NEWNET).ThrowIfError();
+    private static void Set(NetNs ns) => LibC.setns(ns.Descriptor, LibC.CLONE_NEWNET).ThrowIfError();
 
     public sealed class Scope : IDisposable
     {
-        private readonly NativeFile _oldNs;
+        private readonly NetNs _oldNs;
 
         internal Scope(string path)
         {
             _oldNs = OpenCurrent();
-            using var targetNs = OpenPath(path);
+            using var targetNs = new NetNs(path);
             Set(targetNs);
         }
 
