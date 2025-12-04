@@ -130,6 +130,10 @@ internal static unsafe partial class LibC
     [LibraryImport(Lib, EntryPoint = "vsnprintf")]
     public static partial int vsnprintf(byte* str, nuint size, byte* format, void* ap);
 
+    // int fstat(int fd, struct stat *statbuf);
+    [LibraryImport(Lib, EntryPoint = "fstat")]
+    public static partial int fstat(FileDescriptor fd, out stat statbuf);
+
     [StructLayout(LayoutKind.Sequential)]
     public readonly struct pollfd
     {
@@ -148,5 +152,34 @@ internal static unsafe partial class LibC
     public struct rlimit {
         public long rlim_cur;
         public long rlim_max;
+    }
+
+    [StructLayout(LayoutKind.Sequential)]
+    public readonly struct timespec
+    {
+        public readonly long tv_sec;  // seconds
+        public readonly long tv_nsec; // nanoseconds
+    }
+
+    [StructLayout(LayoutKind.Sequential)]
+    public readonly struct stat
+    {
+        public readonly ulong st_dev;
+        public readonly ulong st_ino;
+        public readonly ulong st_nlink;
+        public readonly uint st_mode;
+        public readonly uint st_uid;
+        public readonly uint st_gid;
+        public readonly uint __pad0;
+        public readonly ulong st_rdev;
+        public readonly long st_size;
+        public readonly long st_blksize;
+        public readonly long st_blocks;
+        public readonly timespec st_atim;
+        public readonly timespec st_mtim;
+        public readonly timespec st_ctim;
+        public readonly long __glibc_reserved0;
+        public readonly long __glibc_reserved1;
+        public readonly long __glibc_reserved2;
     }
 }
