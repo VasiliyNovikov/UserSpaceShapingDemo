@@ -95,11 +95,23 @@ public sealed unsafe class NetNs : IDisposable, IEquatable<NetNs>, IEqualityOper
 
     public static string[] List() => Directory.Exists(NetNsBasePath) ? Directory.GetFiles(NetNsBasePath) : [];
 
-    public static Scope Enter(string name) => new(Path.Combine(NetNsBasePath, name));
+    public static Scope Enter(NetNs ns) => new(ns);
 
-    public static Scope EnterRoot() => new(RootNsNetPath);
+    public static Scope Enter(string name)
+    {
+        using var ns = Open(name);
+        return Enter(ns);
+    }
+
+    public static Scope EnterRoot()
+    {
+        using var ns = OpenRoot();
+        return Enter(ns);
+    }
 
     public static NetNs OpenCurrent() => new(SelfThreadNsNetPath);
+
+    public static NetNs OpenRoot() => new(RootNsNetPath);
 
     public static NetNs Open(string name) => new(Path.Combine(NetNsBasePath, name));
 
@@ -107,24 +119,23 @@ public sealed unsafe class NetNs : IDisposable, IEquatable<NetNs>, IEqualityOper
 
     public sealed class Scope : IDisposable
     {
-        private readonly NetNs _oldNs;
+        private readonly NetNs _old;
 
-        internal Scope(string path)
+        internal Scope(NetNs ns)
         {
-            _oldNs = OpenCurrent();
-            using var targetNs = new NetNs(path);
-            Set(targetNs);
+            _old = OpenCurrent();
+            Set(ns);
         }
 
         public void Dispose()
         {
             try
             {
-                Set(_oldNs);
+                Set(_old);
             }
             finally
             {
-                _oldNs.Dispose();
+                _old.Dispose();
             }
         }
     }
