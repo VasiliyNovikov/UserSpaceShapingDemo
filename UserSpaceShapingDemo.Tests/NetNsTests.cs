@@ -16,7 +16,7 @@ public class NetNsTests
         const string testNsName = "test_ns";
         try
         {
-            NetNs.Add(testNsName);
+            NetNs.Create(testNsName);
             Assert.IsTrue(IsNetNsExists(testNsName));
         }
         finally
@@ -66,7 +66,7 @@ public class NetNsTests
         try
         {
             Assert.IsNull(GetCurrentNetNs());
-            NetNs.Add(testNsName);
+            NetNs.Create(testNsName);
             Assert.IsNull(GetCurrentNetNs());
             using (NetNs.Enter(testNsName))
                 Assert.AreEqual(testNsName, GetCurrentNetNs());

@@ -35,7 +35,7 @@ public sealed unsafe class NetNs : IDisposable, IEquatable<NetNs>, IEqualityOper
 
     public static bool operator !=(NetNs? left, NetNs? right) => !(left == right);
 
-    public static void Add(string name)
+    public static void Create(string name)
     {
         // Ensure the base path exists
         Directory.CreateDirectory(NetNsBasePath, NetNsBasePathMode);
@@ -89,7 +89,7 @@ public sealed unsafe class NetNs : IDisposable, IEquatable<NetNs>, IEqualityOper
         var existed = Exists(name);
         if (existed)
             Delete(name);
-        Add(name);
+        Create(name);
         return existed;
     }
 
