@@ -1,11 +1,12 @@
 using System;
 using System.IO;
+using System.Numerics;
 
 using UserSpaceShapingDemo.Lib.Interop;
 
 namespace UserSpaceShapingDemo.Lib.Std;
 
-public static unsafe class NetNs
+public sealed unsafe class NetNs : IDisposable, IEquatable<NetNs>, IEqualityOperators<NetNs, NetNs, bool>
 {
     private const string NetNsBasePath = "/run/netns";
     private const UnixFileMode NetNsBasePathMode = (UnixFileMode)0755;
@@ -13,6 +14,25 @@ public static unsafe class NetNs
     private const string SelfThreadNsNetPath = "/proc/thread-self/ns/net";
     private const string SelfThreadFdPath = "/proc/thread-self/fd";
     private const string RootNsNetPath = "/proc/1/ns/net";
+
+    private readonly NativeFile _nsFile;
+
+    private NetNs(NativeFile nsFile)
+    {
+        _nsFile = nsFile;
+    }
+
+    public void Dispose() => _nsFile.Dispose();
+
+    public override int GetHashCode() => _nsFile.INode.GetHashCode();
+
+    public bool Equals(NetNs? other) => other is not null && _nsFile.DeviceId == other._nsFile.DeviceId && _nsFile.INode == other._nsFile.INode;
+
+    public override bool Equals(object? obj) => obj is NetNs other && Equals(other);
+
+    public static bool operator ==(NetNs? left, NetNs? right) => left is null && right is null || left is not null && left.Equals(right);
+
+    public static bool operator !=(NetNs? left, NetNs? right) => !(left == right);
 
     public static void Add(string name)
     {
