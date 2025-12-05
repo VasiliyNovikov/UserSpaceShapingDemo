@@ -16,7 +16,7 @@ public static unsafe class RtnlBridgeLink
     {
         public bool IsBridge => LibNlRoute3.rtnl_link_is_bridge(link.Link) != 0;
 
-        public RtnlBridgePortState State
+        public RtnlBridgePortState PortState
         {
             get
             {

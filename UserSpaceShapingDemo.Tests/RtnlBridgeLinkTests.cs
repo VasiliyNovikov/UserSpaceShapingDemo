@@ -33,7 +33,7 @@ public sealed class RtnlBridgeLinkTests
             Assert.AreEqual(bridgeName, addedBridge.Name);
             Assert.IsTrue(addedBridge.IsBridge);
             Assert.IsFalse(addedBridge.Up);
-            Assert.AreEqual(RtnlBridgePortState.Disabled, addedBridge.State);
+            Assert.AreEqual(RtnlBridgePortState.Disabled, addedBridge.PortState);
 
             using var bridgeLinkAddr = RtnlAddress.Alloc();
             using var bridgeAddr = NlAddress.Parse(bridgeAddress);
@@ -53,7 +53,7 @@ public sealed class RtnlBridgeLinkTests
 
             using var changedBridge = socket.GetLink(bridgeName);
             Assert.IsTrue(changedBridge.Up);
-            Assert.AreEqual(RtnlBridgePortState.Disabled, changedBridge.State);
+            Assert.AreEqual(RtnlBridgePortState.Disabled, changedBridge.PortState);
 
             socket.DeleteLink(addedBridge);
 

@@ -17,13 +17,9 @@ public sealed unsafe class RtnlLink : NativeObject
         set => LibNlRoute3.rtnl_link_set_ifindex(Link, value);
     }
 
-    public string? Name
+    public string Name
     {
-        get
-        {
-            var namePtr = LibNlRoute3.rtnl_link_get_name(Link);
-            return namePtr is null ? null : Utf8StringMarshaller.ConvertToManaged(namePtr);
-        }
+        get => Utf8StringMarshaller.ConvertToManaged(LibNlRoute3.rtnl_link_get_name(Link))!;
         set => LibNlRoute3.rtnl_link_set_name(Link, value);
     }
 
