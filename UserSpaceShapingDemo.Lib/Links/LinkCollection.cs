@@ -64,4 +64,11 @@ public sealed class LinkCollection : IEnumerable<Link>, IDisposable
         _socket.AddLink(nlBridge);
         return (BridgeLink)this[name];
     }
+
+    public void Delete(Link link)
+    {
+        using var del = RtnlLink.Allocate();
+        del.IfIndex = link.Index;
+        _socket.DeleteLink(del);
+    }
 }

@@ -6,6 +6,7 @@ using NetworkingPrimitivesCore;
 
 using UserSpaceShapingDemo.Lib.Nl3;
 using UserSpaceShapingDemo.Lib.Nl3.Route;
+using UserSpaceShapingDemo.Lib.Std;
 
 namespace UserSpaceShapingDemo.Lib.Links;
 
@@ -37,23 +38,6 @@ public class Link
         }
     }
 
-    public MACAddress MacAddress
-    {
-        get => _macAddress;
-        set
-        {
-            if (_macAddress == value)
-                return;
-
-            using var change = RtnlLink.Allocate();
-            using var nlMac = new NlAddress(value.Bytes, AddressFamily.DataLink);
-            change.IfIndex = Index;
-            change.Address = nlMac;
-            Socket.UpdateLink(change);
-            _macAddress = value;
-        }
-    }
-
     public BridgeLink? Master
     {
         get
@@ -82,6 +66,27 @@ public class Link
         }
     }
 
+    public MACAddress MacAddress
+    {
+        get => _macAddress;
+        set
+        {
+            if (_macAddress == value)
+                return;
+
+            using var change = RtnlLink.Allocate();
+            using var nlMac = new NlAddress(value.Bytes, AddressFamily.DataLink);
+            change.IfIndex = Index;
+            change.Address = nlMac;
+            Socket.UpdateLink(change);
+            _macAddress = value;
+        }
+    }
+
+    public LinkAddressCollection<IPv4Address> IPv4Addresses => field ??= new(Socket, Index);
+
+    public LinkAddressCollection<IPv6Address> IPv6Addresses => field ??= new(Socket, Index);
+
     internal Link(RtnlSocket socket, RtnlLink nlLink)
     {
         Socket = socket;
@@ -101,10 +106,11 @@ public class Link
                 : new Link(socket, nlLink);
     }
 
-    public void Delete()
+    public void MoveTo(NetNs ns)
     {
-        using var del = RtnlLink.Allocate();
-        del.IfIndex = Index;
-        Socket.DeleteLink(del);
+        using var change = RtnlLink.Allocate();
+        change.IfIndex = Index;
+        change.NsDescriptor = ns.Descriptor;
+        Socket.UpdateLink(change);
     }
 }

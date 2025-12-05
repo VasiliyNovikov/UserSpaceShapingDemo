@@ -18,6 +18,7 @@ dotnet_separate_import_directive_groups = true
 dotnet_sort_system_directives_first = true
 csharp_style_namespace_declarations = file_scoped
 
+dotnet_diagnostic.CA1000.severity = none
 dotnet_diagnostic.CA1711.severity = none
 dotnet_diagnostic.CA1716.severity = none
 dotnet_diagnostic.CA1720.severity = none
