@@ -92,6 +92,15 @@ public class Link
         _masterIndex = nlLink.Master;
     }
 
+    internal static Link Create(RtnlSocket socket, RtnlLink nlLink)
+    {
+        return nlLink.IsVEth
+            ? new VEthLink(socket, nlLink)
+            : nlLink.IsBridge
+                ? new BridgeLink(socket, nlLink)
+                : new Link(socket, nlLink);
+    }
+
     public void Delete()
     {
         using var del = RtnlLink.Allocate();
