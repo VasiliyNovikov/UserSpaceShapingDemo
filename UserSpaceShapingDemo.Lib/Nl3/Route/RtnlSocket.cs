@@ -1,6 +1,5 @@
-using System.Net.Sockets;
-
 using UserSpaceShapingDemo.Lib.Interop;
+using UserSpaceShapingDemo.Lib.Std;
 
 namespace UserSpaceShapingDemo.Lib.Nl3.Route;
 
@@ -15,7 +14,7 @@ public sealed unsafe class RtnlSocket() : NlSocket(NlProtocol.Route)
     public RtnlLink GetLink(int ifIndex) => GetLink(ifIndex, null);
     public RtnlLink GetLink(string name) => GetLink(0, name);
 
-    public RtnlLinkCollection GetLinks(AddressFamily family = AddressFamily.Unspecified) => new(this, family);
+    public RtnlLinkCollection GetLinks(NativeAddressFamily family = NativeAddressFamily.Unspecified) => new(this, family);
 
     public void AddLink(RtnlLink link, RtnlLinkUpdateMode mode = RtnlLinkUpdateMode.Create | RtnlLinkUpdateMode.Exclusive)
     {

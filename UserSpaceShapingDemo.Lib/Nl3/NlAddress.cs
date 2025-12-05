@@ -5,6 +5,7 @@ using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices.Marshalling;
 
 using UserSpaceShapingDemo.Lib.Interop;
+using UserSpaceShapingDemo.Lib.Std;
 
 namespace UserSpaceShapingDemo.Lib.Nl3;
 
@@ -23,9 +24,9 @@ public sealed unsafe class NlAddress : NativeObject
         set => LibNl3.nl_addr_set_prefixlen(Addr, value);
     }
 
-    public AddressFamily Family
+    public NativeAddressFamily Family
     {
-        get => (AddressFamily)LibNl3.nl_addr_get_family(Addr);
+        get => (NativeAddressFamily)LibNl3.nl_addr_get_family(Addr);
         set => LibNl3.nl_addr_set_family(Addr, (int)value);
     }
 
@@ -55,15 +56,15 @@ public sealed unsafe class NlAddress : NativeObject
         ArgumentNullException.ThrowIfNull(address);
         Span<byte> addressBytes = stackalloc byte[16];
         address.TryWriteBytes(addressBytes, out int length);
-        Addr = Build(addressBytes[..length], address.AddressFamily);
+        Addr = Build(addressBytes[..length], address.AddressFamily == AddressFamily.InterNetwork ? NativeAddressFamily.Inet : NativeAddressFamily.Inet6);
     }
 
-    public NlAddress(ReadOnlySpan<byte> addressBytes, AddressFamily family)
+    public NlAddress(ReadOnlySpan<byte> addressBytes, NativeAddressFamily family)
     {
         Addr = Build(addressBytes, family);
     }
 
-    private static LibNl3.nl_addr* Build(ReadOnlySpan<byte> addressBytes, AddressFamily family)
+    private static LibNl3.nl_addr* Build(ReadOnlySpan<byte> addressBytes, NativeAddressFamily family)
     {
         fixed (byte* buf = addressBytes)
         {

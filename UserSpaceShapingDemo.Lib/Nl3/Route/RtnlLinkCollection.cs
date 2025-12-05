@@ -2,9 +2,9 @@ using System;
 using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
-using System.Net.Sockets;
 
 using UserSpaceShapingDemo.Lib.Interop;
+using UserSpaceShapingDemo.Lib.Std;
 
 namespace UserSpaceShapingDemo.Lib.Nl3.Route;
 
@@ -14,7 +14,7 @@ public sealed class RtnlLinkCollection : IDisposable, IReadOnlyCollection<RtnlLi
 
     public int Count => _cache.Count;
 
-    internal unsafe RtnlLinkCollection(RtnlSocket sock, AddressFamily family)
+    internal unsafe RtnlLinkCollection(RtnlSocket sock, NativeAddressFamily family)
     {
         LibNlRoute3.rtnl_link_alloc_cache(sock.Sock, (int)family, out var c).ThrowIfError();
         _cache = new NlCache(c);

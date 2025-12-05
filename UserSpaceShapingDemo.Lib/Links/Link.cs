@@ -75,7 +75,7 @@ public class Link
                 return;
 
             using var change = RtnlLink.Allocate();
-            using var nlMac = new NlAddress(value.Bytes, AddressFamily.DataLink);
+            using var nlMac = new NlAddress(value.Bytes, NativeAddressFamily.LLC);
             change.IfIndex = Index;
             change.Address = nlMac;
             Socket.UpdateLink(change);
