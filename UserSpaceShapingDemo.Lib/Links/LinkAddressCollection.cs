@@ -28,6 +28,7 @@ public sealed class LinkAddressCollection<TAddress> : IEnumerable<LinkAddress<TA
     {
         using var linkAddr = RtnlAddress.Alloc();
         using var addr = new NlAddress(address.Address.Bytes, Family);
+        addr.PrefixLength = address.PrefixLength;
         linkAddr.IfIndex = _linkIndex;
         linkAddr.Address = addr;
         _socket.AddAddress(linkAddr);
