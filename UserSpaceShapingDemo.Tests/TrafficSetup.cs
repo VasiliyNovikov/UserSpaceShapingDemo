@@ -6,8 +6,7 @@ using System.Net.Sockets;
 
 using NetworkingPrimitivesCore;
 
-using UserSpaceShapingDemo.Lib.Nl3;
-using UserSpaceShapingDemo.Lib.Nl3.Route;
+using UserSpaceShapingDemo.Lib.Links;
 using UserSpaceShapingDemo.Lib.Std;
 
 namespace UserSpaceShapingDemo.Tests;
@@ -70,42 +69,22 @@ public sealed class TrafficSetup : IDisposable
         }
 
         {
+            using var collection = new LinkCollection();
             using var senderNs = NetNs.Open(SenderNs);
             using var receiverNs = NetNs.Open(ReceiverNs);
-            using var vethPair = RtnlVEthPair.Allocate();
-            foreach (var (name, link, ns) in new[] { (SenderName, vethPair.Link, senderNs),
-                                                     (ReceiverName, vethPair.Peer, receiverNs) })
-            {
-                link.Name = name;
-                link.RxQueueCount = 1;
-                link.NsDescriptor = ns.Descriptor;
-            }
-            using var socket = new RtnlSocket();
-            socket.AddLink(vethPair.Link);
+            var vethPair = collection.CreateVEth(SenderName, ReceiverName, 1);
+            vethPair.Link.MoveTo(senderNs);
+            vethPair.Peer.MoveTo(receiverNs);
         }
         foreach (var (ns, name, address, macAddress) in new[] { (SenderNs, SenderName, SenderAddress, SenderMacAddress),
                                                                 (ReceiverNs, ReceiverName, ReceiverAddress, ReceiverMacAddress) })
             using (NetNs.Enter(ns))
             {
-                using var socket = new RtnlSocket();
-
-                using var link = socket.GetLink(name);
-                using var linkAddr = RtnlAddress.Alloc();
-                using var addr = NlAddress.Parse($"{address}/{PrefixLength}");
-                linkAddr.IfIndex = link.IfIndex;
-                linkAddr.Address = addr;
-                socket.AddAddress(linkAddr);
-
-                using var linkMacChange = RtnlLink.Allocate();
-                using var linkMac = new NlAddress(macAddress.Bytes, NativeAddressFamily.LLC);
-                linkMacChange.IfIndex = link.IfIndex;
-                linkMacChange.Address = linkMac;
-                socket.UpdateLink(linkMacChange);
-
-                using var linkUpChange = RtnlLink.Allocate();
-                linkUpChange.IfIndex = link.IfIndex;
-                linkUpChange.Up = true;
-                socket.UpdateLink(linkUpChange);
+                using var collection = new LinkCollection();
+                var link = collection[name];
+                link.MacAddress = macAddress;
+                link.IPv4Addresses.Add(new(address, PrefixLength));
+                link.Up = true;
             }
     }
 
@@ -117,10 +96,9 @@ public sealed class TrafficSetup : IDisposable
         {
             using (NetNs.Enter(SenderNs))
             {
-                using var socket = new RtnlSocket();
-                using var link = RtnlLink.Allocate();
-                link.Name = SenderName;
-                socket.DeleteLink(link);
+                using var collection = new LinkCollection();
+                var link = collection[SenderName];
+                collection.Delete(link);
             }
         }
         finally
