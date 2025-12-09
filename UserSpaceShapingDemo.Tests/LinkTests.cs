@@ -94,4 +94,62 @@ public class LinkTests
             Script.ExecNoThrow("ip", "link", "del", bridgeName);
         }
     }
+
+    [TestMethod]
+    public void VEthLink_Create_Delete()
+    {
+        const string vethName = "test_veth0";
+        const string vethPeerName = "test_veth1";
+        const string vethAddress = "10.0.10.1/30";
+        const string vethPeerAddress = "10.0.10.2/30";
+
+        using var collection = new LinkCollection();
+
+        Assert.ThrowsExactly<AssertFailedException>(() => Script.Exec("ip", "link", "show", vethName));
+        Assert.ThrowsExactly<AssertFailedException>(() => Script.Exec("ip", "link", "show", vethPeerName));
+        
+        try
+        {
+            var (veth, vethPeer) = collection.CreateVEth(vethName, vethPeerName);
+
+            var linkInfo = Script.Exec("ip", "link", "show", vethName);
+            Assert.AreNotEqual("", linkInfo);
+            Assert.Contains(vethName, linkInfo);
+            Assert.Contains("veth", linkInfo);
+            Assert.Contains("DOWN", linkInfo);
+
+            var peerInfo = Script.Exec("ip", "link", "show", vethPeerName);
+            Assert.AreNotEqual("", peerInfo);
+            Assert.Contains(vethPeerName, peerInfo);
+            Assert.Contains("veth", peerInfo);
+            Assert.Contains("DOWN", peerInfo);
+
+            Assert.IsGreaterThan(0, veth.Index);
+            Assert.IsGreaterThan(0, vethPeer.Index);
+
+            Assert.AreEqual(vethName, veth.Name);
+            Assert.AreEqual(vethPeerName, vethPeer.Name);
+
+            veth.IPv4Addresses.Add(LinkAddress<IPv4Address>.Parse(vethAddress));
+            Assert.Contains(vethAddress, Script.Exec("ip", "address", "show", vethName));
+
+            vethPeer.IPv4Addresses.Add(LinkAddress<IPv4Address>.Parse(vethPeerAddress));
+            Assert.Contains(vethPeerAddress, Script.Exec("ip", "address", "show", vethPeerName));
+
+            veth.Up = true;
+            vethPeer.Up = true;
+
+            Assert.Contains("UP", Script.Exec("ip", "address", "show", vethName));
+            Assert.Contains("UP", Script.Exec("ip", "address", "show", vethPeerName));
+
+            collection.Delete(veth);
+
+            Assert.ThrowsExactly<AssertFailedException>(() => Script.Exec("ip", "link", "show", vethName));
+            Assert.ThrowsExactly<AssertFailedException>(() => Script.Exec("ip", "link", "show", vethPeerName));
+        }
+        finally
+        {
+            Script.ExecNoThrow("ip", "link", "del", vethName);
+        }
+    }
 }
