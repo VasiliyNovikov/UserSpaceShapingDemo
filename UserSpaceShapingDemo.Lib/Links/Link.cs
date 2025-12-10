@@ -1,5 +1,4 @@
 using System.Diagnostics.CodeAnalysis;
-using System.Net.Sockets;
 using System.Runtime.InteropServices;
 
 using NetworkingPrimitivesCore;
@@ -83,9 +82,9 @@ public class Link
         }
     }
 
-    public LinkAddressCollection<IPv4Address> IPv4Addresses => field ??= new(Socket, Index);
+    public LinkAddressCollection<IPv4Address> Addresses4 => field ??= new(Socket, Index);
 
-    public LinkAddressCollection<IPv6Address> IPv6Addresses => field ??= new(Socket, Index);
+    public LinkAddressCollection<IPv6Address> Addresses6 => field ??= new(Socket, Index);
 
     internal Link(RtnlSocket socket, RtnlLink nlLink)
     {

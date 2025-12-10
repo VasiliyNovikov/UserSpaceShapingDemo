@@ -68,24 +68,25 @@ public sealed class TrafficSetup : IDisposable
                 throw new InvalidOperationException($"Shared receiver namespace '{sharedReceiverNs}' does not exist");
         }
 
+        using var senderNs = NetNs.Open(SenderNs);
+        using var receiverNs = NetNs.Open(ReceiverNs);
+
         {
             using var collection = new LinkCollection();
-            using var senderNs = NetNs.Open(SenderNs);
-            using var receiverNs = NetNs.Open(ReceiverNs);
-            var vethPair = collection.CreateVEth(SenderName, ReceiverName, 1);
-            vethPair.Link.MoveTo(senderNs);
-            vethPair.Peer.MoveTo(receiverNs);
+            var (link, peer) = collection.CreateVEth(SenderName, ReceiverName, 1);
+            link.MoveTo(senderNs);
+            peer.MoveTo(receiverNs);
         }
-        foreach (var (ns, name, address, macAddress) in new[] { (SenderNs, SenderName, SenderAddress, SenderMacAddress),
-                                                                (ReceiverNs, ReceiverName, ReceiverAddress, ReceiverMacAddress) })
-            using (NetNs.Enter(ns))
-            {
-                using var collection = new LinkCollection();
-                var link = collection[name];
-                link.MacAddress = macAddress;
-                link.IPv4Addresses.Add(new(address, PrefixLength));
-                link.Up = true;
-            }
+
+        foreach (var (ns, name, address, macAddress) in new[] { (senderNs, SenderName, SenderAddress, SenderMacAddress),
+                                                                (receiverNs, ReceiverName, ReceiverAddress, ReceiverMacAddress) })
+        {
+            using var collection = new LinkCollection(ns);
+            var link = collection[name];
+            link.MacAddress = macAddress;
+            link.Addresses4.Add(new(address, PrefixLength));
+            link.Up = true;
+        }
     }
 
     ~TrafficSetup() => ReleaseUnmanagedResources();
@@ -94,12 +95,10 @@ public sealed class TrafficSetup : IDisposable
     {
         try
         {
-            using (NetNs.Enter(SenderNs))
-            {
-                using var collection = new LinkCollection();
-                var link = collection[SenderName];
-                collection.Delete(link);
-            }
+            using var ns = NetNs.Open(SenderNs);
+            using var collection = new LinkCollection(ns);
+            var link = collection[SenderName];
+            collection.Delete(link);
         }
         finally
         {

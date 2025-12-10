@@ -28,15 +28,15 @@ public class LinkTests
         Assert.AreEqual("lo", link.Name);
         Assert.AreEqual(default, link.MacAddress);
 
-        var ipV4Addrs = link.IPv4Addresses.ToArray();
-        Assert.HasCount(1, ipV4Addrs);
-        Assert.AreEqual(IPv4Address.Loopback, ipV4Addrs[0].Address);
-        Assert.AreEqual(8, ipV4Addrs[0].PrefixLength);
+        var addrs4 = link.Addresses4.ToArray();
+        Assert.HasCount(1, addrs4);
+        Assert.AreEqual(IPv4Address.Loopback, addrs4[0].Address);
+        Assert.AreEqual(8, addrs4[0].PrefixLength);
 
-        var ipV6Addrs = link.IPv6Addresses.ToArray();
-        Assert.HasCount(1, ipV6Addrs);
-        Assert.AreEqual(IPv6Address.Loopback, ipV6Addrs[0].Address);
-        Assert.AreEqual(128, ipV6Addrs[0].PrefixLength);
+        var addrs6 = link.Addresses6.ToArray();
+        Assert.HasCount(1, addrs6);
+        Assert.AreEqual(IPv6Address.Loopback, addrs6[0].Address);
+        Assert.AreEqual(128, addrs6[0].PrefixLength);
     }
 
     [TestMethod]
@@ -74,7 +74,7 @@ public class LinkTests
             Assert.IsFalse(bridge.Up);
             Assert.AreEqual(RtnlBridgePortState.Disabled, bridge.PortState);
 
-            bridge.IPv4Addresses.Add(new LinkAddress<IPv4Address>(IPv4Address.Parse(bridgeAddress), bridgeAddressPrefix));
+            bridge.Addresses4.Add(new(IPv4Address.Parse(bridgeAddress), bridgeAddressPrefix));
 
             Assert.Contains($"{bridgeAddress}/{bridgeAddressPrefix}", Script.Exec("ip", "address", "show", bridgeName));
 
@@ -130,10 +130,10 @@ public class LinkTests
             Assert.AreEqual(vethName, veth.Name);
             Assert.AreEqual(vethPeerName, vethPeer.Name);
 
-            veth.IPv4Addresses.Add(LinkAddress<IPv4Address>.Parse(vethAddress));
+            veth.Addresses4.Add(LinkAddress<IPv4Address>.Parse(vethAddress));
             Assert.Contains(vethAddress, Script.Exec("ip", "address", "show", vethName));
 
-            vethPeer.IPv4Addresses.Add(LinkAddress<IPv4Address>.Parse(vethPeerAddress));
+            vethPeer.Addresses4.Add(LinkAddress<IPv4Address>.Parse(vethPeerAddress));
             Assert.Contains(vethPeerAddress, Script.Exec("ip", "address", "show", vethPeerName));
 
             veth.Up = true;
