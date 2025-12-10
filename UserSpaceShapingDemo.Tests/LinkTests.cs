@@ -85,6 +85,8 @@ public class LinkTests
 
             Assert.AreEqual(RtnlBridgePortState.Disabled, bridge.PortState);
 
+            Assert.IsInstanceOfType<BridgeLink>(collection[bridgeName]);
+
             collection.Delete(bridge);
 
             Assert.ThrowsExactly<AssertFailedException>(() => Script.Exec("ip", "link", "show", bridgeName));
@@ -141,6 +143,9 @@ public class LinkTests
 
             Assert.Contains("UP", Script.Exec("ip", "address", "show", vethName));
             Assert.Contains("UP", Script.Exec("ip", "address", "show", vethPeerName));
+
+            Assert.IsInstanceOfType<VEthLink>(collection[vethName]);
+            Assert.IsInstanceOfType<VEthLink>(collection[vethPeerName]);
 
             collection.Delete(veth);
 
