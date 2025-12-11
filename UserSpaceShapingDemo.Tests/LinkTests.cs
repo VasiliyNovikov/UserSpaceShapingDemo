@@ -26,7 +26,7 @@ public class LinkTests
         var link = collection["lo"];
         Assert.IsGreaterThan(0, link.Index);
         Assert.AreEqual("lo", link.Name);
-        Assert.AreEqual(default, link.MacAddress);
+        Assert.AreEqual(default(MACAddress), link.MacAddress);
 
         var addrs4 = link.Addresses4.ToArray();
         Assert.HasCount(1, addrs4);

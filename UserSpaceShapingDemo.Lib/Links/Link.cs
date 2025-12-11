@@ -14,7 +14,7 @@ public class Link
     [SuppressMessage("Design", "CA1051:Do not declare visible instance fields")]
     protected readonly RtnlSocket Socket;
     private bool _up;
-    private MACAddress _macAddress;
+    private MACAddress? _macAddress;
     private int _masterIndex;
 
     public int Index { get; }
@@ -65,7 +65,7 @@ public class Link
         }
     }
 
-    public MACAddress MacAddress
+    public MACAddress? MacAddress
     {
         get => _macAddress;
         set
@@ -74,9 +74,14 @@ public class Link
                 return;
 
             using var change = RtnlLink.Allocate();
-            using var nlMac = new NlAddress(value.Bytes, NativeAddressFamily.LLC);
             change.IfIndex = Index;
-            change.Address = nlMac;
+            if (value is null)
+                change.Address = null;
+            else
+            {
+                using var nlMac = new NlAddress(value!.Value.Bytes, NativeAddressFamily.LLC);
+                change.Address = nlMac;
+            }
             Socket.UpdateLink(change);
             _macAddress = value;
         }
@@ -92,7 +97,8 @@ public class Link
         Index = nlLink.IfIndex;
         Name = nlLink.Name;
         _up = nlLink.Up;
-        _macAddress = MemoryMarshal.Read<MACAddress>(nlLink.Address.Bytes);
+        var nlMac = nlLink.Address;
+        _macAddress = nlMac is null ? null : MemoryMarshal.Read<MACAddress>(nlMac.Bytes);
         _masterIndex = nlLink.Master;
     }
 
