@@ -3,7 +3,7 @@ using System.Net.Sockets;
 using System.Threading;
 using System.Threading.Tasks;
 
-using UserSpaceShapingDemo.Lib;
+using UserSpaceShapingDemo.Lib.Forwarding;
 
 namespace UserSpaceShapingDemo.Tests;
 
@@ -16,8 +16,8 @@ public sealed class TrafficForwardingSetup : IDisposable
 
     public TrafficForwardingSetup(XdpForwarderMode mode = XdpForwarderMode.Generic,
                                   string? sharedForwarderNs = null, 
-                                  XdpForwarder.PacketCallback? receivedCallback = null,
-                                  XdpForwarder.PacketCallback? sentCallback = null,
+                                  XdpSimpleForwarder.PacketCallback? receivedCallback = null,
+                                  XdpSimpleForwarder.PacketCallback? sentCallback = null,
                                   Action<Exception>? errorCallback = null)
     {
         _setup1 = new TrafficSetup(sharedReceiverNs: sharedForwarderNs);
@@ -29,7 +29,7 @@ public sealed class TrafficForwardingSetup : IDisposable
             using var forwardNs = _setup1.EnterReceiver();
             try
             {
-                XdpForwarder.Run(_setup1.ReceiverName, _setup2.SenderName, mode, receivedCallback, sentCallback, errorCallback, _forwardingCancellation.Token);
+                XdpSimpleForwarder.Run(_setup1.ReceiverName, _setup2.SenderName, mode, receivedCallback, sentCallback, errorCallback, _forwardingCancellation.Token);
             }
             catch (OperationCanceledException)
             {

@@ -8,6 +8,7 @@ using BenchmarkDotNet.Attributes;
 using BenchmarkDotNet.Configs;
 
 using UserSpaceShapingDemo.Lib;
+using UserSpaceShapingDemo.Lib.Forwarding;
 using UserSpaceShapingDemo.Lib.Std;
 using UserSpaceShapingDemo.Lib.Xpd;
 using UserSpaceShapingDemo.Tests;

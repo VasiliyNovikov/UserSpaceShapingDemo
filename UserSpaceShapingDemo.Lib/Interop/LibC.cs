@@ -73,6 +73,7 @@ internal static unsafe partial class LibC
     // ssize_t write(int fd, const void* buf, size_t count);
     [LibraryImport(Lib, EntryPoint = "write")]
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    [SuppressGCTransition]
     public static partial nint write(FileDescriptor fd, void* buf, nuint count);
 
     // int unshare (int __flags)

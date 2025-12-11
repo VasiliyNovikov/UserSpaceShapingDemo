@@ -5,17 +5,20 @@ using UserSpaceShapingDemo.Lib.Interop;
 
 namespace UserSpaceShapingDemo.Lib.Std;
 
-public sealed unsafe class NativeEvent(bool isSet)
-    : FileObject(LibC.eventfd(isSet ? 1u : 0u, 0).ThrowIfError())
+public sealed unsafe class NativeSemaphore(uint initialValue = 0)
+    : FileObject(LibC.eventfd(initialValue, LibC.EFD_SEMAPHORE).ThrowIfError())
 {
     private static readonly long* Value = (long*)NativeMemory.Alloc(sizeof(ulong));
     private static readonly long* Buffer = (long*)NativeMemory.Alloc(sizeof(ulong));
 
-    static NativeEvent() => *Value = 1;
+    static NativeSemaphore() => *Value = 1;
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public void Set() => Write(Value, sizeof(ulong));
+    public void Increment() => Write(Value, sizeof(ulong));
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public void Wait() => Read(Buffer, sizeof(ulong));
+    public void Add(ulong value) => Write(&value, sizeof(ulong));
+
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public void Decrement() => Read(Buffer, sizeof(ulong));
 }

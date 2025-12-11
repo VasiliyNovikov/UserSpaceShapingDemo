@@ -7,12 +7,12 @@ using System.Threading.Tasks;
 
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 
-using UserSpaceShapingDemo.Lib;
+using UserSpaceShapingDemo.Lib.Forwarding;
 
 namespace UserSpaceShapingDemo.Tests;
 
 [TestClass]
-public sealed class XdpForwarderTests
+public sealed class XdpSimpleForwarderTests
 {
     public TestContext TestContext { get; set; } = null!;
 

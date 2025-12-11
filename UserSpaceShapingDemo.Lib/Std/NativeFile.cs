@@ -56,7 +56,7 @@ public sealed unsafe class NativeFile(string path, NativeFileFlags flags, UnixFi
         fixed (byte* ptr = buffer)
             return (int)base.Write(ptr, (nuint)buffer.Length);
     }
-    
+
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     private void EnsureImmutableCached()
     {

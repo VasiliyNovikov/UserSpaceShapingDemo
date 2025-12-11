@@ -6,4 +6,5 @@ using UserSpaceShapingDemo.Lib;
 LinuxScheduler.SetScheduler(LinuxScheduler.Policy.RoundRobin, 60);
 MemoryLockLimit.SetInfinity();
 
-BenchmarkRunner.Run<XdpForwarderBenchmarks>();
+//BenchmarkRunner.Run<XdpForwarderBenchmarks>();
+BenchmarkRunner.Run<NativeEventBenchmarks>();

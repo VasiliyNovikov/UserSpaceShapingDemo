@@ -7,16 +7,9 @@ using UserSpaceShapingDemo.Lib.Headers;
 using UserSpaceShapingDemo.Lib.Std;
 using UserSpaceShapingDemo.Lib.Xpd;
 
-namespace UserSpaceShapingDemo.Lib;
+namespace UserSpaceShapingDemo.Lib.Forwarding;
 
-public enum XdpForwarderMode
-{
-    Generic,
-    Driver,
-    DriverZeroCopy,
-}
-
-public static class XdpForwarder
+public static class XdpSimpleForwarder
 {
     public delegate void PacketCallback(string eth, Span<byte> data);
 
@@ -60,7 +53,7 @@ public static class XdpForwarder
                 var events2 = Poll.Event.Readable;
                 if (packetsToSend2.Count > 0)
                     events2 |= Poll.Event.Writable;
-                XdpSocket.WaitFor([socket1, socket2], [events1, events2], nativeCancellationToken);
+                nativeCancellationToken.Wait([socket1, socket2], [events1, events2]);
             }
         }
         catch (Exception ex)
