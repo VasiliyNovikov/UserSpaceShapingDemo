@@ -23,14 +23,14 @@ public sealed class ForwardingChannel : IDisposable
     public NativeQueue<ulong> FreeFrames { get; }
 
     [SkipLocalsInit]
-    public ForwardingChannel(string eth1, string eth2, ForwardingMode mode = ForwardingMode.Generic)
+    public ForwardingChannel(string ifName1, string ifName2, ForwardingMode mode = ForwardingMode.Generic)
     {
         Mode = mode;
         SocketMode = mode is ForwardingMode.Generic ? XdpSocketMode.Default : XdpSocketMode.Driver;
         BindMode = mode is ForwardingMode.DriverZeroCopy ? XdpSocketBindMode.ZeroCopy : XdpSocketBindMode.Copy;
         Memory = new UMemory();
-        Pipe1 = new Pipe(eth1, _packetQueue1, _packetQueue2);
-        Pipe2 = new Pipe(eth2, _packetQueue2, _packetQueue1);
+        Pipe1 = new Pipe(ifName1, _packetQueue1, _packetQueue2);
+        Pipe2 = new Pipe(ifName2, _packetQueue2, _packetQueue1);
         FreeFrames = new NativeQueue<ulong>();
 
         Span<ulong> frames = stackalloc ulong[(int)Memory.FrameCount];
@@ -48,13 +48,13 @@ public sealed class ForwardingChannel : IDisposable
 
     public sealed class Pipe
     {
-        public string Eth { get; }
+        public string IfName { get; }
         public NativeQueue<XdpDescriptor> IncomingPackets { get; }
         public NativeQueue<XdpDescriptor> OutgoingPackets { get; }
 
-        internal Pipe(string eth, NativeQueue<XdpDescriptor> incomingPackets, NativeQueue<XdpDescriptor> outgoingPackets)
+        internal Pipe(string ifName, NativeQueue<XdpDescriptor> incomingPackets, NativeQueue<XdpDescriptor> outgoingPackets)
         {
-            Eth = eth;
+            IfName = ifName;
             IncomingPackets = incomingPackets;
             OutgoingPackets = outgoingPackets;
         }

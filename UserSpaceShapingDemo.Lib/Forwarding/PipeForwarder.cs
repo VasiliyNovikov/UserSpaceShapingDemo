@@ -11,7 +11,7 @@ using UserSpaceShapingDemo.Lib.Xpd;
 
 namespace UserSpaceShapingDemo.Lib.Forwarding;
 
-public sealed class XdpForwarder : IDisposable
+public sealed class PipeForwarder : IDisposable
 {
     private const int BatchSize = 64;
 
@@ -22,9 +22,9 @@ public sealed class XdpForwarder : IDisposable
     private readonly Task _forwardingTask;
     private readonly CancellationTokenSource _forwardingCancellation;
 
-    public XdpForwarder(ForwardingChannel channel, ForwardingChannel.Pipe pipe, bool shared = false)
+    public PipeForwarder(ForwardingChannel channel, ForwardingChannel.Pipe pipe, uint queueId = 0, bool shared = false)
     {
-        _socket = new XdpSocket(channel.Memory, pipe.Eth, shared: shared);
+        _socket = new XdpSocket(channel.Memory, pipe.IfName, queueId, shared: shared);
         _freeFrames = channel.FreeFrames;
         _incomingPackets = pipe.IncomingPackets;
         _outgoingPackets = pipe.OutgoingPackets;
