@@ -63,12 +63,11 @@ public sealed class XdpSocketTests
 
             using var socket = new XdpSocket(umem, setup.ReceiverName);
 
-            using (var fill = socket.FillRing.Fill(umem.FillRingSize))
-            {
-                Assert.AreEqual(umem.FillRingSize, fill.Length);
-                for (var i = 0u; i < fill.Length; ++i)
-                    fill[i] = addresses[(int)i];
-            }
+            var fill = socket.FillRing.Fill(umem.FillRingSize);
+            Assert.AreEqual(umem.FillRingSize, fill.Length);
+            for (var i = 0u; i < fill.Length; ++i)
+                fill[i] = addresses[(int)i];
+            fill.Submit();
 
             sender.Send(messageBytes);
 
@@ -78,10 +77,12 @@ public sealed class XdpSocketTests
 
             ulong receivedAddress;
 
-            using (var receivePackets = socket.RxRing.Receive())
+            var receivePackets = socket.RxRing.Receive();
             {
                 Assert.AreEqual(1u, receivePackets.Length);
-                ref readonly var packet = ref receivePackets[0];
+                var packet = receivePackets[0];
+                receivePackets.Release();
+
                 receivedAddress = packet.Address;
 
                 var packetData = umem[packet];
@@ -108,7 +109,7 @@ public sealed class XdpSocketTests
                 Assert.AreEqual(message, payloadString);
             }
 
-            using (var sendPackets = socket.TxRing.Send(1))
+            var sendPackets = socket.TxRing.Send(1);
             {
                 Assert.AreEqual(1u, sendPackets.Length);
 
@@ -144,6 +145,7 @@ public sealed class XdpSocketTests
 
                 replyMessageBytes.CopyTo(udpHeader.Payload);
             }
+            sendPackets.Submit();
 
             if (socket.TxRing.NeedsWakeup)
                 socket.WakeUp();
@@ -156,13 +158,13 @@ public sealed class XdpSocketTests
                 Assert.AreEqual(replyMessage, receiveMessage);
             }
 
-            using (var completed = socket.CompletionRing.Complete())
-            {
-                Assert.AreEqual(1u, completed.Length);
-                using var fill = socket.FillRing.Fill(1);
-                Assert.AreEqual(1u, fill.Length);
-                fill[0] = completed[0];
-            }
+            var completed = socket.CompletionRing.Complete();
+            Assert.AreEqual(1u, completed.Length);
+            fill = socket.FillRing.Fill(1);
+            Assert.AreEqual(1u, fill.Length);
+            fill[0] = completed[0];
+            fill.Submit();
+            completed.Release();
         }
     }
 }

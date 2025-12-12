@@ -20,7 +20,7 @@ public sealed class RxRingBuffer : ConsumerRingBuffer
     }
 
     [method: MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public readonly struct PacketRange(RxRingBuffer ringBuffer, uint index, uint length) : IDisposable
+    public readonly struct PacketRange(RxRingBuffer ringBuffer, uint index, uint length)
     {
         public uint Length
         {
@@ -39,7 +39,15 @@ public sealed class RxRingBuffer : ConsumerRingBuffer
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public void Dispose()
+        public void Release(uint count)
+        {
+            ArgumentOutOfRangeException.ThrowIfGreaterThan(count, length);
+            if (count > 0)
+                ringBuffer.Release(count);
+        }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public void Release()
         {
             if (length > 0)
                 ringBuffer.Release(length);

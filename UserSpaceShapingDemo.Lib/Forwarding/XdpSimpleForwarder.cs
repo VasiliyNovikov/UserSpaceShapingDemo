@@ -66,13 +66,11 @@ public static class XdpSimpleForwarder
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     private static bool FillOnce(XdpSocket socket, Stack<ulong> freeAddresses)
     {
-        bool filled;
-        using (var fill = socket.FillRing.Fill((uint)freeAddresses.Count))
-        {
-            filled = fill.Length > 0;
-            for (var i = 0u; i < fill.Length; ++i)
-                fill[i] = freeAddresses.Pop();
-        }
+        var fill = socket.FillRing.Fill((uint)freeAddresses.Count);
+        var filled = fill.Length > 0;
+        for (var i = 0u; i < fill.Length; ++i)
+            fill[i] = freeAddresses.Pop();
+        fill.Submit();
         if (filled && socket.FillRing.NeedsWakeup)
             socket.WakeUp();
         return filled;
@@ -81,40 +79,36 @@ public static class XdpSimpleForwarder
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     private static bool ForwardOnce(XdpSocket sourceSocket, XdpSocket destinationSocket, Queue<XdpDescriptor> packetsToSend, Stack<ulong> freeAddresses, PacketCallback? receivedCallback, PacketCallback? sentCallback)
     {
-        bool hasActivity;
-        using (var receivePackets = sourceSocket.RxRing.Receive())
+        var receivePackets = sourceSocket.RxRing.Receive();
+        var hasActivity = receivePackets.Length > 0;
+        for (var i = 0u; i < receivePackets.Length; ++i)
         {
-            hasActivity = receivePackets.Length > 0;
-            for (var i = 0u; i < receivePackets.Length; ++i)
-            {
-                var packet = receivePackets[i];
-                packetsToSend.Enqueue(packet);
-                var packetData = sourceSocket.Umem[packet];
-                UpdateChecksums(packetData);
-                receivedCallback?.Invoke(sourceSocket.IfName, packetData);
-            }
+            var packet = receivePackets[i];
+            packetsToSend.Enqueue(packet);
+            var packetData = sourceSocket.Umem[packet];
+            UpdateChecksums(packetData);
+            receivedCallback?.Invoke(sourceSocket.IfName, packetData);
         }
+        receivePackets.Release();
 
-        using (var sendPackets = destinationSocket.TxRing.Send((uint)packetsToSend.Count))
+        var sendPackets = destinationSocket.TxRing.Send((uint)packetsToSend.Count);
+        hasActivity |= sendPackets.Length > 0;
+        for (var i = 0u; i < sendPackets.Length; ++i)
         {
-            hasActivity |= sendPackets.Length > 0;
-            for (var i = 0u; i < sendPackets.Length; ++i)
-            {
-                var descriptor = packetsToSend.Dequeue();
-                sendPackets[i] = descriptor;
-                sentCallback?.Invoke(destinationSocket.IfName, destinationSocket.Umem[descriptor]);
-            }
+            var descriptor = packetsToSend.Dequeue();
+            sendPackets[i] = descriptor;
+            sentCallback?.Invoke(destinationSocket.IfName, destinationSocket.Umem[descriptor]);
         }
+        sendPackets.Submit();
 
         if (destinationSocket.TxRing.NeedsWakeup)
             destinationSocket.WakeUp();
 
-        using (var completed = destinationSocket.CompletionRing.Complete())
-        {
-            hasActivity |= completed.Length > 0;
-            for (var i = 0u; i < completed.Length; ++i)
-                freeAddresses.Push(completed[i]);
-        }
+        var completed = destinationSocket.CompletionRing.Complete();
+        hasActivity |= completed.Length > 0;
+        for (var i = 0u; i < completed.Length; ++i)
+            freeAddresses.Push(completed[i]);
+        completed.Release();
 
         hasActivity |= FillOnce(sourceSocket, freeAddresses);
 

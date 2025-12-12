@@ -13,7 +13,7 @@ public sealed class FillRingBuffer : ProducerRingBuffer
     }
 
     [method: MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public readonly struct AddressRange(FillRingBuffer ringBuffer, uint index, uint length) : IDisposable
+    public readonly struct AddressRange(FillRingBuffer ringBuffer, uint index, uint length)
     {
         public uint Length
         {
@@ -32,7 +32,15 @@ public sealed class FillRingBuffer : ProducerRingBuffer
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public void Dispose()
+        public void Submit(uint count)
+        {
+            ArgumentOutOfRangeException.ThrowIfGreaterThan(count, length);
+            if (count > 0)
+                ringBuffer.Submit(count);
+        }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public void Submit()
         {
             if (length > 0)
                 ringBuffer.Submit(length);
