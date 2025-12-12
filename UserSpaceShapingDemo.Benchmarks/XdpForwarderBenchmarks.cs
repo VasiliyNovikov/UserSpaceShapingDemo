@@ -48,9 +48,9 @@ public class XdpForwarderBenchmarks
 
         if (ForwarderNs is not null)
             NetNs.ReCreate(ForwarderNs);
-        ForwardingGenericSetup = new(XdpForwarderMode.Generic, ForwarderNs, errorCallback: e => Console.Error.WriteLine(e));
+        ForwardingGenericSetup = new(ForwardingMode.Generic, ForwarderNs, errorCallback: e => Console.Error.WriteLine(e));
         Thread.Sleep(100);
-        ForwardingDriverSetup = new(XdpForwarderMode.Driver, ForwarderNs, errorCallback: e => Console.Error.WriteLine(e));
+        ForwardingDriverSetup = new(ForwardingMode.Driver, ForwarderNs, errorCallback: e => Console.Error.WriteLine(e));
         DirectSender = DirectSetup.CreateSenderSocket(SocketType.Dgram, ProtocolType.Udp, SenderPort);
         DirectReceiver = DirectSetup.CreateReceiverSocket(SocketType.Dgram, ProtocolType.Udp, ReceiverPort);
         ForwardingGenericSender = ForwardingGenericSetup.CreateSenderSocket(SocketType.Dgram, ProtocolType.Udp, SenderPort);

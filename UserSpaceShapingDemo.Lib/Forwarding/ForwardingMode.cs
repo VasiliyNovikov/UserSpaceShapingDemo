@@ -1,6 +1,6 @@
 namespace UserSpaceShapingDemo.Lib.Forwarding;
 
-public enum XdpForwarderMode
+public enum ForwardingMode
 {
     Generic,
     Driver,

@@ -9,12 +9,12 @@ using UserSpaceShapingDemo.Lib.Xpd;
 
 namespace UserSpaceShapingDemo.Lib.Forwarding;
 
-public static class XdpSimpleForwarder
+public static class SimpleForwarder
 {
     public delegate void PacketCallback(string eth, Span<byte> data);
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public static void Run(string eth1, string eth2, XdpForwarderMode mode = XdpForwarderMode.Generic,
+    public static void Run(string eth1, string eth2, ForwardingMode mode = ForwardingMode.Generic,
                            PacketCallback? receivedCallback = null, PacketCallback? sentCallback = null,
                            Action<Exception>? errorCallback = null,
                            CancellationToken cancellationToken = default)
@@ -23,8 +23,8 @@ public static class XdpSimpleForwarder
         {
             using var umem = new UMemory();
 
-            var socketMode = mode is XdpForwarderMode.Generic ? XdpSocketMode.Default : XdpSocketMode.Driver;
-            var bindMode = mode is XdpForwarderMode.DriverZeroCopy ? XdpSocketBindMode.ZeroCopy : XdpSocketBindMode.Copy;
+            var socketMode = mode is ForwardingMode.Generic ? XdpSocketMode.Default : XdpSocketMode.Driver;
+            var bindMode = mode is ForwardingMode.DriverZeroCopy ? XdpSocketBindMode.ZeroCopy : XdpSocketBindMode.Copy;
 
             using var socket1 = new XdpSocket(umem, eth1, mode: socketMode, bindMode: bindMode | XdpSocketBindMode.UseNeedWakeup);
             using var socket2 = new XdpSocket(umem, eth2, mode: socketMode, bindMode: bindMode | XdpSocketBindMode.UseNeedWakeup, shared: true);

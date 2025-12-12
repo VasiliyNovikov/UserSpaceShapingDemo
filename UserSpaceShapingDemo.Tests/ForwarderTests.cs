@@ -12,16 +12,16 @@ using UserSpaceShapingDemo.Lib.Forwarding;
 namespace UserSpaceShapingDemo.Tests;
 
 [TestClass]
-public sealed class XdpSimpleForwarderTests
+public sealed class ForwarderTests
 {
     public TestContext TestContext { get; set; } = null!;
 
     [TestMethod]
     [Timeout(5000, CooperativeCancellation = true)]
-    [DataRow(XdpForwarderMode.Generic)]
-    [DataRow(XdpForwarderMode.Driver)]
+    [DataRow(ForwardingMode.Generic)]
+    [DataRow(ForwardingMode.Driver)]
     //[DataRow(XdpForwarderMode.DriverZeroCopy)]
-    public async Task XdpSocket_Forward(XdpForwarderMode mode)
+    public async Task XdpSocket_Forward(ForwardingMode mode)
     {
         const string clientMessage = "Hello from XDP client!!!";
         const string serverMessage = "Hello back from XDP server!!!";
@@ -56,17 +56,17 @@ public sealed class XdpSimpleForwarderTests
 
     [TestMethod]
     [Timeout(5000, CooperativeCancellation = true)]
-    [DataRow(XdpForwarderMode.Generic, 8)]
-    [DataRow(XdpForwarderMode.Generic, 16)]
-    [DataRow(XdpForwarderMode.Generic, 32)]
-    [DataRow(XdpForwarderMode.Generic, 64)]
-    [DataRow(XdpForwarderMode.Generic, 128)]
-    [DataRow(XdpForwarderMode.Driver, 8)]
-    [DataRow(XdpForwarderMode.Driver, 16)]
-    [DataRow(XdpForwarderMode.Driver, 32)]
-    [DataRow(XdpForwarderMode.Driver, 64)]
-    [DataRow(XdpForwarderMode.Driver, 128)]
-    public async Task XdpSocket_Forward_Batch(XdpForwarderMode mode, int batchSize)
+    [DataRow(ForwardingMode.Generic, 8)]
+    [DataRow(ForwardingMode.Generic, 16)]
+    [DataRow(ForwardingMode.Generic, 32)]
+    [DataRow(ForwardingMode.Generic, 64)]
+    [DataRow(ForwardingMode.Generic, 128)]
+    [DataRow(ForwardingMode.Driver, 8)]
+    [DataRow(ForwardingMode.Driver, 16)]
+    [DataRow(ForwardingMode.Driver, 32)]
+    [DataRow(ForwardingMode.Driver, 64)]
+    [DataRow(ForwardingMode.Driver, 128)]
+    public async Task XdpSocket_Forward_Batch(ForwardingMode mode, int batchSize)
     {
         const string clientMessageTemplate = "Hello from XDP client: {0}";
         const int clientPort = 54321;

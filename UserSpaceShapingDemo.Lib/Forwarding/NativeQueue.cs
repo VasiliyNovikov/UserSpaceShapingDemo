@@ -11,6 +11,8 @@ public sealed class NativeQueue<T> : IFileObject, IDisposable
     private readonly NativeSemaphore _counter = new();
     private readonly ConcurrentQueue<T> _queue = new();
 
+    public int Count => _queue.Count;
+
     public FileDescriptor Descriptor => _counter.Descriptor;
 
     public void Dispose() => _counter.Dispose();
