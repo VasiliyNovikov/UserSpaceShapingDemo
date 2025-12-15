@@ -98,7 +98,7 @@ public sealed class PipeForwarder : IDisposable
         {
             var packet = receivePackets[i];
             _outgoingPackets.Enqueue(packet);
-            _receivedCallback?.Invoke(_socket.IfName, _socket.Umem[packet]);
+            _receivedCallback?.Invoke(_socket.IfName, _socket.QueueId, _socket.Umem[packet]);
         }
         receivePackets.Release();
         return receivePackets.Length > 0;
@@ -114,7 +114,7 @@ public sealed class PipeForwarder : IDisposable
             var packetData = _socket.Umem[descriptor];
             UpdateChecksums(packetData);
             sendPackets[sendCount++] = descriptor;
-            _sentCallback?.Invoke(_socket.IfName, packetData);
+            _sentCallback?.Invoke(_socket.IfName, _socket.QueueId, packetData);
         }
 
         if (sendCount == 0)

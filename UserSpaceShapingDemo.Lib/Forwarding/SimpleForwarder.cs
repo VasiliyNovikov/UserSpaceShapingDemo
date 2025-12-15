@@ -96,7 +96,7 @@ public sealed class SimpleForwarder : IDisposable
             packetsToSend.Enqueue(packet);
             var packetData = sourceSocket.Umem[packet];
             UpdateChecksums(packetData);
-            _receivedCallback?.Invoke(sourceSocket.IfName, packetData);
+            _receivedCallback?.Invoke(sourceSocket.IfName, sourceSocket.QueueId, packetData);
         }
         receivePackets.Release();
 
@@ -106,7 +106,7 @@ public sealed class SimpleForwarder : IDisposable
         {
             var descriptor = packetsToSend.Dequeue();
             sendPackets[i] = descriptor;
-            _sentCallback?.Invoke(destinationSocket.IfName, destinationSocket.Umem[descriptor]);
+            _sentCallback?.Invoke(destinationSocket.IfName, sourceSocket.QueueId, destinationSocket.Umem[descriptor]);
         }
         sendPackets.Submit();
 

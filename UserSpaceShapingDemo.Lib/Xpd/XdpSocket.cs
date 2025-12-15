@@ -15,6 +15,7 @@ public sealed unsafe class XdpSocket : NativeObject, IFileObject
 
     public UMemory Umem { get; }
     public string IfName { get; }
+    public uint QueueId { get; }
 
     public FillRingBuffer FillRing { get; }
     public CompletionRingBuffer CompletionRing { get; }
@@ -38,6 +39,7 @@ public sealed unsafe class XdpSocket : NativeObject, IFileObject
     {
         Umem = umem;
         IfName = ifName;
+        QueueId = queueId;
         var ifIndex = InterfaceNameHelper.GetIndex(ifName);
         var config = new LibXdp.xsk_socket_config
         {
