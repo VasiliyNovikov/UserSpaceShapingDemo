@@ -11,8 +11,6 @@ namespace UserSpaceShapingDemo.Lib.Forwarding;
 
 public sealed class SimpleForwarder : IDisposable
 {
-    public delegate void PacketCallback(string eth, Span<byte> data);
-
     private readonly PacketCallback? _receivedCallback;
     private readonly PacketCallback? _sentCallback;
     private readonly Action<Exception>? _errorCallback;

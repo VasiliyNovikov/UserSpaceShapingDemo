@@ -14,8 +14,8 @@ public sealed class TrafficForwardingSetup : IDisposable
     public TrafficForwardingSetup(TrafficForwarderType forwarderType = TrafficForwarderType.Simple,
                                   ForwardingMode mode = ForwardingMode.Generic,
                                   string? sharedForwarderNs = null,
-                                  SimpleForwarder.PacketCallback? receivedCallback = null,
-                                  SimpleForwarder.PacketCallback? sentCallback = null,
+                                  PacketCallback? receivedCallback = null,
+                                  PacketCallback? sentCallback = null,
                                   Action<Exception>? errorCallback = null)
     {
         _setup1 = new TrafficSetup(sharedReceiverNs: sharedForwarderNs);
