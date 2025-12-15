@@ -18,10 +18,12 @@ public sealed class ForwarderTests
 
     [TestMethod]
     [Timeout(5000, CooperativeCancellation = true)]
-    [DataRow(ForwardingMode.Generic)]
-    [DataRow(ForwardingMode.Driver)]
-    //[DataRow(XdpForwarderMode.DriverZeroCopy)]
-    public async Task XdpSocket_Forward(ForwardingMode mode)
+    [DataRow(TrafficForwarderType.Simple, ForwardingMode.Generic)]
+    [DataRow(TrafficForwarderType.Simple, ForwardingMode.Driver)]
+    //[DataRow(TrafficForwarderType.Simple, XdpForwarderMode.DriverZeroCopy)]
+    [DataRow(TrafficForwarderType.Parallel, ForwardingMode.Generic)]
+    [DataRow(TrafficForwarderType.Parallel, ForwardingMode.Driver)]
+    public async Task XdpSocket_Forward(TrafficForwarderType type, ForwardingMode mode)
     {
         const string clientMessage = "Hello from XDP client!!!";
         const string serverMessage = "Hello back from XDP server!!!";
@@ -32,7 +34,7 @@ public sealed class ForwarderTests
 
         var cancellationToken = TestContext.CancellationTokenSource.Token;
 
-        using var setup = new TrafficForwardingSetup(mode, null,
+        using var setup = new TrafficForwardingSetup(type, mode, null,
             (eth, data) => TestContext.WriteLine($"{DateTime.UtcNow:O}: {eth}: received packet:\n{data.PacketToString()}"),
             (eth, data) => TestContext.WriteLine($"{DateTime.UtcNow:O}: {eth}: sent packet:\n{data.PacketToString()}"));
 
@@ -56,17 +58,19 @@ public sealed class ForwarderTests
 
     [TestMethod]
     [Timeout(5000, CooperativeCancellation = true)]
-    [DataRow(ForwardingMode.Generic, 8)]
-    [DataRow(ForwardingMode.Generic, 16)]
-    [DataRow(ForwardingMode.Generic, 32)]
-    [DataRow(ForwardingMode.Generic, 64)]
-    [DataRow(ForwardingMode.Generic, 128)]
-    [DataRow(ForwardingMode.Driver, 8)]
-    [DataRow(ForwardingMode.Driver, 16)]
-    [DataRow(ForwardingMode.Driver, 32)]
-    [DataRow(ForwardingMode.Driver, 64)]
-    [DataRow(ForwardingMode.Driver, 128)]
-    public async Task XdpSocket_Forward_Batch(ForwardingMode mode, int batchSize)
+    [DataRow(TrafficForwarderType.Simple, ForwardingMode.Generic, 8)]
+    [DataRow(TrafficForwarderType.Simple, ForwardingMode.Generic, 32)]
+    [DataRow(TrafficForwarderType.Simple, ForwardingMode.Generic, 128)]
+    [DataRow(TrafficForwarderType.Simple, ForwardingMode.Driver, 8)]
+    [DataRow(TrafficForwarderType.Simple, ForwardingMode.Driver, 32)]
+    [DataRow(TrafficForwarderType.Simple, ForwardingMode.Driver, 128)]
+    [DataRow(TrafficForwarderType.Parallel, ForwardingMode.Generic, 8)]
+    [DataRow(TrafficForwarderType.Parallel, ForwardingMode.Generic, 32)]
+    [DataRow(TrafficForwarderType.Parallel, ForwardingMode.Generic, 128)]
+    [DataRow(TrafficForwarderType.Parallel, ForwardingMode.Driver, 8)]
+    [DataRow(TrafficForwarderType.Parallel, ForwardingMode.Driver, 32)]
+    [DataRow(TrafficForwarderType.Parallel, ForwardingMode.Driver, 128)]
+    public async Task XdpSocket_Forward_Batch(TrafficForwarderType type, ForwardingMode mode, int batchSize)
     {
         const string clientMessageTemplate = "Hello from XDP client: {0}";
         const int clientPort = 54321;
@@ -74,7 +78,7 @@ public sealed class ForwarderTests
 
         var cancellationToken = TestContext.CancellationTokenSource.Token;
 
-        using var setup = new TrafficForwardingSetup(mode, null,
+        using var setup = new TrafficForwardingSetup(type, mode, null,
             (eth, data) => TestContext.WriteLine($"{DateTime.UtcNow:O}: {eth}: received packet:\n{data.PacketToString()}"),
             (eth, data) => TestContext.WriteLine($"{DateTime.UtcNow:O}: {eth}: sent packet:\n{data.PacketToString()}"));
 

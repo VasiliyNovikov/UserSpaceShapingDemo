@@ -7,7 +7,6 @@ using System.Threading;
 using BenchmarkDotNet.Attributes;
 using BenchmarkDotNet.Configs;
 
-using UserSpaceShapingDemo.Lib;
 using UserSpaceShapingDemo.Lib.Forwarding;
 using UserSpaceShapingDemo.Lib.Std;
 using UserSpaceShapingDemo.Lib.Xpd;
@@ -48,9 +47,9 @@ public class XdpForwarderBenchmarks
 
         if (ForwarderNs is not null)
             NetNs.ReCreate(ForwarderNs);
-        ForwardingGenericSetup = new(ForwardingMode.Generic, ForwarderNs, errorCallback: e => Console.Error.WriteLine(e));
+        ForwardingGenericSetup = new(TrafficForwarderType.Simple, ForwardingMode.Generic, ForwarderNs, errorCallback: e => Console.Error.WriteLine(e));
         Thread.Sleep(100);
-        ForwardingDriverSetup = new(ForwardingMode.Driver, ForwarderNs, errorCallback: e => Console.Error.WriteLine(e));
+        ForwardingDriverSetup = new(TrafficForwarderType.Simple, ForwardingMode.Driver, ForwarderNs, errorCallback: e => Console.Error.WriteLine(e));
         DirectSender = DirectSetup.CreateSenderSocket(SocketType.Dgram, ProtocolType.Udp, SenderPort);
         DirectReceiver = DirectSetup.CreateReceiverSocket(SocketType.Dgram, ProtocolType.Udp, ReceiverPort);
         ForwardingGenericSender = ForwardingGenericSetup.CreateSenderSocket(SocketType.Dgram, ProtocolType.Udp, SenderPort);
