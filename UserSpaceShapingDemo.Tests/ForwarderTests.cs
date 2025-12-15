@@ -35,8 +35,8 @@ public sealed class ForwarderTests
         var cancellationToken = TestContext.CancellationTokenSource.Token;
 
         using var setup = new TrafficForwardingSetup(type, mode, null,
-            (eth, data) => TestContext.WriteLine($"{DateTime.UtcNow:O}: {eth}: received packet:\n{data.PacketToString()}"),
-            (eth, data) => TestContext.WriteLine($"{DateTime.UtcNow:O}: {eth}: sent packet:\n{data.PacketToString()}"));
+            (eth, queue, data) => TestContext.WriteLine($"{DateTime.UtcNow:O}: {eth}:{queue}: received packet:\n{data.PacketToString()}"),
+            (eth, queue, data) => TestContext.WriteLine($"{DateTime.UtcNow:O}: {eth}:{queue}: sent packet:\n{data.PacketToString()}"));
 
         using var client = setup.CreateSenderSocket(SocketType.Dgram, ProtocolType.Udp, clientPort);
         using var server = setup.CreateReceiverSocket(SocketType.Dgram, ProtocolType.Udp, serverPort);
@@ -79,8 +79,8 @@ public sealed class ForwarderTests
         var cancellationToken = TestContext.CancellationTokenSource.Token;
 
         using var setup = new TrafficForwardingSetup(type, mode, null,
-            (eth, data) => TestContext.WriteLine($"{DateTime.UtcNow:O}: {eth}: received packet:\n{data.PacketToString()}"),
-            (eth, data) => TestContext.WriteLine($"{DateTime.UtcNow:O}: {eth}: sent packet:\n{data.PacketToString()}"));
+            (eth, queue, data) => TestContext.WriteLine($"{DateTime.UtcNow:O}: {eth}:{queue}: received packet:\n{data.PacketToString()}"),
+            (eth, queue, data) => TestContext.WriteLine($"{DateTime.UtcNow:O}: {eth}:{queue}: sent packet:\n{data.PacketToString()}"));
 
         using var client = setup.CreateSenderSocket(SocketType.Dgram, ProtocolType.Udp, clientPort);
         using var server = setup.CreateReceiverSocket(SocketType.Dgram, ProtocolType.Udp, serverPort);
