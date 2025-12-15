@@ -30,4 +30,10 @@ public sealed class NativeQueue<T> : IFileObject, IDisposable
         _counter.Decrement();
         return true;
     }
+
+    public T Dequeue()
+    {
+        _counter.Decrement();
+        return _queue.TryDequeue(out var item) ? item : throw new InvalidOperationException("Queue is empty");
+    }
 }
