@@ -62,13 +62,10 @@ public sealed class PipeForwarder : IDisposable
                 waitEvents.Clear();
 
                 waitObjects.Add(_socket);
-                var noIncoming = _incomingPackets.IsEmpty;
-                waitEvents.Add(noIncoming ? Poll.Event.Readable : Poll.Event.Readable | Poll.Event.Writable);
-                if (noIncoming)
-                {
-                    waitObjects.Add(_incomingPackets);
-                    waitEvents.Add(Poll.Event.Readable);
-                }
+                waitEvents.Add(_incomingPackets.IsEmpty ? Poll.Event.Readable : Poll.Event.Readable | Poll.Event.Writable);
+
+                waitObjects.Add(_incomingPackets);
+                waitEvents.Add(Poll.Event.Readable);
 
                 if (_freeFrames.IsEmpty)
                 {
