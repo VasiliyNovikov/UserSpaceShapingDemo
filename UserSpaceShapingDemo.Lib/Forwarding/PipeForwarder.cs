@@ -12,6 +12,9 @@ namespace UserSpaceShapingDemo.Lib.Forwarding;
 
 public sealed class PipeForwarder : IDisposable
 {
+    private readonly PacketCallback? _receivedCallback;
+    private readonly PacketCallback? _sentCallback;
+    private readonly Action<Exception>? _errorCallback;
     private const int BatchSize = 64;
 
     private readonly XdpSocket _socket;
@@ -20,8 +23,11 @@ public sealed class PipeForwarder : IDisposable
     private readonly NativeQueue<XdpDescriptor> _outgoingPackets;
     private readonly Worker _forwardingWorker;
 
-    public PipeForwarder(ForwardingChannel channel, ForwardingChannel.Pipe pipe, uint queueId = 0, bool shared = false)
+    public PipeForwarder(ForwardingChannel channel, ForwardingChannel.Pipe pipe, uint queueId = 0, bool shared = false, PacketCallback? receivedCallback = null, PacketCallback? sentCallback = null, Action<Exception>? errorCallback = null)
     {
+        _receivedCallback = receivedCallback;
+        _sentCallback = sentCallback;
+        _errorCallback = errorCallback;
         var socketMode = channel.Mode is ForwardingMode.Generic ? XdpSocketMode.Default : XdpSocketMode.Driver;
         var bindMode = channel.Mode is ForwardingMode.DriverZeroCopy ? XdpSocketBindMode.ZeroCopy : XdpSocketBindMode.Copy;
         _socket = new XdpSocket(channel.Memory, pipe.IfName, queueId, mode: socketMode, bindMode: bindMode | XdpSocketBindMode.UseNeedWakeup, shared: shared);
@@ -40,34 +46,44 @@ public sealed class PipeForwarder : IDisposable
 
     private void Run(CancellationToken cancellationToken)
     {
-        List<IFileObject> waitObjects = [];
-        List<Poll.Event> waitEvents = [];
-
-        using var nativeCancellationToken = new NativeCancellationToken(cancellationToken);
-
-        while (true)
+        try
         {
-            while (ForwardBatch())
-                cancellationToken.ThrowIfCancellationRequested();
+            List<IFileObject> waitObjects = [];
+            List<Poll.Event> waitEvents = [];
 
-            waitObjects.Clear();
-            waitEvents.Clear();
+            using var nativeCancellationToken = new NativeCancellationToken(cancellationToken);
 
-            waitObjects.Add(_socket);
-            waitEvents.Add(_incomingPackets.Count > 0 ? Poll.Event.Readable : Poll.Event.Readable | Poll.Event.Writable);
-            if (_incomingPackets.Count == 0)
+            while (true)
             {
-                waitObjects.Add(_incomingPackets);
-                waitEvents.Add(Poll.Event.Readable);
-            }
+                while (ForwardBatch())
+                    cancellationToken.ThrowIfCancellationRequested();
 
-            if (_freeFrames.Count == 0)
-            {
-                waitObjects.Add(_freeFrames);
-                waitEvents.Add(Poll.Event.Readable);
-            }
+                waitObjects.Clear();
+                waitEvents.Clear();
 
-            nativeCancellationToken.Wait(CollectionsMarshal.AsSpan(waitObjects), CollectionsMarshal.AsSpan(waitEvents));
+                waitObjects.Add(_socket);
+                waitEvents.Add(_incomingPackets.Count > 0
+                    ? Poll.Event.Readable
+                    : Poll.Event.Readable | Poll.Event.Writable);
+                if (_incomingPackets.Count == 0)
+                {
+                    waitObjects.Add(_incomingPackets);
+                    waitEvents.Add(Poll.Event.Readable);
+                }
+
+                if (_freeFrames.Count == 0)
+                {
+                    waitObjects.Add(_freeFrames);
+                    waitEvents.Add(Poll.Event.Readable);
+                }
+
+                nativeCancellationToken.Wait(CollectionsMarshal.AsSpan(waitObjects),
+                    CollectionsMarshal.AsSpan(waitEvents));
+            }
+        }
+        catch (Exception e)
+        {
+            _errorCallback?.Invoke(e);
         }
     }
 
@@ -79,7 +95,11 @@ public sealed class PipeForwarder : IDisposable
     {
         var receivePackets = _socket.RxRing.Receive(BatchSize);
         for (var i = 0u; i < receivePackets.Length; ++i)
-            _outgoingPackets.Enqueue(receivePackets[i]);
+        {
+            var packet = receivePackets[i];
+            _outgoingPackets.Enqueue(packet);
+            _receivedCallback?.Invoke(_socket.IfName, _socket.Umem[packet]);
+        }
         receivePackets.Release();
         return receivePackets.Length > 0;
     }
@@ -94,6 +114,7 @@ public sealed class PipeForwarder : IDisposable
             var packetData = _socket.Umem[descriptor];
             UpdateChecksums(packetData);
             sendPackets[sendCount++] = descriptor;
+            _sentCallback?.Invoke(_socket.IfName, packetData);
         }
 
         if (sendCount == 0)

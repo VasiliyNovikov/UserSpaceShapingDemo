@@ -24,7 +24,7 @@ public sealed class TrafficForwardingSetup : IDisposable
         {
             _forwarder = forwarderType == TrafficForwarderType.Simple
                 ? new SimpleForwarder(_setup1.ReceiverName, _setup2.SenderName, mode, receivedCallback, sentCallback, errorCallback)
-                : new ParallelForwarder(_setup1.ReceiverName, _setup2.SenderName, mode);
+                : new ParallelForwarder(_setup1.ReceiverName, _setup2.SenderName, mode, receivedCallback, sentCallback, errorCallback);
         }
     }
 

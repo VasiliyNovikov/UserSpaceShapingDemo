@@ -65,9 +65,9 @@ public sealed class SimpleForwarder : IDisposable
                 nativeCancellationToken.Wait([_socket1, _socket2], [events1, events2]);
             }
         }
-        catch (Exception ex)
+        catch (Exception e)
         {
-            _errorCallback?.Invoke(ex);
+            _errorCallback?.Invoke(e);
             throw;
         }
     }
