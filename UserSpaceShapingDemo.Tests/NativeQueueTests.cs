@@ -43,6 +43,7 @@ public class NativeQueueTests
             {
                 while (true)
                 {
+                    Assert.IsFalse(queue.TryDequeue(out _));
                     nativeCancellationToken.Wait(queue, Poll.Event.Readable);
                     Assert.IsTrue(queue.TryDequeue(out var item));
                     dequeuedItems.Add(item);
