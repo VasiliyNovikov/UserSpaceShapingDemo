@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Concurrent;
 using System.Diagnostics.CodeAnalysis;
+using System.Runtime.CompilerServices;
 
 using UserSpaceShapingDemo.Lib.Std;
 
@@ -11,18 +12,28 @@ public sealed class NativeQueue<T> : IFileObject, IDisposable
     private readonly NativeSemaphore _counter = new();
     private readonly ConcurrentQueue<T> _queue = new();
 
-    public int Count => _queue.Count;
+    public bool IsEmpty
+    {
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        get => _queue.IsEmpty;
+    }
 
-    public FileDescriptor Descriptor => _counter.Descriptor;
+    public FileDescriptor Descriptor
+    {
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        get => _counter.Descriptor;
+    }
 
     public void Dispose() => _counter.Dispose();
 
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public void Enqueue(T item)
     {
         _queue.Enqueue(item);
         _counter.Increment();
     }
 
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public bool TryDequeue([MaybeNullWhen(false)] out T item)
     {
         if (!_queue.TryDequeue(out item))
@@ -31,6 +42,7 @@ public sealed class NativeQueue<T> : IFileObject, IDisposable
         return true;
     }
 
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public T Dequeue()
     {
         _counter.Decrement();
