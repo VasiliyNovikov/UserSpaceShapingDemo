@@ -12,9 +12,6 @@ public sealed class ForwardingChannel : IDisposable
 
     public ForwardingMode Mode { get; }
 
-    public XdpSocketMode SocketMode { get; }
-    public XdpSocketBindMode BindMode { get; }
-
     public UMemory Memory { get; }
 
     public Pipe Pipe1 { get; }
@@ -26,8 +23,6 @@ public sealed class ForwardingChannel : IDisposable
     public ForwardingChannel(string ifName1, string ifName2, ForwardingMode mode = ForwardingMode.Generic)
     {
         Mode = mode;
-        SocketMode = mode is ForwardingMode.Generic ? XdpSocketMode.Default : XdpSocketMode.Driver;
-        BindMode = mode is ForwardingMode.DriverZeroCopy ? XdpSocketBindMode.ZeroCopy : XdpSocketBindMode.Copy;
         Memory = new UMemory();
         Pipe1 = new Pipe(ifName1, _packetQueue1, _packetQueue2);
         Pipe2 = new Pipe(ifName2, _packetQueue2, _packetQueue1);

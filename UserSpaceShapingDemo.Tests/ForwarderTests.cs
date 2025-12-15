@@ -87,6 +87,7 @@ public sealed class ForwarderTests
         {
             var clientMessageBytes = Encoding.ASCII.GetBytes(string.Format(CultureInfo.InvariantCulture, clientMessageTemplate, i));
             await client.SendToAsync(clientMessageBytes, new IPEndPoint(TrafficSetup.ReceiverAddress, serverPort), cancellationToken);
+            await Task.Delay(TimeSpan.FromMilliseconds(1), cancellationToken);// Packets get reordered without this delay in some environments
         }
 
         await receiveTask;
@@ -104,6 +105,4 @@ public sealed class ForwarderTests
             }
         }
     }
-
-    
 }

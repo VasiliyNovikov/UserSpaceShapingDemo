@@ -9,43 +9,54 @@ using UserSpaceShapingDemo.Lib.Xpd;
 
 namespace UserSpaceShapingDemo.Lib.Forwarding;
 
-public static class SimpleForwarder
+public sealed class SimpleForwarder : IDisposable
 {
     public delegate void PacketCallback(string eth, Span<byte> data);
 
+    private readonly PacketCallback? _receivedCallback;
+    private readonly PacketCallback? _sentCallback;
+    private readonly Action<Exception>? _errorCallback;
+    private readonly UMemory _umem;
+    private readonly XdpSocket _socket1;
+    private readonly XdpSocket _socket2;
+    private readonly Worker _forwardingWorker;
+
+    public SimpleForwarder(string ifName1, string ifName2, ForwardingMode mode = ForwardingMode.Generic,
+                           PacketCallback? receivedCallback = null, PacketCallback? sentCallback = null, Action<Exception>? errorCallback = null)
+    {
+        _receivedCallback = receivedCallback;
+        _sentCallback = sentCallback;
+        _errorCallback = errorCallback;
+        var socketMode = mode is ForwardingMode.Generic ? XdpSocketMode.Default : XdpSocketMode.Driver;
+        var bindMode = mode is ForwardingMode.DriverZeroCopy ? XdpSocketBindMode.ZeroCopy : XdpSocketBindMode.Copy;
+        _umem = new UMemory();
+        _socket1 = new XdpSocket(_umem, ifName1, mode: socketMode, bindMode: bindMode | XdpSocketBindMode.UseNeedWakeup);
+        _socket2 = new XdpSocket(_umem, ifName2, mode: socketMode, bindMode: bindMode | XdpSocketBindMode.UseNeedWakeup, shared: true);
+        _forwardingWorker = new Worker(Run);
+    }
+
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public static void Run(string ifName1, string ifName2, ForwardingMode mode = ForwardingMode.Generic,
-                           PacketCallback? receivedCallback = null, PacketCallback? sentCallback = null,
-                           Action<Exception>? errorCallback = null,
-                           CancellationToken cancellationToken = default)
+    private void Run(CancellationToken cancellationToken)
     {
         try
         {
-            using var umem = new UMemory();
-
-            var socketMode = mode is ForwardingMode.Generic ? XdpSocketMode.Default : XdpSocketMode.Driver;
-            var bindMode = mode is ForwardingMode.DriverZeroCopy ? XdpSocketBindMode.ZeroCopy : XdpSocketBindMode.Copy;
-
-            using var socket1 = new XdpSocket(umem, ifName1, mode: socketMode, bindMode: bindMode | XdpSocketBindMode.UseNeedWakeup);
-            using var socket2 = new XdpSocket(umem, ifName2, mode: socketMode, bindMode: bindMode | XdpSocketBindMode.UseNeedWakeup, shared: true);
-
             Queue<XdpDescriptor> packetsToSend1 = [];
             Queue<XdpDescriptor> packetsToSend2 = [];
             Stack<ulong> freeAddresses = [];
 
-            Span<ulong> addresses = stackalloc ulong[(int)umem.FrameCount];
-            umem.GetAddresses(addresses);
+            Span<ulong> addresses = stackalloc ulong[(int)_umem.FrameCount];
+            _umem.GetAddresses(addresses);
             foreach (var address in addresses)
                 freeAddresses.Push(address);
 
-            FillOnce(socket1, freeAddresses);
-            FillOnce(socket2, freeAddresses);
+            FillOnce(_socket1, freeAddresses);
+            FillOnce(_socket2, freeAddresses);
 
             using var nativeCancellationToken = new NativeCancellationToken(cancellationToken);
             while (true)
             {
-                while (ForwardOnce(socket1, socket2, packetsToSend2, freeAddresses, receivedCallback, sentCallback) |
-                       ForwardOnce(socket2, socket1, packetsToSend1, freeAddresses, receivedCallback, sentCallback)) ;
+                while (ForwardOnce(_socket1, _socket2, packetsToSend2, freeAddresses) |
+                       ForwardOnce(_socket2, _socket1, packetsToSend1, freeAddresses)) ;
 
                 var events1 = Poll.Event.Readable;
                 if (packetsToSend1.Count > 0)
@@ -53,12 +64,12 @@ public static class SimpleForwarder
                 var events2 = Poll.Event.Readable;
                 if (packetsToSend2.Count > 0)
                     events2 |= Poll.Event.Writable;
-                nativeCancellationToken.Wait([socket1, socket2], [events1, events2]);
+                nativeCancellationToken.Wait([_socket1, _socket2], [events1, events2]);
             }
         }
         catch (Exception ex)
         {
-            errorCallback?.Invoke(ex);
+            _errorCallback?.Invoke(ex);
             throw;
         }
     }
@@ -77,7 +88,7 @@ public static class SimpleForwarder
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    private static bool ForwardOnce(XdpSocket sourceSocket, XdpSocket destinationSocket, Queue<XdpDescriptor> packetsToSend, Stack<ulong> freeAddresses, PacketCallback? receivedCallback, PacketCallback? sentCallback)
+    private bool ForwardOnce(XdpSocket sourceSocket, XdpSocket destinationSocket, Queue<XdpDescriptor> packetsToSend, Stack<ulong> freeAddresses)
     {
         var receivePackets = sourceSocket.RxRing.Receive();
         var hasActivity = receivePackets.Length > 0;
@@ -87,7 +98,7 @@ public static class SimpleForwarder
             packetsToSend.Enqueue(packet);
             var packetData = sourceSocket.Umem[packet];
             UpdateChecksums(packetData);
-            receivedCallback?.Invoke(sourceSocket.IfName, packetData);
+            _receivedCallback?.Invoke(sourceSocket.IfName, packetData);
         }
         receivePackets.Release();
 
@@ -97,7 +108,7 @@ public static class SimpleForwarder
         {
             var descriptor = packetsToSend.Dequeue();
             sendPackets[i] = descriptor;
-            sentCallback?.Invoke(destinationSocket.IfName, destinationSocket.Umem[descriptor]);
+            _sentCallback?.Invoke(destinationSocket.IfName, destinationSocket.Umem[descriptor]);
         }
         sendPackets.Submit();
 
@@ -125,5 +136,13 @@ public static class SimpleForwarder
             if (ipv4Header.Protocol == IPProtocol.UDP)
                 ipv4Header.Layer3Header<UDPHeader>().Checksum = default;
         }
+    }
+
+    public void Dispose()
+    {
+        _forwardingWorker.Dispose();
+        _socket1.Dispose();
+        _socket2.Dispose();
+        _umem.Dispose();
     }
 }

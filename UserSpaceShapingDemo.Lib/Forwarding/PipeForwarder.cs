@@ -3,7 +3,6 @@ using System.Collections.Generic;
 using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 using System.Threading;
-using System.Threading.Tasks;
 
 using UserSpaceShapingDemo.Lib.Headers;
 using UserSpaceShapingDemo.Lib.Std;
@@ -19,36 +18,23 @@ public sealed class PipeForwarder : IDisposable
     private readonly NativeQueue<ulong> _freeFrames;
     private readonly NativeQueue<XdpDescriptor> _incomingPackets;
     private readonly NativeQueue<XdpDescriptor> _outgoingPackets;
-    private readonly Task _forwardingTask;
-    private readonly CancellationTokenSource _forwardingCancellation;
+    private readonly Worker _forwardingWorker;
 
     public PipeForwarder(ForwardingChannel channel, ForwardingChannel.Pipe pipe, uint queueId = 0, bool shared = false)
     {
-        _socket = new XdpSocket(channel.Memory, pipe.IfName, queueId, shared: shared);
+        var socketMode = channel.Mode is ForwardingMode.Generic ? XdpSocketMode.Default : XdpSocketMode.Driver;
+        var bindMode = channel.Mode is ForwardingMode.DriverZeroCopy ? XdpSocketBindMode.ZeroCopy : XdpSocketBindMode.Copy;
+        _socket = new XdpSocket(channel.Memory, pipe.IfName, queueId, mode: socketMode, bindMode: bindMode | XdpSocketBindMode.UseNeedWakeup, shared: shared);
         _freeFrames = channel.FreeFrames;
         _incomingPackets = pipe.IncomingPackets;
         _outgoingPackets = pipe.OutgoingPackets;
         while (FillBatch()) ;
-        _forwardingCancellation = new();
-        _forwardingTask = Task.Factory.StartNew(() =>
-        {
-            
-            try
-            {
-                Run(_forwardingCancellation.Token);
-            }
-            catch (OperationCanceledException)
-            {
-            }
-        }, TaskCreationOptions.LongRunning);
+        _forwardingWorker = new(Run);
     }
 
     public void Dispose()
     {
-        _forwardingCancellation.Cancel();
-        _forwardingTask.Wait();
-        _forwardingCancellation.Dispose();
-        _forwardingTask.Dispose();
+        _forwardingWorker.Dispose();
         _socket.Dispose();
     }
 

@@ -1,7 +1,5 @@
 using System;
 using System.Net.Sockets;
-using System.Threading;
-using System.Threading.Tasks;
 
 using UserSpaceShapingDemo.Lib.Forwarding;
 
@@ -11,8 +9,7 @@ public sealed class TrafficForwardingSetup : IDisposable
 {
     private readonly TrafficSetup _setup1;
     private readonly TrafficSetup _setup2;
-    private readonly Task _forwardingTask;
-    private readonly CancellationTokenSource _forwardingCancellation;
+    private readonly SimpleForwarder _forwarder;
 
     public TrafficForwardingSetup(ForwardingMode mode = ForwardingMode.Generic,
                                   string? sharedForwarderNs = null, 
@@ -22,27 +19,13 @@ public sealed class TrafficForwardingSetup : IDisposable
     {
         _setup1 = new TrafficSetup(sharedReceiverNs: sharedForwarderNs);
         _setup2 = new TrafficSetup(sharedSenderNs: _setup1.ReceiverNs);
-        _forwardingCancellation = new();
-        _forwardingTask = Task.Factory.StartNew(() =>
-        {
-            
-            using var forwardNs = _setup1.EnterReceiver();
-            try
-            {
-                SimpleForwarder.Run(_setup1.ReceiverName, _setup2.SenderName, mode, receivedCallback, sentCallback, errorCallback, _forwardingCancellation.Token);
-            }
-            catch (OperationCanceledException)
-            {
-            }
-        }, TaskCreationOptions.LongRunning);
+        using (_setup1.EnterReceiver())
+            _forwarder = new SimpleForwarder(_setup1.ReceiverName, _setup2.SenderName, mode, receivedCallback, sentCallback, errorCallback);
     }
 
     public void Dispose()
     {
-        _forwardingCancellation.Cancel();
-        _forwardingTask.Wait();
-        _forwardingCancellation.Dispose();
-        _forwardingTask.Dispose();
+        _forwarder.Dispose();
         _setup2.Dispose();
         _setup1.Dispose();
     }
