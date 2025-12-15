@@ -32,6 +32,9 @@ public sealed class NativeCancellationToken : NativeObject
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public void ThrowIfCancellationRequested() => _cancellationToken.ThrowIfCancellationRequested();
+
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public bool Wait(ReadOnlySpan<IFileObject> objects, ReadOnlySpan<Poll.Event> events)
     {
         var objectCount = objects.Length;

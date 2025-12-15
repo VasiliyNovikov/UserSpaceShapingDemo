@@ -12,11 +12,11 @@ namespace UserSpaceShapingDemo.Lib.Forwarding;
 
 public sealed class PipeForwarder : IDisposable
 {
+    private const int BatchSize = 64;
+
     private readonly PacketCallback? _receivedCallback;
     private readonly PacketCallback? _sentCallback;
     private readonly Action<Exception>? _errorCallback;
-    private const int BatchSize = 64;
-
     private readonly XdpSocket _socket;
     private readonly NativeQueue<ulong> _freeFrames;
     private readonly NativeQueue<XdpDescriptor> _incomingPackets;
@@ -77,8 +77,7 @@ public sealed class PipeForwarder : IDisposable
                     waitEvents.Add(Poll.Event.Readable);
                 }
 
-                nativeCancellationToken.Wait(CollectionsMarshal.AsSpan(waitObjects),
-                    CollectionsMarshal.AsSpan(waitEvents));
+                nativeCancellationToken.Wait(CollectionsMarshal.AsSpan(waitObjects), CollectionsMarshal.AsSpan(waitEvents));
             }
         }
         catch (Exception e)
@@ -109,11 +108,11 @@ public sealed class PipeForwarder : IDisposable
     {
         var sendPackets = _socket.TxRing.Send(BatchSize);
         var sendCount = 0u;
-        while (sendCount < sendPackets.Length && _incomingPackets.TryDequeue(out var descriptor))
+        while (sendCount < sendPackets.Length && _incomingPackets.TryDequeue(out var packet))
         {
-            var packetData = _socket.Umem[descriptor];
+            var packetData = _socket.Umem[packet];
             UpdateChecksums(packetData);
-            sendPackets[sendCount++] = descriptor;
+            sendPackets[sendCount++] = packet;
             _sentCallback?.Invoke(_socket.IfName, _socket.QueueId, packetData);
         }
 
@@ -140,16 +139,14 @@ public sealed class PipeForwarder : IDisposable
     private bool FillBatch()
     {
         var fill = _socket.FillRing.Fill(BatchSize);
-        if (fill.Length == 0)
+        var fillCount = 0u;
+        while (fillCount < fill.Length && _freeFrames.TryDequeue(out var frame))
+            fill[fillCount++] = frame;
+
+        if (fillCount == 0)
             return false;
 
-        var filled = 0u;
-        while (filled < fill.Length && _freeFrames.TryDequeue(out var frame))
-            fill[filled++] = frame;
-        if (filled == 0)
-            return false;
-
-        fill.Submit(filled);
+        fill.Submit(fillCount);
         if (_socket.FillRing.NeedsWakeup)
             _socket.WakeUp();
         return true;
