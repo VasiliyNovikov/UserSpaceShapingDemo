@@ -1,21 +1,13 @@
 using System.Runtime.CompilerServices;
-using System.Runtime.InteropServices;
-
-using UserSpaceShapingDemo.Lib.Interop;
 
 namespace UserSpaceShapingDemo.Lib.Std;
 
-public sealed unsafe class NativeEvent(bool isSet)
-    : FileObject(LibC.eventfd(isSet ? 1u : 0u, 0).ThrowIfError())
+public sealed class NativeEvent(bool isSet)
+    : NativeEventBase(isSet ? 1u : 0u, 0)
 {
-    private static readonly long* Value = (long*)NativeMemory.Alloc(sizeof(ulong));
-    private static readonly long* Buffer = (long*)NativeMemory.Alloc(sizeof(ulong));
-
-    static NativeEvent() => *Value = 1;
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public void Set() => WriteOne();
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public void Set() => Write(Value, sizeof(ulong));
-
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public void Wait() => Read(Buffer, sizeof(ulong));
+    public void Wait() => Read();
 }
