@@ -18,11 +18,12 @@ public sealed class ForwarderTests : IForwardingLogger
 
     [TestMethod]
     [Timeout(2000, CooperativeCancellation = true)]
-    //[DataRow(TrafficForwarderType.Simple, ForwardingMode.Generic)]
-    //[DataRow(TrafficForwarderType.Simple, ForwardingMode.Driver)]
-    //[DataRow(TrafficForwarderType.Simple, XdpForwarderMode.DriverZeroCopy)]
+    [DataRow(TrafficForwarderType.Simple, ForwardingMode.Generic)]
+    [DataRow(TrafficForwarderType.Simple, ForwardingMode.Driver)]
+    //[DataRow(TrafficForwarderType.Simple, ForwardingMode.DriverZeroCopy)]
     [DataRow(TrafficForwarderType.Parallel, ForwardingMode.Generic)]
-    //[DataRow(TrafficForwarderType.Parallel, ForwardingMode.Driver)]
+    [DataRow(TrafficForwarderType.Parallel, ForwardingMode.Driver)]
+    //[DataRow(TrafficForwarderType.Parallel, ForwardingMode.DriverZeroCopy)]
     public async Task XdpSocket_Forward_One(TrafficForwarderType type, ForwardingMode mode)
     {
         const string clientMessage = "Hello from XDP client!!!";
@@ -55,7 +56,7 @@ public sealed class ForwarderTests : IForwardingLogger
     }
 
     [TestMethod]
-    [Timeout(5000, CooperativeCancellation = true)]
+    [Timeout(3000, CooperativeCancellation = true)]
     [DataRow(TrafficForwarderType.Simple, ForwardingMode.Generic, 8)]
     [DataRow(TrafficForwarderType.Simple, ForwardingMode.Generic, 32)]
     [DataRow(TrafficForwarderType.Simple, ForwardingMode.Generic, 128)]
