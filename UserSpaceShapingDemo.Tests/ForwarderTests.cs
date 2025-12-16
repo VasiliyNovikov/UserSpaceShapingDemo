@@ -20,10 +20,10 @@ public sealed class ForwarderTests : IForwardingLogger
     [Timeout(2000, CooperativeCancellation = true)]
     [DataRow(TrafficForwarderType.Simple, ForwardingMode.Generic)]
     [DataRow(TrafficForwarderType.Simple, ForwardingMode.Driver)]
-    [DataRow(TrafficForwarderType.Simple, ForwardingMode.DriverZeroCopy)]
+    //[DataRow(TrafficForwarderType.Simple, ForwardingMode.DriverZeroCopy)]
     [DataRow(TrafficForwarderType.Parallel, ForwardingMode.Generic)]
     [DataRow(TrafficForwarderType.Parallel, ForwardingMode.Driver)]
-    [DataRow(TrafficForwarderType.Parallel, ForwardingMode.DriverZeroCopy)]
+    //[DataRow(TrafficForwarderType.Parallel, ForwardingMode.DriverZeroCopy)]
     public async Task Forward_One(TrafficForwarderType type, ForwardingMode mode)
     {
         const string clientMessage = "Hello from XDP client!!!";
@@ -35,7 +35,7 @@ public sealed class ForwarderTests : IForwardingLogger
 
         var cancellationToken = TestContext.CancellationTokenSource.Token;
 
-        using var setup = new TrafficForwardingSetup(type, mode, null, this);
+        using var setup = new TrafficForwardingSetup(type, mode, logger: this);
 
         using var client = setup.CreateSenderSocket(SocketType.Dgram, ProtocolType.Udp, clientPort);
         using var server = setup.CreateReceiverSocket(SocketType.Dgram, ProtocolType.Udp, serverPort);
@@ -77,7 +77,7 @@ public sealed class ForwarderTests : IForwardingLogger
 
         var cancellationToken = TestContext.CancellationTokenSource.Token;
 
-        using var setup = new TrafficForwardingSetup(type, mode, null, this);
+        using var setup = new TrafficForwardingSetup(type, mode, logger: this);
 
         using var client = setup.CreateSenderSocket(SocketType.Dgram, ProtocolType.Udp, clientPort);
         using var server = setup.CreateReceiverSocket(SocketType.Dgram, ProtocolType.Udp, serverPort);

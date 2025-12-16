@@ -13,11 +13,11 @@ public sealed class TrafficForwardingSetup : IDisposable
 
     public TrafficForwardingSetup(TrafficForwarderType forwarderType = TrafficForwarderType.Simple,
                                   ForwardingMode mode = ForwardingMode.Generic,
-                                  string? sharedForwarderNs = null,
+                                  string? sharedForwarderNs = null, byte rxQueueCount = 1,
                                   IForwardingLogger? logger = null)
     {
-        _setup1 = new TrafficSetup(sharedReceiverNs: sharedForwarderNs);
-        _setup2 = new TrafficSetup(sharedSenderNs: _setup1.ReceiverNs);
+        _setup1 = new TrafficSetup(sharedReceiverNs: sharedForwarderNs, rxQueueCount: rxQueueCount);
+        _setup2 = new TrafficSetup(sharedSenderNs: _setup1.ReceiverNs, rxQueueCount: rxQueueCount);
         using (_setup1.EnterReceiver())
         {
             _forwarder = forwarderType == TrafficForwarderType.Simple
