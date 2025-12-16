@@ -57,19 +57,25 @@ public sealed class ForwarderTests : IForwardingLogger
 
     [TestMethod]
     [Timeout(3000, CooperativeCancellation = true)]
-    [DataRow(TrafficForwarderType.Simple, ForwardingMode.Generic, 8)]
-    [DataRow(TrafficForwarderType.Simple, ForwardingMode.Generic, 32)]
-    [DataRow(TrafficForwarderType.Simple, ForwardingMode.Generic, 128)]
-    [DataRow(TrafficForwarderType.Simple, ForwardingMode.Driver, 8)]
-    [DataRow(TrafficForwarderType.Simple, ForwardingMode.Driver, 32)]
-    [DataRow(TrafficForwarderType.Simple, ForwardingMode.Driver, 128)]
-    [DataRow(TrafficForwarderType.Parallel, ForwardingMode.Generic, 8)]
-    [DataRow(TrafficForwarderType.Parallel, ForwardingMode.Generic, 32)]
-    [DataRow(TrafficForwarderType.Parallel, ForwardingMode.Generic, 128)]
-    [DataRow(TrafficForwarderType.Parallel, ForwardingMode.Driver, 8)]
-    [DataRow(TrafficForwarderType.Parallel, ForwardingMode.Driver, 32)]
-    [DataRow(TrafficForwarderType.Parallel, ForwardingMode.Driver, 128)]
-    public async Task Forward_Batch(TrafficForwarderType type, ForwardingMode mode, int batchSize)
+    [DataRow(TrafficForwarderType.Simple, ForwardingMode.Generic, 8, 1)]
+    [DataRow(TrafficForwarderType.Simple, ForwardingMode.Generic, 32, 1)]
+    [DataRow(TrafficForwarderType.Simple, ForwardingMode.Generic, 128, 1)]
+    [DataRow(TrafficForwarderType.Simple, ForwardingMode.Driver, 8, 1)]
+    [DataRow(TrafficForwarderType.Simple, ForwardingMode.Driver, 32, 1)]
+    [DataRow(TrafficForwarderType.Simple, ForwardingMode.Driver, 128, 1)]
+    [DataRow(TrafficForwarderType.Parallel, ForwardingMode.Generic, 8, 1)]
+    [DataRow(TrafficForwarderType.Parallel, ForwardingMode.Generic, 32, 1)]
+    [DataRow(TrafficForwarderType.Parallel, ForwardingMode.Generic, 128, 1)]
+    [DataRow(TrafficForwarderType.Parallel, ForwardingMode.Driver, 8, 1)]
+    [DataRow(TrafficForwarderType.Parallel, ForwardingMode.Driver, 32, 1)]
+    [DataRow(TrafficForwarderType.Parallel, ForwardingMode.Driver, 128, 1)]
+    [DataRow(TrafficForwarderType.Parallel, ForwardingMode.Generic, 8, 2)]
+    [DataRow(TrafficForwarderType.Parallel, ForwardingMode.Generic, 32, 2)]
+    [DataRow(TrafficForwarderType.Parallel, ForwardingMode.Generic, 128, 2)]
+    [DataRow(TrafficForwarderType.Parallel, ForwardingMode.Driver, 8, 2)]
+    [DataRow(TrafficForwarderType.Parallel, ForwardingMode.Driver, 32, 2)]
+    [DataRow(TrafficForwarderType.Parallel, ForwardingMode.Driver, 128, 2)]
+    public async Task Forward_Batch(TrafficForwarderType type, ForwardingMode mode, int batchSize, int rxQueues)
     {
         const string clientMessageTemplate = "Hello from XDP client: {0}";
         const int clientPort = 54321;
@@ -77,7 +83,7 @@ public sealed class ForwarderTests : IForwardingLogger
 
         var cancellationToken = TestContext.CancellationTokenSource.Token;
 
-        using var setup = new TrafficForwardingSetup(type, mode, logger: this);
+        using var setup = new TrafficForwardingSetup(type, mode, rxQueueCount: (byte)rxQueues, logger: this);
 
         using var client = setup.CreateSenderSocket(SocketType.Dgram, ProtocolType.Udp, clientPort);
         using var server = setup.CreateReceiverSocket(SocketType.Dgram, ProtocolType.Udp, serverPort);
