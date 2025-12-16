@@ -12,12 +12,14 @@ namespace UserSpaceShapingDemo.Lib.Forwarding;
 
 public sealed class PipeForwarder : IDisposable
 {
-    private const int BatchSize = 64;
+    private const int FillBatchSize = 32;
 
     private readonly IForwardingLogger? _logger;
     private readonly XdpSocket _socket;
     private readonly NativeQueue<ulong> _freeFrames;
+    private readonly Queue<ulong> _freeFramesLocal = new();
     private readonly NativeQueue<XdpDescriptor> _incomingPackets;
+    private readonly Queue<XdpDescriptor> _incomingPacketsLocal = new();
     private readonly NativeQueue<XdpDescriptor> _outgoingPackets;
     private readonly Worker _forwardingWorker;
 
@@ -30,7 +32,7 @@ public sealed class PipeForwarder : IDisposable
         _freeFrames = channel.FreeFrames;
         _incomingPackets = pipe.IncomingPackets;
         _outgoingPackets = pipe.OutgoingPackets;
-        while (FillBatch(UMemory.DefaultFillRingSize)) ;
+        while (FillBatch(_socket.FillRing.Capacity)) ;
         _forwardingWorker = new(Run);
     }
 
@@ -94,7 +96,7 @@ public sealed class PipeForwarder : IDisposable
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     private bool ReceiveBatch()
     {
-        var receivePackets = _socket.RxRing.Receive(BatchSize);
+        var receivePackets = _socket.RxRing.Receive();
         _logger?.Log(_socket.IfName, _socket.QueueId, $"Received {receivePackets.Length} packets");
         for (var i = 0u; i < receivePackets.Length; ++i)
         {
@@ -109,23 +111,24 @@ public sealed class PipeForwarder : IDisposable
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     private bool SendBatch()
     {
-        var sendPackets = _socket.TxRing.Send(BatchSize);
-        _logger?.Log(_socket.IfName, _socket.QueueId, $"Able to send {sendPackets.Length} packets");
-        var sendCount = 0u;
-        while (sendCount < sendPackets.Length && _incomingPackets.TryDequeue(out var packet))
+        if (_incomingPacketsLocal.Count == 0)
+            while (_incomingPackets.TryDequeue(out var packet))
+                _incomingPacketsLocal.Enqueue(packet);
+
+        var sendPackets = _socket.TxRing.Send((uint)_incomingPacketsLocal.Count);
+        _logger?.Log(_socket.IfName, _socket.QueueId, $"Will send {sendPackets.Length} packets");
+        for (var i = 0u; i < sendPackets.Length; ++i)
         {
+            var packet = _incomingPacketsLocal.Dequeue();
             var packetData = _socket.Umem[packet];
             UpdateChecksums(packetData);
-            sendPackets[sendCount++] = packet;
+            sendPackets[i] = packet;
             _logger?.LogPacket(_socket.IfName, _socket.QueueId, "Sent packet", packetData);
         }
-
-        _logger?.Log(_socket.IfName, _socket.QueueId, $"Sent {sendCount} packets");
-
-        if (sendCount == 0)
+        if (sendPackets.Length == 0)
             return false;
 
-        sendPackets.Submit(sendCount);
+        sendPackets.Submit();
         if (_socket.TxRing.NeedsWakeup)
         {
             _logger?.Log(_socket.IfName, _socket.QueueId, "Waking up socket for TX");
@@ -156,20 +159,22 @@ public sealed class PipeForwarder : IDisposable
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    private bool FillBatch(uint batchSize = BatchSize)
+    private bool FillBatch(uint batchSize = FillBatchSize)
     {
-        var fill = _socket.FillRing.Fill(batchSize);
-        _logger?.Log(_socket.IfName, _socket.QueueId, $"Able to fill {fill.Length} frames");
-        var fillCount = 0u;
-        while (fillCount < fill.Length && _freeFrames.TryDequeue(out var frame))
-            fill[fillCount++] = frame;
+        if (_freeFramesLocal.Count == 0)
+            for (var i = 0; i < batchSize && _freeFrames.TryDequeue(out var frame); ++i)
+                _freeFramesLocal.Enqueue(frame);
 
-        _logger?.Log(_socket.IfName, _socket.QueueId, $"Filled {fillCount} frames");
+        var fill = _socket.FillRing.Fill((uint)_freeFramesLocal.Count);
+        for (var i = 0u; i < fill.Length; i++)
+            fill[i] = _freeFramesLocal.Dequeue();
 
-        if (fillCount == 0)
+        _logger?.Log(_socket.IfName, _socket.QueueId, $"Filled {fill.Length} frames");
+
+        if (fill.Length == 0)
             return false;
 
-        fill.Submit(fillCount);
+        fill.Submit();
         if (_socket.FillRing.NeedsWakeup)
             _socket.WakeUp();
         return true;

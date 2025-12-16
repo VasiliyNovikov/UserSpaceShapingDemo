@@ -18,6 +18,12 @@ public abstract unsafe class RingBuffer : NativeObject
         get => ref *_ring;
     }
 
+    public uint Capacity
+    {
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        get => Ring.size;
+    }
+
     protected RingBuffer()
     {
         _ring = (LibXdp.xsk_ring*)NativeMemory.AlignedAlloc(Size, (nuint)IntPtr.Size);

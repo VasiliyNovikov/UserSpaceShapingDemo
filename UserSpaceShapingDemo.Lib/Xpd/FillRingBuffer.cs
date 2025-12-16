@@ -32,14 +32,6 @@ public sealed class FillRingBuffer : ProducerRingBuffer
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public void Submit(uint count)
-        {
-            ArgumentOutOfRangeException.ThrowIfGreaterThan(count, length);
-            if (count > 0)
-                ringBuffer.Submit(count);
-        }
-
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public void Submit()
         {
             if (length > 0)

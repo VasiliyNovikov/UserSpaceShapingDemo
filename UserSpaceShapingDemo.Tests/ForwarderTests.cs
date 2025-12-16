@@ -17,7 +17,7 @@ public sealed class ForwarderTests : IForwardingLogger
     public TestContext TestContext { get; set; } = null!;
 
     [TestMethod]
-    [Timeout(5000, CooperativeCancellation = true)]
+    [Timeout(2000, CooperativeCancellation = true)]
     //[DataRow(TrafficForwarderType.Simple, ForwardingMode.Generic)]
     //[DataRow(TrafficForwarderType.Simple, ForwardingMode.Driver)]
     //[DataRow(TrafficForwarderType.Simple, XdpForwarderMode.DriverZeroCopy)]

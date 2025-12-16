@@ -39,14 +39,6 @@ public sealed class CompletionRingBuffer : ConsumerRingBuffer
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public void Release(uint count)
-        {
-            ArgumentOutOfRangeException.ThrowIfGreaterThan(count, length);
-            if (count > 0)
-                ringBuffer.Release(count);
-        }
-
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public void Release()
         {
             if (length > 0)
