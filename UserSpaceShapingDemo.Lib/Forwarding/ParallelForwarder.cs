@@ -10,8 +10,7 @@ public sealed class ParallelForwarder : IDisposable
     private readonly ForwardingChannel _channel;
     private readonly List<PipeForwarder> _forwarders = new();
 
-    public ParallelForwarder(string ifName1, string ifName2, ForwardingMode mode = ForwardingMode.Generic,
-                             PacketCallback? receivedCallback = null, PacketCallback? sentCallback = null, Action<Exception>? errorCallback = null)
+    public ParallelForwarder(string ifName1, string ifName2, ForwardingMode mode = ForwardingMode.Generic, IForwardingLogger? logger = null)
     {
         _channel = new ForwardingChannel(ifName1, ifName2, mode);
         var shared = false;
@@ -21,7 +20,7 @@ public sealed class ParallelForwarder : IDisposable
             var rxQueueCount = collection[pipe.IfName].RxQueueCount;
             for (var queueId = 0u; queueId < rxQueueCount; ++queueId)
             {
-                _forwarders.Add(new PipeForwarder(_channel, pipe, queueId, shared, receivedCallback, sentCallback, errorCallback));
+                _forwarders.Add(new PipeForwarder(_channel, pipe, queueId, shared, logger));
                 shared = true;
             }
         }

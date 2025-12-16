@@ -11,20 +11,15 @@ namespace UserSpaceShapingDemo.Lib.Forwarding;
 
 public sealed class SimpleForwarder : IDisposable
 {
-    private readonly PacketCallback? _receivedCallback;
-    private readonly PacketCallback? _sentCallback;
-    private readonly Action<Exception>? _errorCallback;
+    private readonly IForwardingLogger? _logger;
     private readonly UMemory _umem;
     private readonly XdpSocket _socket1;
     private readonly XdpSocket _socket2;
     private readonly Worker _forwardingWorker;
 
-    public SimpleForwarder(string ifName1, string ifName2, ForwardingMode mode = ForwardingMode.Generic,
-                           PacketCallback? receivedCallback = null, PacketCallback? sentCallback = null, Action<Exception>? errorCallback = null)
+    public SimpleForwarder(string ifName1, string ifName2, ForwardingMode mode = ForwardingMode.Generic, IForwardingLogger? logger = null)
     {
-        _receivedCallback = receivedCallback;
-        _sentCallback = sentCallback;
-        _errorCallback = errorCallback;
+        _logger = logger;
         var socketMode = mode is ForwardingMode.Generic ? XdpSocketMode.Default : XdpSocketMode.Driver;
         var bindMode = mode is ForwardingMode.DriverZeroCopy ? XdpSocketBindMode.ZeroCopy : XdpSocketBindMode.Copy;
         _umem = new UMemory();
@@ -67,7 +62,7 @@ public sealed class SimpleForwarder : IDisposable
         }
         catch (Exception e)
         {
-            _errorCallback?.Invoke(e);
+            _logger?.LogError("Forwarding loop failed", e);
             throw;
         }
     }
@@ -96,7 +91,7 @@ public sealed class SimpleForwarder : IDisposable
             packetsToSend.Enqueue(packet);
             var packetData = sourceSocket.Umem[packet];
             UpdateChecksums(packetData);
-            _receivedCallback?.Invoke(sourceSocket.IfName, sourceSocket.QueueId, packetData);
+            _logger?.LogPacket(sourceSocket.IfName, sourceSocket.QueueId, "Received packet", packetData);
         }
         receivePackets.Release();
 
@@ -104,9 +99,9 @@ public sealed class SimpleForwarder : IDisposable
         hasActivity |= sendPackets.Length > 0;
         for (var i = 0u; i < sendPackets.Length; ++i)
         {
-            var descriptor = packetsToSend.Dequeue();
-            sendPackets[i] = descriptor;
-            _sentCallback?.Invoke(destinationSocket.IfName, sourceSocket.QueueId, destinationSocket.Umem[descriptor]);
+            var packet = packetsToSend.Dequeue();
+            sendPackets[i] = packet;
+            _logger?.LogPacket(destinationSocket.IfName, destinationSocket.QueueId, "Sent packet", destinationSocket.Umem[packet]);
         }
         sendPackets.Submit();
 

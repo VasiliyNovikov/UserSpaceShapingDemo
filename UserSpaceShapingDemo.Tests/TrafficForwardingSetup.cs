@@ -14,17 +14,15 @@ public sealed class TrafficForwardingSetup : IDisposable
     public TrafficForwardingSetup(TrafficForwarderType forwarderType = TrafficForwarderType.Simple,
                                   ForwardingMode mode = ForwardingMode.Generic,
                                   string? sharedForwarderNs = null,
-                                  PacketCallback? receivedCallback = null,
-                                  PacketCallback? sentCallback = null,
-                                  Action<Exception>? errorCallback = null)
+                                  IForwardingLogger? logger = null)
     {
         _setup1 = new TrafficSetup(sharedReceiverNs: sharedForwarderNs);
         _setup2 = new TrafficSetup(sharedSenderNs: _setup1.ReceiverNs);
         using (_setup1.EnterReceiver())
         {
             _forwarder = forwarderType == TrafficForwarderType.Simple
-                ? new SimpleForwarder(_setup1.ReceiverName, _setup2.SenderName, mode, receivedCallback, sentCallback, errorCallback)
-                : new ParallelForwarder(_setup1.ReceiverName, _setup2.SenderName, mode, receivedCallback, sentCallback, errorCallback);
+                ? new SimpleForwarder(_setup1.ReceiverName, _setup2.SenderName, mode, logger)
+                : new ParallelForwarder(_setup1.ReceiverName, _setup2.SenderName, mode, logger);
         }
     }
 

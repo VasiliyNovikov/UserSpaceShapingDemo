@@ -12,7 +12,7 @@ using UserSpaceShapingDemo.Lib.Forwarding;
 namespace UserSpaceShapingDemo.Tests;
 
 [TestClass]
-public sealed class ForwarderTests
+public sealed class ForwarderTests : IForwardingLogger
 {
     public TestContext TestContext { get; set; } = null!;
 
@@ -34,9 +34,7 @@ public sealed class ForwarderTests
 
         var cancellationToken = TestContext.CancellationTokenSource.Token;
 
-        using var setup = new TrafficForwardingSetup(type, mode, null,
-            (eth, queue, data) => TestContext.WriteLine($"{DateTime.UtcNow:O}: {eth}:{queue}: received packet:\n{data.PacketToString()}"),
-            (eth, queue, data) => TestContext.WriteLine($"{DateTime.UtcNow:O}: {eth}:{queue}: sent packet:\n{data.PacketToString()}"));
+        using var setup = new TrafficForwardingSetup(type, mode, null, this);
 
         using var client = setup.CreateSenderSocket(SocketType.Dgram, ProtocolType.Udp, clientPort);
         using var server = setup.CreateReceiverSocket(SocketType.Dgram, ProtocolType.Udp, serverPort);
@@ -78,9 +76,7 @@ public sealed class ForwarderTests
 
         var cancellationToken = TestContext.CancellationTokenSource.Token;
 
-        using var setup = new TrafficForwardingSetup(type, mode, null,
-            (eth, queue, data) => TestContext.WriteLine($"{DateTime.UtcNow:O}: {eth}:{queue}: received packet:\n{data.PacketToString()}"),
-            (eth, queue, data) => TestContext.WriteLine($"{DateTime.UtcNow:O}: {eth}:{queue}: sent packet:\n{data.PacketToString()}"));
+        using var setup = new TrafficForwardingSetup(type, mode, null, this);
 
         using var client = setup.CreateSenderSocket(SocketType.Dgram, ProtocolType.Udp, clientPort);
         using var server = setup.CreateReceiverSocket(SocketType.Dgram, ProtocolType.Udp, serverPort);
@@ -109,4 +105,10 @@ public sealed class ForwarderTests
             }
         }
     }
+
+    private void Log(string message) => TestContext.WriteLine($"{DateTime.UtcNow:O}: {message}");
+    void IForwardingLogger.Log(string ifName, uint queueId, string message) => Log($"{ifName}:{queueId}: {message}");
+    void IForwardingLogger.LogPacket(string ifName, uint queueId, string message, Span<byte> packet) => Log($"{ifName}:{queueId}: {message}\n{packet.PacketToString()}");
+    void IForwardingLogger.LogError(string ifName, uint queueId, string message, Exception error) => Log($"{ifName}:{queueId}: {message}\n{error}");
+    void IForwardingLogger.LogError(string message, Exception error) => Log($"{message}\n{error}");
 }
