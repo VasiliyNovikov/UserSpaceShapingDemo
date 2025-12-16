@@ -20,11 +20,11 @@ public sealed class ForwarderTests : IForwardingLogger
     [Timeout(2000, CooperativeCancellation = true)]
     [DataRow(TrafficForwarderType.Simple, ForwardingMode.Generic)]
     [DataRow(TrafficForwarderType.Simple, ForwardingMode.Driver)]
-    //[DataRow(TrafficForwarderType.Simple, ForwardingMode.DriverZeroCopy)]
+    [DataRow(TrafficForwarderType.Simple, ForwardingMode.DriverZeroCopy)]
     [DataRow(TrafficForwarderType.Parallel, ForwardingMode.Generic)]
     [DataRow(TrafficForwarderType.Parallel, ForwardingMode.Driver)]
-    //[DataRow(TrafficForwarderType.Parallel, ForwardingMode.DriverZeroCopy)]
-    public async Task XdpSocket_Forward_One(TrafficForwarderType type, ForwardingMode mode)
+    [DataRow(TrafficForwarderType.Parallel, ForwardingMode.DriverZeroCopy)]
+    public async Task Forward_One(TrafficForwarderType type, ForwardingMode mode)
     {
         const string clientMessage = "Hello from XDP client!!!";
         const string serverMessage = "Hello back from XDP server!!!";
@@ -69,7 +69,7 @@ public sealed class ForwarderTests : IForwardingLogger
     [DataRow(TrafficForwarderType.Parallel, ForwardingMode.Driver, 8)]
     [DataRow(TrafficForwarderType.Parallel, ForwardingMode.Driver, 32)]
     [DataRow(TrafficForwarderType.Parallel, ForwardingMode.Driver, 128)]
-    public async Task XdpSocket_Forward_Batch(TrafficForwarderType type, ForwardingMode mode, int batchSize)
+    public async Task Forward_Batch(TrafficForwarderType type, ForwardingMode mode, int batchSize)
     {
         const string clientMessageTemplate = "Hello from XDP client: {0}";
         const int clientPort = 54321;
