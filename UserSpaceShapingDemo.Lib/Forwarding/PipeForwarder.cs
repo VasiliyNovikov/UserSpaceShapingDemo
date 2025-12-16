@@ -12,7 +12,7 @@ namespace UserSpaceShapingDemo.Lib.Forwarding;
 
 public sealed class PipeForwarder : IDisposable
 {
-    private const int BatchSize = 128;
+    private const int BatchSize = 64;
 
     private readonly IForwardingLogger? _logger;
     private readonly XdpSocket _socket;
@@ -30,7 +30,7 @@ public sealed class PipeForwarder : IDisposable
         _freeFrames = channel.FreeFrames;
         _incomingPackets = pipe.IncomingPackets;
         _outgoingPackets = pipe.OutgoingPackets;
-        while (FillBatch()) ;
+        while (FillBatch(UMemory.DefaultFillRingSize)) ;
         _forwardingWorker = new(Run);
     }
 
@@ -58,7 +58,9 @@ public sealed class PipeForwarder : IDisposable
                 waitEvents.Clear();
 
                 waitObjects.Add(_socket);
-                waitEvents.Add(_incomingPackets.IsEmpty ? Poll.Event.Readable : Poll.Event.Readable | Poll.Event.Writable);
+                waitEvents.Add(_incomingPackets.IsEmpty
+                    ? Poll.Event.Readable
+                    : Poll.Event.Readable | Poll.Event.Writable);
 
                 waitObjects.Add(_incomingPackets);
                 waitEvents.Add(Poll.Event.Readable);
@@ -70,9 +72,14 @@ public sealed class PipeForwarder : IDisposable
                 }
 
                 _logger?.Log(_socket.IfName, _socket.QueueId, "Entering the poll");
-                nativeCancellationToken.Wait(CollectionsMarshal.AsSpan(waitObjects), CollectionsMarshal.AsSpan(waitEvents));
+                nativeCancellationToken.Wait(CollectionsMarshal.AsSpan(waitObjects),
+                    CollectionsMarshal.AsSpan(waitEvents));
                 _logger?.Log(_socket.IfName, _socket.QueueId, "Woke up from poll");
             }
+        }
+        catch (OperationCanceledException)
+        {
+            throw;
         }
         catch (Exception e)
         {
@@ -124,8 +131,8 @@ public sealed class PipeForwarder : IDisposable
             _logger?.Log(_socket.IfName, _socket.QueueId, "Waking up socket for TX");
             try
             {
-                _socket.WakeUp();
-                _logger?.Log(_socket.IfName, _socket.QueueId, "Woke up socket for TX");
+                var error = _socket.WakeUp();
+                _logger?.Log(_socket.IfName, _socket.QueueId, $"Woke up socket for TX: {error}");
             }
             catch (Exception e)
             {
@@ -149,9 +156,9 @@ public sealed class PipeForwarder : IDisposable
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    private bool FillBatch()
+    private bool FillBatch(uint batchSize = BatchSize)
     {
-        var fill = _socket.FillRing.Fill(BatchSize);
+        var fill = _socket.FillRing.Fill(batchSize);
         _logger?.Log(_socket.IfName, _socket.QueueId, $"Able to fill {fill.Length} frames");
         var fillCount = 0u;
         while (fillCount < fill.Length && _freeFrames.TryDequeue(out var frame))

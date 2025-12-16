@@ -69,16 +69,15 @@ public sealed unsafe class XdpSocket : NativeObject, IFileObject
 
     public bool WaitFor(Poll.Event events, NativeCancellationToken cancellationToken) => cancellationToken.Wait(this, events);
 
-    public void WakeUp()
+    public NativeErrorNumber WakeUp()
     {
         if (!LibC.sendto(Descriptor, null, 0, LibC.MSG_DONTWAIT, null, 0).IsError())
-            return;
+            return NativeErrorNumber.OK;
 
         var error = NativeErrorNumber.Last;
-        if (error is not NativeErrorNumber.TryAgain and not NativeErrorNumber.DeviceOrResourceBusy and not NativeErrorNumber.InterruptedSystemCall)
-            throw new NativeException(error);
-        if (error == NativeErrorNumber.DeviceOrResourceBusy)
-            Console.Error.WriteLine($"EBUSY on WakeUp at {IfName}:{QueueId}");
+        return error is NativeErrorNumber.TryAgain or NativeErrorNumber.DeviceOrResourceBusy or NativeErrorNumber.InterruptedSystemCall
+            ? error
+            : throw new NativeException(error);
     }
 
     protected override void ReleaseUnmanagedResources()
