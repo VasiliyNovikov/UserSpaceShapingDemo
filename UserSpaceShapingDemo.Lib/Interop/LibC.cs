@@ -118,6 +118,7 @@ internal static unsafe partial class LibC
     // ssize_t sendto(int socket, const void *message, size_t length, int flags, const struct sockaddr *dest_addr, socklen_t dest_len);
     [LibraryImport(Lib, EntryPoint = "sendto")]
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    [SuppressGCTransition]
     public static partial nint sendto(FileDescriptor socket, void* message, nuint length, int flags, void* dest_addr, uint dest_len);
 
     // int sched_setscheduler(pid_t pid, int policy, const struct sched_param *param);
