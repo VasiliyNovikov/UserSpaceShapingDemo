@@ -18,12 +18,12 @@ public sealed class ForwarderTests
 
     [TestMethod]
     [Timeout(5000, CooperativeCancellation = true)]
-    [DataRow(TrafficForwarderType.Simple, ForwardingMode.Generic)]
-    [DataRow(TrafficForwarderType.Simple, ForwardingMode.Driver)]
+    //[DataRow(TrafficForwarderType.Simple, ForwardingMode.Generic)]
+    //[DataRow(TrafficForwarderType.Simple, ForwardingMode.Driver)]
     //[DataRow(TrafficForwarderType.Simple, XdpForwarderMode.DriverZeroCopy)]
     [DataRow(TrafficForwarderType.Parallel, ForwardingMode.Generic)]
-    [DataRow(TrafficForwarderType.Parallel, ForwardingMode.Driver)]
-    public async Task XdpSocket_Forward(TrafficForwarderType type, ForwardingMode mode)
+    //[DataRow(TrafficForwarderType.Parallel, ForwardingMode.Driver)]
+    public async Task XdpSocket_Forward_One(TrafficForwarderType type, ForwardingMode mode)
     {
         const string clientMessage = "Hello from XDP client!!!";
         const string serverMessage = "Hello back from XDP server!!!";

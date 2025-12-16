@@ -5,7 +5,7 @@ using System.Runtime.CompilerServices;
 namespace UserSpaceShapingDemo.Lib.Std;
 
 public class NativeException(NativeErrorNumber errorNumber)
-    : Exception(errorNumber.Message)
+    : Exception($"{(int)errorNumber} - {errorNumber.Message}")
 {
     public NativeErrorNumber ErrorNumber => errorNumber;
 

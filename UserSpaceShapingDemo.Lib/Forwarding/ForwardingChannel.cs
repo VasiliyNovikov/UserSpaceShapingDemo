@@ -23,7 +23,7 @@ public sealed class ForwardingChannel : IDisposable
     public ForwardingChannel(string ifName1, string ifName2, ForwardingMode mode = ForwardingMode.Generic)
     {
         Mode = mode;
-        Memory = new UMemory();
+        Memory = new UMemory(UMemory.DefaultFrameCount * 2);
         Pipe1 = new Pipe(ifName1, _packetQueue1, _packetQueue2);
         Pipe2 = new Pipe(ifName2, _packetQueue2, _packetQueue1);
         FreeFrames = new NativeQueue<ulong>();

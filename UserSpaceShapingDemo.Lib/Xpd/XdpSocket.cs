@@ -75,8 +75,10 @@ public sealed unsafe class XdpSocket : NativeObject, IFileObject
             return;
 
         var error = NativeErrorNumber.Last;
-        if (error != NativeErrorNumber.TryAgain)
+        if (error is not NativeErrorNumber.TryAgain and not NativeErrorNumber.DeviceOrResourceBusy)
             throw new NativeException(error);
+        if (error == NativeErrorNumber.DeviceOrResourceBusy)
+            Console.Error.WriteLine($"EBUSY on WakeUp at {IfName}:{QueueId}");
     }
 
     protected override void ReleaseUnmanagedResources()

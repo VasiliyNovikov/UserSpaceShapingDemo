@@ -73,7 +73,9 @@ public sealed class PipeForwarder : IDisposable
                     waitEvents.Add(Poll.Event.Readable);
                 }
 
+                Console.Error.WriteLine($"Entering the poll at {_socket.IfName}:{_socket.QueueId}");
                 nativeCancellationToken.Wait(CollectionsMarshal.AsSpan(waitObjects), CollectionsMarshal.AsSpan(waitEvents));
+                Console.Error.WriteLine($"Woke up from poll at {_socket.IfName}:{_socket.QueueId}");
             }
         }
         catch (Exception e)
@@ -89,6 +91,7 @@ public sealed class PipeForwarder : IDisposable
     private bool ReceiveBatch()
     {
         var receivePackets = _socket.RxRing.Receive(BatchSize);
+        Console.Error.WriteLine($"Received {receivePackets.Length} packets at {_socket.IfName}:{_socket.QueueId}");
         for (var i = 0u; i < receivePackets.Length; ++i)
         {
             var packet = receivePackets[i];
@@ -103,6 +106,7 @@ public sealed class PipeForwarder : IDisposable
     private bool SendBatch()
     {
         var sendPackets = _socket.TxRing.Send(BatchSize);
+        Console.Error.WriteLine($"Able to send {sendPackets.Length} packets at {_socket.IfName}:{_socket.QueueId}");
         var sendCount = 0u;
         while (sendCount < sendPackets.Length && _incomingPackets.TryDequeue(out var packet))
         {
@@ -112,12 +116,27 @@ public sealed class PipeForwarder : IDisposable
             _sentCallback?.Invoke(_socket.IfName, _socket.QueueId, packetData);
         }
 
+        Console.Error.WriteLine($"Sent {sendCount} packet/s at {_socket.IfName}:{_socket.QueueId}");
+
         if (sendCount == 0)
             return false;
 
         sendPackets.Submit(sendCount);
         if (_socket.TxRing.NeedsWakeup)
-            _socket.WakeUp();
+        {
+            Console.Error.WriteLine($"Waking up TX ring socket at {_socket.IfName}:{_socket.QueueId}");
+            try
+            {
+                _socket.WakeUp();
+                Console.Error.WriteLine($"Woke up TX ring socket at {_socket.IfName}:{_socket.QueueId}");
+            }
+            catch (Exception e)
+            {
+                Console.Error.WriteLine($"Failed to wake up TX ring socket at {_socket.IfName}:{_socket.QueueId}: {e}");
+                throw;
+            }
+        }
+
         return true;
     }
 
@@ -125,6 +144,7 @@ public sealed class PipeForwarder : IDisposable
     private bool CompleteBatch()
     {
         var completed = _socket.CompletionRing.Complete();
+        Console.Error.WriteLine($"Completed {completed.Length} frames at {_socket.IfName}:{_socket.QueueId}");
         for (var i = 0u; i < completed.Length; ++i)
             _freeFrames.Enqueue(completed[i]);
         completed.Release();
@@ -135,9 +155,12 @@ public sealed class PipeForwarder : IDisposable
     private bool FillBatch()
     {
         var fill = _socket.FillRing.Fill(BatchSize);
+        Console.Error.WriteLine($"Able to fill {fill.Length} frames at {_socket.IfName}:{_socket.QueueId}");
         var fillCount = 0u;
         while (fillCount < fill.Length && _freeFrames.TryDequeue(out var frame))
             fill[fillCount++] = frame;
+
+        Console.Error.WriteLine($"Filled {fillCount} frames at {_socket. IfName}:{_socket.QueueId}");
 
         if (fillCount == 0)
             return false;
