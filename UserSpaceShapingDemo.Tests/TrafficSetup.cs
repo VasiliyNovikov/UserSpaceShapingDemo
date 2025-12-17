@@ -38,6 +38,12 @@ public sealed class TrafficSetup : IDisposable
         if (!InstanceIds.TryDequeue(out _id))
             throw new InvalidOperationException("Too many instances of TestTrafficSetup");
 
+        if (sharedSenderNs is not null && !NetNs.Exists(sharedSenderNs))
+            throw new InvalidOperationException($"Shared sender namespace '{sharedSenderNs}' does not exist");
+
+        if (sharedReceiverNs is not null && !NetNs.Exists(sharedReceiverNs))
+            throw new InvalidOperationException($"Shared receiver namespace '{sharedReceiverNs}' does not exist");
+
         SenderName = $"{SenderNetNsNamePrefix}{_id:X}";
         ReceiverName = $"{ReceiverNetNsNamePrefix}{_id:X}";
         if (sharedSenderNs is null)
@@ -50,8 +56,6 @@ public sealed class TrafficSetup : IDisposable
         {
             _isSharedSenderNs = true;
             SenderNs = sharedSenderNs;
-            if (!NetNs.Exists(SenderNs))
-                throw new InvalidOperationException($"Shared sender namespace '{sharedSenderNs}' does not exist");
         }
 
         if (sharedReceiverNs is null)
@@ -64,8 +68,6 @@ public sealed class TrafficSetup : IDisposable
         {
             _isSharedReceiverNs = true;
             ReceiverNs = sharedReceiverNs;
-            if (!NetNs.Exists(ReceiverNs))
-                throw new InvalidOperationException($"Shared receiver namespace '{sharedReceiverNs}' does not exist");
         }
 
         using var senderNs = NetNs.Open(SenderNs);
