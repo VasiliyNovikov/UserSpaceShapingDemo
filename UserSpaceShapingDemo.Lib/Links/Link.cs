@@ -21,7 +21,9 @@ public class Link
 
     public string Name { get; }
 
-    public uint RxQueueCount { get; }
+    public uint RXQueueCount { get; }
+
+    public uint TXQueueCount { get; }
 
     public bool Up
     {
@@ -98,7 +100,8 @@ public class Link
         Socket = socket;
         Index = nlLink.IfIndex;
         Name = nlLink.Name;
-        RxQueueCount = nlLink.RxQueueCount;
+        RXQueueCount = nlLink.RXQueueCount;
+        TXQueueCount = nlLink.TXQueueCount;
         _up = nlLink.Up;
         var nlMac = nlLink.Address;
         _macAddress = nlMac is null ? null : MemoryMarshal.Read<MACAddress>(nlMac.Bytes);

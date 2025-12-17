@@ -25,7 +25,7 @@ public sealed class ForwardingChannel : IDisposable
     {
         Mode = mode;
         using var collection = new LinkCollection();
-        Memory = new UMemory(UMemory.DefaultFillRingSize * (1 + collection[ifName1].RxQueueCount + collection[ifName2].RxQueueCount));
+        Memory = new UMemory(UMemory.DefaultFillRingSize * (1 + collection[ifName1].RXQueueCount + collection[ifName2].RXQueueCount));
         Pipe1 = new Pipe(ifName1, _packetQueue1, _packetQueue2);
         Pipe2 = new Pipe(ifName2, _packetQueue2, _packetQueue1);
         FreeFrames = new NativeQueue<ulong>();

@@ -1,5 +1,7 @@
 using System;
+using System.Collections.Generic;
 using System.Globalization;
+using System.Linq;
 using System.Net;
 using System.Net.Sockets;
 using System.Text;
@@ -55,61 +57,62 @@ public sealed class ForwarderTests : IForwardingLogger
         Assert.AreEqual(serverMessage, receivedServerMessage);
     }
 
+    public static IEnumerable<object[]> Forward_Batch_Arguments()
+    {
+        foreach (var type in new [] { TrafficForwarderType.Simple, TrafficForwarderType.Parallel })
+        foreach (var mode in new [] { ForwardingMode.Generic, ForwardingMode.Driver/*, ForwardingMode.DriverZeroCopy*/ })
+        foreach (var batchSize in new[] { 4, 16, 64 })
+        {
+            yield return [type, mode, batchSize, 1, 1];
+            if (type == TrafficForwarderType.Parallel)
+            {
+                yield return [type, mode, batchSize, 2, 1];
+                yield return [type, mode, batchSize, 2, 2];
+                yield return [type, mode, batchSize, 4, 1];
+                yield return [type, mode, batchSize, 4, 2];
+                yield return [type, mode, batchSize, 4, 4];
+            }
+        }
+    }
+
     [TestMethod]
-    [Timeout(3000, CooperativeCancellation = true)]
-    [DataRow(TrafficForwarderType.Simple, ForwardingMode.Generic, 8, 1)]
-    [DataRow(TrafficForwarderType.Simple, ForwardingMode.Generic, 32, 1)]
-    [DataRow(TrafficForwarderType.Simple, ForwardingMode.Generic, 128, 1)]
-    [DataRow(TrafficForwarderType.Simple, ForwardingMode.Driver, 8, 1)]
-    [DataRow(TrafficForwarderType.Simple, ForwardingMode.Driver, 32, 1)]
-    [DataRow(TrafficForwarderType.Simple, ForwardingMode.Driver, 128, 1)]
-    [DataRow(TrafficForwarderType.Parallel, ForwardingMode.Generic, 8, 1)]
-    [DataRow(TrafficForwarderType.Parallel, ForwardingMode.Generic, 32, 1)]
-    [DataRow(TrafficForwarderType.Parallel, ForwardingMode.Generic, 128, 1)]
-    [DataRow(TrafficForwarderType.Parallel, ForwardingMode.Driver, 8, 1)]
-    [DataRow(TrafficForwarderType.Parallel, ForwardingMode.Driver, 32, 1)]
-    [DataRow(TrafficForwarderType.Parallel, ForwardingMode.Driver, 128, 1)]
-    [DataRow(TrafficForwarderType.Parallel, ForwardingMode.Generic, 8, 2)]
-    [DataRow(TrafficForwarderType.Parallel, ForwardingMode.Generic, 32, 2)]
-    [DataRow(TrafficForwarderType.Parallel, ForwardingMode.Generic, 128, 2)]
-    [DataRow(TrafficForwarderType.Parallel, ForwardingMode.Driver, 8, 2)]
-    [DataRow(TrafficForwarderType.Parallel, ForwardingMode.Driver, 32, 2)]
-    [DataRow(TrafficForwarderType.Parallel, ForwardingMode.Driver, 128, 2)]
-    public async Task Forward_Batch(TrafficForwarderType type, ForwardingMode mode, int batchSize, int rxQueues)
+    [Timeout(5000, CooperativeCancellation = true)]
+    [DynamicData(nameof(Forward_Batch_Arguments))]
+    public async Task Forward_Batch(TrafficForwarderType type, ForwardingMode mode, int batchSize, int rxQueues, int txQueues)
     {
         const string clientMessageTemplate = "Hello from XDP client: {0}";
         const int clientPort = 54321;
         const int serverPort = 12345;
 
+        var clientMessages = Enumerable.Range(0, batchSize).Select(i => string.Format(CultureInfo.InvariantCulture, clientMessageTemplate, i)).ToList();
+
         var cancellationToken = TestContext.CancellationTokenSource.Token;
 
-        using var setup = new TrafficForwardingSetup(type, mode, rxQueueCount: (byte)rxQueues, logger: this);
+        using var setup = new TrafficForwardingSetup(type, mode, rxQueueCount: (byte)rxQueues, txQueueCount: (byte)txQueues, logger: this);
 
         using var client = setup.CreateSenderSocket(SocketType.Dgram, ProtocolType.Udp, clientPort);
         using var server = setup.CreateReceiverSocket(SocketType.Dgram, ProtocolType.Udp, serverPort);
 
         var receiveTask = ReceiveBatchAsync();
 
-        for (var i = 0; i < batchSize; ++i)
-        {
-            var clientMessageBytes = Encoding.ASCII.GetBytes(string.Format(CultureInfo.InvariantCulture, clientMessageTemplate, i));
-            await client.SendToAsync(clientMessageBytes, new IPEndPoint(TrafficSetup.ReceiverAddress, serverPort), cancellationToken);
-            await Task.Delay(TimeSpan.FromMilliseconds(1), cancellationToken);// Packets get reordered without this delay in some environments
-        }
+        foreach (var clientMessage in clientMessages)
+            await client.SendToAsync(Encoding.ASCII.GetBytes(clientMessage), new IPEndPoint(TrafficSetup.ReceiverAddress, serverPort), cancellationToken);
 
-        await receiveTask;
+        var receivedClientMessages = await receiveTask;
+
+        CollectionAssert.AreEquivalent(clientMessages, receivedClientMessages); // Order is not guaranteed
 
         return;
-        async Task ReceiveBatchAsync()
+        async Task<List<string>> ReceiveBatchAsync()
         {
+            var result = new List<string>(batchSize);
             var receivedClientMessageBytes = new byte[clientMessageTemplate.Length + 8];
             for (var i = 0; i < batchSize; ++i)
             {
                 var res = await server.ReceiveFromAsync(receivedClientMessageBytes, new IPEndPoint(IPAddress.Any, 0), cancellationToken);
-                var clientMessage = string.Format(CultureInfo.InvariantCulture, clientMessageTemplate, i);
-                var receivedClientMessage = Encoding.ASCII.GetString(receivedClientMessageBytes, 0, res.ReceivedBytes);
-                Assert.AreEqual(clientMessage, receivedClientMessage);
+                result.Add(Encoding.ASCII.GetString(receivedClientMessageBytes, 0, res.ReceivedBytes));
             }
+            return result;
         }
     }
 

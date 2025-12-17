@@ -46,13 +46,15 @@ public sealed class LinkCollection : IEnumerable<Link>, IDisposable
 
     IEnumerator IEnumerable.GetEnumerator() => GetEnumerator();
 
-    public (VEthLink Link, VEthLink Peer) CreateVEth(string name, string peerName, uint? rxQueueCount = null)
+    public (VEthLink Link, VEthLink Peer) CreateVEth(string name, string peerName, uint? rxQueueCount = null, uint? txQueueCount = null)
     {
         using var nlVethPair = RtnlVEthPair.Allocate();
         nlVethPair.Link.Name = name;
         nlVethPair.Peer.Name = peerName;
-        if (rxQueueCount is { } count)
-            nlVethPair.Link.RxQueueCount = nlVethPair.Peer.RxQueueCount = count;
+        if (rxQueueCount is { } rxCount)
+            nlVethPair.Link.RXQueueCount = nlVethPair.Peer.RXQueueCount = rxCount;
+        if (txQueueCount is { } txCount)
+            nlVethPair.Link.TXQueueCount = nlVethPair.Peer.TXQueueCount = txCount;
         _socket.AddLink(nlVethPair.Link);
         return ((VEthLink)this[name], (VEthLink)this[peerName]);
     }

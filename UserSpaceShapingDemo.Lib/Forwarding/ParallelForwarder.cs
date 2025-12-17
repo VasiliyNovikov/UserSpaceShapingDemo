@@ -17,10 +17,12 @@ public sealed class ParallelForwarder : IDisposable
         foreach (var pipe in new [] { _channel.Pipe1, _channel.Pipe2 })
         {
             using var collection = new LinkCollection();
-            var rxQueueCount = collection[pipe.IfName].RxQueueCount;
-            for (var queueId = 0u; queueId < rxQueueCount; ++queueId)
+            var rxQueueCount = collection[pipe.IfName].RXQueueCount;
+            var txQueueCount = collection[pipe.IfName].TXQueueCount;
+            var queueCount = Math.Max(rxQueueCount, txQueueCount);
+            for (var queueId = 0u; queueId < queueCount; ++queueId)
             {
-                _forwarders.Add(new PipeForwarder(_channel, pipe, queueId, shared, logger));
+                _forwarders.Add(new PipeForwarder(_channel, pipe, queueId, queueId < rxQueueCount, queueId < txQueueCount, shared, logger));
                 shared = true;
             }
         }

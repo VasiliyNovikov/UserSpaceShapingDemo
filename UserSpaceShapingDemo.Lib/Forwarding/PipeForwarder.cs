@@ -14,6 +14,8 @@ public sealed class PipeForwarder : IDisposable
 {
     private const int FillBatchSize = 32;
 
+    private readonly bool _canReceive;
+    private readonly bool _canSend;
     private readonly IForwardingLogger? _logger;
     private readonly XdpSocket _socket;
     private readonly NativeQueue<ulong> _freeFrames;
@@ -23,8 +25,10 @@ public sealed class PipeForwarder : IDisposable
     private readonly NativeQueue<XdpDescriptor> _outgoingPackets;
     private readonly Worker _forwardingWorker;
 
-    public PipeForwarder(ForwardingChannel channel, ForwardingChannel.Pipe pipe, uint queueId, bool shared, IForwardingLogger? logger)
+    public PipeForwarder(ForwardingChannel channel, ForwardingChannel.Pipe pipe, uint queueId, bool canReceive, bool canSend, bool shared, IForwardingLogger? logger)
     {
+        _canReceive = canReceive;
+        _canSend = canSend;
         _logger = logger;
         var socketMode = channel.Mode is ForwardingMode.Generic ? XdpSocketMode.Default : XdpSocketMode.Driver;
         var bindMode = channel.Mode is ForwardingMode.DriverZeroCopy ? XdpSocketBindMode.ZeroCopy : XdpSocketBindMode.Copy;
@@ -32,7 +36,8 @@ public sealed class PipeForwarder : IDisposable
         _freeFrames = channel.FreeFrames;
         _incomingPackets = pipe.IncomingPackets;
         _outgoingPackets = pipe.OutgoingPackets;
-        while (FillBatch(_socket.FillRing.Capacity)) ;
+        if (canReceive)
+            while (FillBatch(_socket.FillRing.Capacity)) ;
         _forwardingWorker = new(Run);
     }
 
@@ -59,15 +64,22 @@ public sealed class PipeForwarder : IDisposable
                 waitObjects.Clear();
                 waitEvents.Clear();
 
-                waitObjects.Add(_socket);
-                waitEvents.Add(_incomingPackets.IsEmpty
-                    ? Poll.Event.Readable
-                    : Poll.Event.Readable | Poll.Event.Writable);
+                var socketEvents = _canReceive ? Poll.Event.Readable : Poll.Event.None;
+                if (_canSend && !_incomingPackets.IsEmpty)
+                    socketEvents |= Poll.Event.Writable;
+                if (socketEvents != Poll.Event.None)
+                {
+                    waitObjects.Add(_socket);
+                    waitEvents.Add(socketEvents);
+                }
 
-                waitObjects.Add(_incomingPackets);
-                waitEvents.Add(Poll.Event.Readable);
+                if (_canSend && _incomingPackets.IsEmpty)
+                {
+                    waitObjects.Add(_incomingPackets);
+                    waitEvents.Add(Poll.Event.Readable);
+                }
 
-                if (_freeFrames.IsEmpty)
+                if (_canReceive && _freeFrames.IsEmpty)
                 {
                     waitObjects.Add(_freeFrames);
                     waitEvents.Add(Poll.Event.Readable);
@@ -91,7 +103,15 @@ public sealed class PipeForwarder : IDisposable
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    private bool ForwardBatch() => ReceiveBatch() | SendBatch() | CompleteBatch() | FillBatch();
+    private bool ForwardBatch()
+    {
+        var result = false;
+        if (_canReceive)
+            result = ReceiveBatch() | FillBatch();
+        if (_canSend)
+            result |= SendBatch() | CompleteBatch();
+        return result;
+    }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     private bool ReceiveBatch()
