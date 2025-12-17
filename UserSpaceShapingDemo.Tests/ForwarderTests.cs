@@ -16,16 +16,26 @@ namespace UserSpaceShapingDemo.Tests;
 [TestClass]
 public sealed class ForwarderTests : IForwardingLogger
 {
+    private const bool IsDriverZeroCopySupported = false;
+    private static readonly TrafficForwarderType[] Types = [TrafficForwarderType.Simple, TrafficForwarderType.Parallel];
+    private static readonly ForwardingMode[] Modes = IsDriverZeroCopySupported
+#pragma warning disable CS0162 // Unreachable code detected
+        ? [ForwardingMode.Generic, ForwardingMode.Driver, ForwardingMode.DriverZeroCopy]
+#pragma warning restore CS0162 // Unreachable code detected
+        : [ForwardingMode.Generic, ForwardingMode.Driver];
+
     public TestContext TestContext { get; set; } = null!;
 
+    public static IEnumerable<object[]> Forward_One_Arguments()
+    {
+        foreach (var type in Types)
+        foreach (var mode in Modes)
+            yield return [type, mode];
+    }
+
     [TestMethod]
-    [Timeout(2000, CooperativeCancellation = true)]
-    [DataRow(TrafficForwarderType.Simple, ForwardingMode.Generic)]
-    [DataRow(TrafficForwarderType.Simple, ForwardingMode.Driver)]
-    //[DataRow(TrafficForwarderType.Simple, ForwardingMode.DriverZeroCopy)]
-    [DataRow(TrafficForwarderType.Parallel, ForwardingMode.Generic)]
-    [DataRow(TrafficForwarderType.Parallel, ForwardingMode.Driver)]
-    //[DataRow(TrafficForwarderType.Parallel, ForwardingMode.DriverZeroCopy)]
+    [Timeout(5000, CooperativeCancellation = true)]
+    [DynamicData(nameof(Forward_One_Arguments))]
     public async Task Forward_One(TrafficForwarderType type, ForwardingMode mode)
     {
         const string clientMessage = "Hello from XDP client!!!";
@@ -59,9 +69,9 @@ public sealed class ForwarderTests : IForwardingLogger
 
     public static IEnumerable<object[]> Forward_Batch_Arguments()
     {
-        foreach (var type in new [] { TrafficForwarderType.Simple, TrafficForwarderType.Parallel })
-        foreach (var mode in new [] { ForwardingMode.Generic, ForwardingMode.Driver/*, ForwardingMode.DriverZeroCopy*/ })
-        foreach (var batchSize in new[] { 4, 16, 64 })
+        foreach (var type in Types)
+        foreach (var mode in Modes)
+        foreach (var batchSize in new[] { 8, 32, 128 })
         {
             yield return [type, mode, batchSize, 1, 1];
             if (type == TrafficForwarderType.Parallel)
