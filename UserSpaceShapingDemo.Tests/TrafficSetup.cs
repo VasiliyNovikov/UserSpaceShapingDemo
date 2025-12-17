@@ -75,6 +75,8 @@ public sealed class TrafficSetup : IDisposable
 
         {
             using var collection = new LinkCollection();
+            if (collection.SingleOrDefault(l => l.Name == SenderName) is { } existingLink)
+                collection.Delete(existingLink);
             var (link, peer) = collection.CreateVEth(SenderName, ReceiverName, rxQueueCount, txQueueCount);
             link.MoveTo(senderNs);
             peer.MoveTo(receiverNs);
