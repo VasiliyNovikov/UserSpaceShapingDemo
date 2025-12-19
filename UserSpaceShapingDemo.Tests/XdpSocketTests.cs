@@ -42,9 +42,9 @@ public sealed class XdpSocketTests
         const int receiverPort = 12345;
 
         using var setup = new TrafficSetup();
-        using var sender = setup.CreateSenderSocket(SocketType.Dgram, ProtocolType.Udp, senderPort);
-        sender.Connect(TrafficSetup.ReceiverAddress4, receiverPort);
-        using (var receiver = setup.CreateReceiverSocket(SocketType.Dgram, ProtocolType.Udp, receiverPort))
+        using var sender = setup.CreateSenderSocket(4, ProtocolType.Udp, senderPort);
+        sender.Connect(TrafficSetup.ReceiverAddress(4), receiverPort);
+        using (var receiver = setup.CreateReceiverSocket(4, ProtocolType.Udp, receiverPort))
         {
             sender.Send(messageBytes);
             Span<byte> receivedMessageBytes = stackalloc byte[message.Length];
@@ -96,8 +96,8 @@ public sealed class XdpSocketTests
                 Assert.AreEqual(4, ipv4Header.Version);
                 Assert.AreEqual(sizeof(IPv4Header), ipv4Header.HeaderLength);
                 Assert.AreEqual(IPProtocol.UDP, ipv4Header.Protocol);
-                Assert.AreEqual(TrafficSetup.SenderAddress4, ipv4Header.SourceAddress);
-                Assert.AreEqual(TrafficSetup.ReceiverAddress4, ipv4Header.DestinationAddress);
+                Assert.AreEqual(TrafficSetup.SenderAddress(4), ipv4Header.SourceAddress);
+                Assert.AreEqual(TrafficSetup.ReceiverAddress(4), ipv4Header.DestinationAddress);
 
                 ref var udpHeader = ref ipv4Header.NextHeader<UDPHeader>();
                 Assert.AreEqual(receiverPort, udpHeader.DestinationPort);
@@ -133,8 +133,8 @@ public sealed class XdpSocketTests
                 ipv4Header.FragmentOffset = 0;
                 ipv4Header.Ttl = 64;
                 ipv4Header.Protocol = IPProtocol.UDP;
-                ipv4Header.SourceAddress = TrafficSetup.ReceiverAddress4;
-                ipv4Header.DestinationAddress = TrafficSetup.SenderAddress4;
+                ipv4Header.SourceAddress = TrafficSetup.ReceiverAddress(4);
+                ipv4Header.DestinationAddress = TrafficSetup.SenderAddress(4);
                 ipv4Header.UpdateChecksum();
 
                 ref var udpHeader = ref ipv4Header.NextHeader<UDPHeader>();

@@ -32,7 +32,7 @@ public class XdpForwarderBenchmarks
     private static readonly Socket ForwardingGenericReceiver;
     private static readonly Socket ForwardingDriverSender;
     private static readonly Socket ForwardingDriverReceiver;
-    private static readonly SocketAddress ReceiverAddress = new IPEndPoint(TrafficSetup.ReceiverAddress4, ReceiverPort).Serialize();
+    private static readonly SocketAddress ReceiverAddress = new IPEndPoint(TrafficSetup.ReceiverAddress(4), ReceiverPort).Serialize();
     private static readonly SocketAddress AddressBuffer = new IPEndPoint(IPAddress.Loopback, 0).Serialize();
     private static readonly byte[] Packet = new byte[1400];
     private static readonly byte[] PacketBuffer = new byte[2048];
@@ -50,12 +50,12 @@ public class XdpForwarderBenchmarks
         ForwardingGenericSetup = new(TrafficForwarderType.Simple, ForwardingMode.Generic, ForwarderNs);
         Thread.Sleep(100);
         ForwardingDriverSetup = new(TrafficForwarderType.Simple, ForwardingMode.Driver, ForwarderNs);
-        DirectSender = DirectSetup.CreateSenderSocket(SocketType.Dgram, ProtocolType.Udp, SenderPort);
-        DirectReceiver = DirectSetup.CreateReceiverSocket(SocketType.Dgram, ProtocolType.Udp, ReceiverPort);
-        ForwardingGenericSender = ForwardingGenericSetup.CreateSenderSocket(SocketType.Dgram, ProtocolType.Udp, SenderPort);
-        ForwardingGenericReceiver = ForwardingGenericSetup.CreateReceiverSocket(SocketType.Dgram, ProtocolType.Udp, ReceiverPort);
-        ForwardingDriverSender = ForwardingDriverSetup.CreateSenderSocket(SocketType.Dgram, ProtocolType.Udp, SenderPort);
-        ForwardingDriverReceiver = ForwardingDriverSetup.CreateReceiverSocket(SocketType.Dgram, ProtocolType.Udp, ReceiverPort);
+        DirectSender = DirectSetup.CreateSenderSocket(4, ProtocolType.Udp, SenderPort);
+        DirectReceiver = DirectSetup.CreateReceiverSocket(4, ProtocolType.Udp, ReceiverPort);
+        ForwardingGenericSender = ForwardingGenericSetup.CreateSenderSocket(ProtocolType.Udp, SenderPort);
+        ForwardingGenericReceiver = ForwardingGenericSetup.CreateReceiverSocket(ProtocolType.Udp, ReceiverPort);
+        ForwardingDriverSender = ForwardingDriverSetup.CreateSenderSocket(ProtocolType.Udp, SenderPort);
+        ForwardingDriverReceiver = ForwardingDriverSetup.CreateReceiverSocket(ProtocolType.Udp, ReceiverPort);
         RandomNumberGenerator.Fill(Packet);
     }
 

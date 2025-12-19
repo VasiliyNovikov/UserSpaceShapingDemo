@@ -22,11 +22,14 @@ public sealed class TrafficSetup : IDisposable
     public static readonly MACAddress SenderMacAddress = MACAddress.Parse("02:11:22:33:44:55");
     public static readonly MACAddress ReceiverMacAddress = MACAddress.Parse("02:66:77:88:99:AA");
 
-    public static readonly IPAddress SenderAddress4 = IPAddress.Parse("10.11.22.1");
-    public static readonly IPAddress ReceiverAddress4 = IPAddress.Parse("10.11.22.2");
+    private static readonly IPAddress SenderAddress4 = IPAddress.Parse("10.11.22.1");
+    private static readonly IPAddress ReceiverAddress4 = IPAddress.Parse("10.11.22.2");
 
-    public static readonly IPAddress SenderAddress6 = IPAddress.Parse("2001:db8::1");
-    public static readonly IPAddress ReceiverAddress6 = IPAddress.Parse("2001:db8::2");
+    private static readonly IPAddress SenderAddress6 = IPAddress.Parse("2001:db8::1");
+    private static readonly IPAddress ReceiverAddress6 = IPAddress.Parse("2001:db8::2");
+
+    public static IPAddress SenderAddress(int version) => version == 4 ? SenderAddress4 : SenderAddress6;
+    public static IPAddress ReceiverAddress(int version) => version == 4 ? ReceiverAddress4 : ReceiverAddress6;
 
     private readonly int _id;
     private readonly bool _isSharedSenderNs;
@@ -128,18 +131,19 @@ public sealed class TrafficSetup : IDisposable
     public NetNs.Scope EnterSender() => NetNs.Enter(SenderNs);
     public NetNs.Scope EnterReceiver() => NetNs.Enter(ReceiverNs);
 
-    public Socket CreateSenderSocket(SocketType socketType, ProtocolType protocolType, int port = 0)
+    public Socket CreateSenderSocket(int version, ProtocolType protocolType, int port = 0)
     {
-        return CreateSocket(SenderNs, socketType, protocolType, (IPAddress)SenderAddress4, port);
+        return CreateSocket(SenderNs, protocolType, SenderAddress(version), port);
     }
 
-    public Socket CreateReceiverSocket(SocketType socketType, ProtocolType protocolType, int port)
+    public Socket CreateReceiverSocket(int version, ProtocolType protocolType, int port)
     {
-        return CreateSocket(ReceiverNs, socketType, protocolType, (IPAddress)ReceiverAddress4, port);
+        return CreateSocket(ReceiverNs, protocolType, ReceiverAddress(version), port);
     }
 
-    private static Socket CreateSocket(string name, SocketType socketType, ProtocolType protocolType, IPAddress address, int port)
+    private static Socket CreateSocket(string name, ProtocolType protocolType, IPAddress address, int port)
     {
+        var socketType = protocolType == ProtocolType.Udp ? SocketType.Dgram : SocketType.Stream;
         using (NetNs.Enter(name))
         {
             var socket = new Socket(address.AddressFamily, socketType, protocolType);

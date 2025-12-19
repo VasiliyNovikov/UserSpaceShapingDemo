@@ -18,14 +18,16 @@ public class TrafficSetupTests
     }
 
     [TestMethod]
-    public void TrafficSetup_Ping()
+    [DataRow(4)]
+    [DataRow(6)]
+    public void TrafficSetup_Ping(int version)
     {
         var message = "Hello from veth"u8.ToArray();
         using var trafficSetup = new TrafficSetup();
         using (trafficSetup.EnterSender())
         {
             using var ping = new Ping();
-            var reply = ping.Send(TrafficSetup.ReceiverAddress4, 500, message);
+            var reply = ping.Send(TrafficSetup.ReceiverAddress(version), 500, message);
             Assert.IsNotNull(reply);
             Assert.AreEqual(IPStatus.Success, reply.Status);
             CollectionAssert.AreEqual(message, reply.Buffer);
@@ -33,15 +35,24 @@ public class TrafficSetupTests
     }
 
     [TestMethod]
-    public void TrafficSetup_Sockets()
+    [DataRow(4)]
+    [DataRow(6)]
+    public void TrafficSetup_Sockets(int version)
     {
         var message = "Hello from veth"u8;
         const int port = 12345;
 
         using var trafficSetup = new TrafficSetup();
-        using var sender = trafficSetup.CreateSenderSocket(SocketType.Dgram, ProtocolType.Udp);
-        using var receiver = trafficSetup.CreateReceiverSocket(SocketType.Dgram, ProtocolType.Udp, port);
-        sender.Connect(TrafficSetup.ReceiverAddress4, port);
+
+        using (trafficSetup.EnterSender())
+            Console.Error.WriteLine($"\nSender:\n{Script.Exec("ip", "a", "show")}\n");
+
+        using (trafficSetup.EnterReceiver())
+            Console.Error.WriteLine($"\nReceiver:\n{Script.Exec("ip", "a", "show")}\n");
+
+        using var sender = trafficSetup.CreateSenderSocket(version, ProtocolType.Udp);
+        using var receiver = trafficSetup.CreateReceiverSocket(version, ProtocolType.Udp, port);
+        sender.Connect(TrafficSetup.ReceiverAddress(version), port);
 
         var bytesSent = sender.Send(message);
 
@@ -53,7 +64,7 @@ public class TrafficSetupTests
         var bytesReceived = receiver.ReceiveFrom(receivedMessage, ref endPoint);
 
         var senderEndPoint = Assert.IsInstanceOfType<IPEndPoint>(endPoint);
-        Assert.AreEqual(TrafficSetup.SenderAddress4, senderEndPoint.Address);
+        Assert.AreEqual(TrafficSetup.SenderAddress(version), senderEndPoint.Address);
         Assert.AreEqual(message.Length, bytesReceived);
         Assert.IsTrue(message.SequenceEqual(receivedMessage));
     }

@@ -31,6 +31,6 @@ public sealed class TrafficForwardingSetup : IDisposable
         _setup1.Dispose();
     }
 
-    public Socket CreateSenderSocket(SocketType socketType, ProtocolType protocolType, int port = 0) => _setup1.CreateSenderSocket(socketType, protocolType, port);
-    public Socket CreateReceiverSocket(SocketType socketType, ProtocolType protocolType, int port) => _setup2.CreateReceiverSocket(socketType, protocolType, port);
+    public Socket CreateSenderSocket(ProtocolType protocolType, int port = 0) => _setup1.CreateSenderSocket(4, protocolType, port);
+    public Socket CreateReceiverSocket(ProtocolType protocolType, int port) => _setup2.CreateReceiverSocket(4, protocolType, port);
 }

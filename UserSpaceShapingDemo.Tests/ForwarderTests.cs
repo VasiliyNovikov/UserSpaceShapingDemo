@@ -50,17 +50,17 @@ public sealed class ForwarderTests : IForwardingLogger
 
         using var setup = new TrafficForwardingSetup(type, mode, logger: this);
 
-        using var client = setup.CreateSenderSocket(SocketType.Dgram, ProtocolType.Udp, clientPort);
-        using var server = setup.CreateReceiverSocket(SocketType.Dgram, ProtocolType.Udp, serverPort);
+        using var client = setup.CreateSenderSocket(ProtocolType.Udp, clientPort);
+        using var server = setup.CreateReceiverSocket(ProtocolType.Udp, serverPort);
 
-        await client.SendToAsync(clientMessageBytes, new IPEndPoint(TrafficSetup.ReceiverAddress4, serverPort), cancellationToken);
+        await client.SendToAsync(clientMessageBytes, new IPEndPoint(TrafficSetup.ReceiverAddress(4), serverPort), cancellationToken);
 
         var receivedClientMessageBytes = new byte[clientMessage.Length];
         await server.ReceiveFromAsync(receivedClientMessageBytes, new IPEndPoint(IPAddress.Any, 0), cancellationToken);
         var receivedClientMessage = Encoding.ASCII.GetString(receivedClientMessageBytes);
         Assert.AreEqual(clientMessage, receivedClientMessage);
 
-        await server.SendToAsync(serverMessageBytes, new IPEndPoint(TrafficSetup.SenderAddress4, clientPort), cancellationToken);
+        await server.SendToAsync(serverMessageBytes, new IPEndPoint(TrafficSetup.SenderAddress(4), clientPort), cancellationToken);
 
         var receivedServerMessageBytes = new byte[serverMessage.Length];
         await client.ReceiveFromAsync(receivedServerMessageBytes, new IPEndPoint(IPAddress.Any, 0), cancellationToken);
@@ -101,13 +101,13 @@ public sealed class ForwarderTests : IForwardingLogger
 
         using var setup = new TrafficForwardingSetup(type, mode, rxQueueCount: (byte)rxQueues, txQueueCount: (byte)txQueues, logger: this);
 
-        using var client = setup.CreateSenderSocket(SocketType.Dgram, ProtocolType.Udp, clientPort);
-        using var server = setup.CreateReceiverSocket(SocketType.Dgram, ProtocolType.Udp, serverPort);
+        using var client = setup.CreateSenderSocket(ProtocolType.Udp, clientPort);
+        using var server = setup.CreateReceiverSocket(ProtocolType.Udp, serverPort);
 
         var receiveTask = ReceiveBatchAsync();
 
         foreach (var clientMessage in clientMessages)
-            await client.SendToAsync(Encoding.ASCII.GetBytes(clientMessage), new IPEndPoint(TrafficSetup.ReceiverAddress4, serverPort), cancellationToken);
+            await client.SendToAsync(Encoding.ASCII.GetBytes(clientMessage), new IPEndPoint(TrafficSetup.ReceiverAddress(4), serverPort), cancellationToken);
 
         var receivedClientMessages = await receiveTask;
 
