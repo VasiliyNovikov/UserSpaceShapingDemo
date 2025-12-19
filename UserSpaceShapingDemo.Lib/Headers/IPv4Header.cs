@@ -108,7 +108,7 @@ public struct IPv4Header : IIPHeader<IPv4Address>
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public ref T Layer3Header<T>() where T : unmanaged => ref Unsafe.As<byte, T>(ref Unsafe.Add(ref Unsafe.As<IPv4Header, byte>(ref Unsafe.AsRef(ref this)), HeaderLength));
+    public ref T NextHeader<T>() where T : unmanaged => ref Unsafe.As<byte, T>(ref Unsafe.Add(ref Unsafe.As<IPv4Header, byte>(ref Unsafe.AsRef(ref this)), HeaderLength));
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public void UpdateChecksum()

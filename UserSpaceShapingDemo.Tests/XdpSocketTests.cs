@@ -92,14 +92,14 @@ public sealed class XdpSocketTests
                 Assert.AreEqual(TrafficSetup.SenderMacAddress, ethernetHeader.SourceAddress);
                 Assert.AreEqual(TrafficSetup.ReceiverMacAddress, ethernetHeader.DestinationAddress);
 
-                ref var ipv4Header = ref ethernetHeader.Layer2Header<IPv4Header>();
+                ref var ipv4Header = ref ethernetHeader.NextHeader<IPv4Header>();
                 Assert.AreEqual(4, ipv4Header.Version);
                 Assert.AreEqual(sizeof(IPv4Header), ipv4Header.HeaderLength);
                 Assert.AreEqual(IPProtocol.UDP, ipv4Header.Protocol);
                 Assert.AreEqual(TrafficSetup.SenderAddress, ipv4Header.SourceAddress);
                 Assert.AreEqual(TrafficSetup.ReceiverAddress, ipv4Header.DestinationAddress);
 
-                ref var udpHeader = ref ipv4Header.Layer3Header<UDPHeader>();
+                ref var udpHeader = ref ipv4Header.NextHeader<UDPHeader>();
                 Assert.AreEqual(receiverPort, udpHeader.DestinationPort);
                 Assert.AreEqual(senderPort, udpHeader.SourcePort);
 
@@ -124,7 +124,7 @@ public sealed class XdpSocketTests
                 ethernetHeader.SourceAddress = TrafficSetup.ReceiverMacAddress;
                 ethernetHeader.EtherType = EthernetType.IPv4;
 
-                ref var ipv4Header = ref ethernetHeader.Layer2Header<IPv4Header>();
+                ref var ipv4Header = ref ethernetHeader.NextHeader<IPv4Header>();
                 ipv4Header.Version = 4;
                 ipv4Header.HeaderLength = (byte)sizeof(IPv4Header);
                 ipv4Header.TrafficClass = 0;
@@ -137,7 +137,7 @@ public sealed class XdpSocketTests
                 ipv4Header.DestinationAddress = TrafficSetup.SenderAddress;
                 ipv4Header.UpdateChecksum();
 
-                ref var udpHeader = ref ipv4Header.Layer3Header<UDPHeader>();
+                ref var udpHeader = ref ipv4Header.NextHeader<UDPHeader>();
                 udpHeader.SourcePort = receiverPort;
                 udpHeader.DestinationPort = senderPort;
                 udpHeader.Size = (ushort)(sizeof(UDPHeader) + replyMessageBytes.Length);

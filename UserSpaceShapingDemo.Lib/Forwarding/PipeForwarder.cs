@@ -213,9 +213,9 @@ public sealed class PipeForwarder : IDisposable
         ref var ethernetHeader = ref Unsafe.As<byte, EthernetHeader>(ref packetData[0]);
         if (ethernetHeader.EtherType == EthernetType.IPv4)
         {
-            ref var ipv4Header = ref ethernetHeader.Layer2Header<IPv4Header>();
+            ref var ipv4Header = ref ethernetHeader.NextHeader<IPv4Header>();
             if (ipv4Header.Protocol == IPProtocol.UDP)
-                ipv4Header.Layer3Header<UDPHeader>().Checksum = default;
+                ipv4Header.NextHeader<UDPHeader>().Checksum = default;
         }
     }
 }

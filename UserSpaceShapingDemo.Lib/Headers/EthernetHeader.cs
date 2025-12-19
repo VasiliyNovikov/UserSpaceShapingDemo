@@ -21,5 +21,5 @@ public struct EthernetHeader
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public ref T Layer2Header<T>() where T : unmanaged => ref Unsafe.As<EthernetHeader, T>(ref Unsafe.Add(ref Unsafe.AsRef(ref this), 1));
+    public ref T NextHeader<T>() where T : unmanaged => ref Unsafe.As<EthernetHeader, T>(ref Unsafe.Add(ref Unsafe.AsRef(ref this), 1));
 }

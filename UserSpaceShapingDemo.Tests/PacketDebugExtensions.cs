@@ -25,17 +25,17 @@ public static class PacketDebugExtensions
         {
             case EthernetType.IPv4:
             {
-                WriteIPHeader<IPv4Address, IPv4Header>(sb, ref ethernetHeader.Layer2Header<IPv4Header>(), payloadAsString);
+                WriteIPHeader<IPv4Address, IPv4Header>(sb, ref ethernetHeader.NextHeader<IPv4Header>(), payloadAsString);
                 break;
             }
             case EthernetType.IPv6:
             {
-                WriteIPHeader<IPv6Address, IPv6Header>(sb, ref ethernetHeader.Layer2Header<IPv6Header>(), payloadAsString);
+                WriteIPHeader<IPv6Address, IPv6Header>(sb, ref ethernetHeader.NextHeader<IPv6Header>(), payloadAsString);
                 break;
             }
             case EthernetType.ARP:
             {
-                WriteARPHeader(sb, ref ethernetHeader.Layer2Header<ARPHeader>());
+                WriteARPHeader(sb, ref ethernetHeader.NextHeader<ARPHeader>());
                 break;
             }
         }
@@ -48,10 +48,8 @@ public static class PacketDebugExtensions
     {
         sb.Append("IPv").Append(ipHeader.Version).AppendLine(":");
         sb.Append("    src_ip=").Append(ipHeader.SourceAddress).AppendLine()
-          .Append("    dst_ip=").Append(ipHeader.DestinationAddress).AppendLine()
-          .Append("    proto=").Append(ipHeader.Protocol).AppendLine();
-        if (ipHeader.Protocol == IPProtocol.UDP)
-            WriteUDPHeader(sb, ref ipHeader.Layer3Header<UDPHeader>(), payloadAsString);
+          .Append("    dst_ip=").Append(ipHeader.DestinationAddress).AppendLine();
+        WriteNextHeader(sb, ref ipHeader, payloadAsString);
     }
 
     private static void WriteARPHeader(StringBuilder sb, ref ARPHeader arpHeader)
@@ -62,6 +60,31 @@ public static class PacketDebugExtensions
           .Append("    src_mac=").Append(arpHeader.SenderHardwareAddress).AppendLine()
           .Append("    dst_ip=").Append(arpHeader.TargetProtocolAddress).AppendLine()
           .Append("    dst_mac=").Append(arpHeader.TargetHardwareAddress).AppendLine();
+    }
+
+    private static void WriteNextHeader<THeader>(StringBuilder sb, ref THeader header, bool payloadAsString)
+        where THeader : IHasNextHeader
+    {
+        sb.Append("    proto=").Append(header.Protocol).AppendLine();
+        switch (header.Protocol)
+        {
+            case IPProtocol.UDP:
+                WriteUDPHeader(sb, ref header.NextHeader<UDPHeader>(), payloadAsString);
+                break;
+            case IPProtocol.IPv6HopOpts:
+            case IPProtocol.IPv6Route:
+            case IPProtocol.IPv6Fragment:
+            case IPProtocol.IPv6DestOpts:
+                WriteIP6ExtensionHeader(sb, header.Protocol, ref header.NextHeader<IPv6ExtensionHeader>(), payloadAsString);
+                break;
+        }
+    }
+
+    private static void WriteIP6ExtensionHeader(StringBuilder sb, IPProtocol type, ref IPv6ExtensionHeader extHeader, bool payloadAsString)
+    {
+        sb.Append(type).AppendLine(":");
+        sb.Append("    len=").Append(extHeader.HeaderLength).AppendLine();
+        WriteNextHeader(sb, ref extHeader, payloadAsString);
     }
 
     private static void WriteUDPHeader(StringBuilder sb, ref UDPHeader udpHeader, bool payloadAsString)
