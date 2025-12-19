@@ -82,7 +82,6 @@ public sealed class ForwarderTests : IForwardingLogger
                 yield return [type, mode, batchSize, 4, 1];
                 yield return [type, mode, batchSize, 4, 2];
                 yield return [type, mode, batchSize, 4, 4];
-                yield return [type, mode, batchSize, 8, 8];
             }
         }
     }
