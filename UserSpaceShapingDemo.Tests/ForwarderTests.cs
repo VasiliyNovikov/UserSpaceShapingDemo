@@ -37,7 +37,7 @@ public sealed class ForwarderTests : IForwardingLogger
     [TestMethod]
     [Timeout(5000, CooperativeCancellation = true)]
     [DynamicData(nameof(Forward_One_Arguments))]
-    public async Task Forward_One(TrafficForwarderType type, ForwardingMode mode)
+    public async Task Forward_Request_Reply(TrafficForwarderType type, ForwardingMode mode)
     {
         const string clientMessage = "Hello from XDP client!!!";
         const string serverMessage = "Hello back from XDP server!!!";
