@@ -148,7 +148,7 @@ public sealed class PipeForwarder : IDisposable
         {
             var packet = _incomingPacketsLocal.Dequeue();
             var packetData = _socket.Umem[packet];
-            UpdateChecksums(packetData);
+            ForwardingHelpers.UpdateChecksums(packetData);
             sendPackets[i] = packet;
             _logger?.LogPacket(_socket.IfName, _socket.QueueId, "Sent packet", packetData);
         }
@@ -205,17 +205,5 @@ public sealed class PipeForwarder : IDisposable
         if (_socket.FillRing.NeedsWakeup)
             _socket.WakeUp();
         return true;
-    }
-
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    private static void UpdateChecksums(Span<byte> packetData)
-    {
-        ref var ethernetHeader = ref Unsafe.As<byte, EthernetHeader>(ref packetData[0]);
-        if (ethernetHeader.EtherType == EthernetType.IPv4)
-        {
-            ref var ipv4Header = ref ethernetHeader.NextHeader<IPv4Header>();
-            if (ipv4Header.Protocol == IPProtocol.UDP)
-                ipv4Header.NextHeader<UDPHeader>().Checksum = default;
-        }
     }
 }

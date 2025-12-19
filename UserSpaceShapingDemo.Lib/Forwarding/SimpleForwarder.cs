@@ -94,7 +94,7 @@ public sealed class SimpleForwarder : IDisposable
             var packet = receivePackets[i];
             packetsToSend.Enqueue(packet);
             var packetData = sourceSocket.Umem[packet];
-            UpdateChecksums(packetData);
+            ForwardingHelpers.UpdateChecksums(packetData);
             _logger?.LogPacket(sourceSocket.IfName, sourceSocket.QueueId, "Received packet", packetData);
         }
         receivePackets.Release();
@@ -121,18 +121,6 @@ public sealed class SimpleForwarder : IDisposable
         hasActivity |= FillOnce(sourceSocket, freeAddresses);
 
         return hasActivity;
-    }
-
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    private static void UpdateChecksums(Span<byte> packetData)
-    {
-        ref var ethernetHeader = ref Unsafe.As<byte, EthernetHeader>(ref packetData[0]);
-        if (ethernetHeader.EtherType == EthernetType.IPv4)
-        {
-            ref var ipv4Header = ref ethernetHeader.NextHeader<IPv4Header>();
-            if (ipv4Header.Protocol == IPProtocol.UDP)
-                ipv4Header.NextHeader<UDPHeader>().Checksum = default;
-        }
     }
 
     public void Dispose()
