@@ -121,8 +121,8 @@ public sealed class PipeForwarder : IDisposable
         for (var i = 0u; i < receivePackets.Length; ++i)
         {
             var packet = receivePackets[i];
-            _outgoingPackets.Enqueue(packet);
             _logger?.LogPacket(_socket.IfName, _socket.QueueId, "Received packet", _socket.Umem[packet]);
+            _outgoingPackets.Enqueue(packet);
         }
         receivePackets.Release();
         return receivePackets.Length > 0;
