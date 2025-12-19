@@ -91,7 +91,8 @@ public static class PacketDebugExtensions
     {
         sb.AppendLine("UDP:");
         sb.Append("    src_port=").Append(udpHeader.SourcePort).AppendLine()
-          .Append("    dst_port=").Append(udpHeader.DestinationPort).AppendLine();
+          .Append("    dst_port=").Append(udpHeader.DestinationPort).AppendLine()
+          .Append("    check=").Append((ushort)udpHeader.Checksum).AppendLine();
         if (payloadAsString)
             sb.Append("    payload=").Append(Encoding.UTF8.GetString(udpHeader.Payload)).AppendLine();
     }
