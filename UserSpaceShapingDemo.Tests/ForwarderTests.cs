@@ -27,7 +27,7 @@ public sealed class ForwarderTests : IForwardingLogger
 
     public TestContext TestContext { get; set; } = null!;
 
-    public static IEnumerable<object[]> Forward_One_Arguments()
+    public static IEnumerable<object[]> Forward_Request_Reply_Arguments()
     {
         foreach (var type in Types)
         foreach (var mode in Modes)
@@ -36,11 +36,11 @@ public sealed class ForwarderTests : IForwardingLogger
 
     [TestMethod]
     [Timeout(5000, CooperativeCancellation = true)]
-    [DynamicData(nameof(Forward_One_Arguments))]
+    [DynamicData(nameof(Forward_Request_Reply_Arguments))]
     public async Task Forward_Request_Reply(TrafficForwarderType type, ForwardingMode mode)
     {
-        const string clientMessage = "Hello from XDP client!!!";
-        const string serverMessage = "Hello back from XDP server!!!";
+        const string clientMessage = "Hello from XDP client";
+        const string serverMessage = "Hello back from XDP server";
         var clientMessageBytes = Encoding.ASCII.GetBytes(clientMessage);
         var serverMessageBytes = Encoding.ASCII.GetBytes(serverMessage);
         const int clientPort = 54321;

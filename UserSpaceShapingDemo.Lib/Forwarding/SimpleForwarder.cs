@@ -60,6 +60,10 @@ public sealed class SimpleForwarder : IDisposable
                 nativeCancellationToken.Wait([_socket1, _socket2], [events1, events2]);
             }
         }
+        catch (OperationCanceledException)
+        {
+            throw;
+        }
         catch (Exception e)
         {
             _logger?.LogError("Forwarding loop failed", e);
