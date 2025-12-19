@@ -18,7 +18,7 @@ namespace UserSpaceShapingDemo.Tests;
 public sealed class ForwarderTests : IForwardingLogger
 {
     private const bool IsDriverZeroCopySupported = false;
-    private const bool IsDisplayLogging = true;
+    private const bool IsDisplayLogging = false;
 
     private static readonly TrafficForwarderType[] Types = [TrafficForwarderType.Simple, TrafficForwarderType.Parallel];
     private static readonly ForwardingMode[] Modes = IsDriverZeroCopySupported

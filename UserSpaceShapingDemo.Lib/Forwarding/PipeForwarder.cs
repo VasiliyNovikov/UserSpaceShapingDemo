@@ -37,7 +37,11 @@ public sealed class PipeForwarder : IDisposable
         _incomingPackets = pipe.IncomingPackets;
         _outgoingPackets = pipe.OutgoingPackets;
         if (canReceive)
+        {
             while (FillBatch(_socket.FillRing.Capacity)) ;
+            while (_freeFramesLocal.TryDequeue(out var frame))
+                _freeFrames.Enqueue(frame);
+        }
         _forwardingWorker = new(Run);
     }
 
