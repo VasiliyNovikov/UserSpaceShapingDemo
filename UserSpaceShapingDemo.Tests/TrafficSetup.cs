@@ -13,7 +13,8 @@ namespace UserSpaceShapingDemo.Tests;
 
 public sealed class TrafficSetup : IDisposable
 {
-    private const byte PrefixLength = 30;
+    private const byte PrefixLength4 = 30;
+    private const byte PrefixLength6 = 126;
     private const string SenderNetNsNamePrefix = "tst_snd_";
     private const string ReceiverNetNsNamePrefix = "tst_rcv_";
     private static readonly ConcurrentQueue<int> InstanceIds = new(Enumerable.Range(0, 0x1000));
@@ -21,8 +22,11 @@ public sealed class TrafficSetup : IDisposable
     public static readonly MACAddress SenderMacAddress = MACAddress.Parse("02:11:22:33:44:55");
     public static readonly MACAddress ReceiverMacAddress = MACAddress.Parse("02:66:77:88:99:AA");
 
-    public static readonly IPAddress SenderAddress = IPAddress.Parse("10.11.22.1");
-    public static readonly IPAddress ReceiverAddress = IPAddress.Parse("10.11.22.2");
+    public static readonly IPAddress SenderAddress4 = IPAddress.Parse("10.11.22.1");
+    public static readonly IPAddress ReceiverAddress4 = IPAddress.Parse("10.11.22.2");
+
+    public static readonly IPAddress SenderAddress6 = IPAddress.Parse("2001:db8::1");
+    public static readonly IPAddress ReceiverAddress6 = IPAddress.Parse("2001:db8::2");
 
     private readonly int _id;
     private readonly bool _isSharedSenderNs;
@@ -82,13 +86,14 @@ public sealed class TrafficSetup : IDisposable
             peer.MoveTo(receiverNs);
         }
 
-        foreach (var (ns, name, address, macAddress) in new[] { (senderNs, SenderName, SenderAddress, SenderMacAddress),
-                                                                (receiverNs, ReceiverName, ReceiverAddress, ReceiverMacAddress) })
+        foreach (var (ns, name, address4, address6, macAddress) in new[] { (senderNs, SenderName, SenderAddress4, SenderAddress6, SenderMacAddress),
+                                                                           (receiverNs, ReceiverName, ReceiverAddress4, ReceiverAddress6, ReceiverMacAddress) })
         {
             using var collection = new LinkCollection(ns);
             var link = collection[name];
             link.MacAddress = macAddress;
-            link.Addresses4.Add(new(address, PrefixLength));
+            link.Addresses4.Add(new(address4, PrefixLength4));
+            link.Addresses6.Add(new(address6, PrefixLength6));
             link.Up = true;
         }
     }
@@ -125,19 +130,19 @@ public sealed class TrafficSetup : IDisposable
 
     public Socket CreateSenderSocket(SocketType socketType, ProtocolType protocolType, int port = 0)
     {
-        return CreateSocket(SenderNs, socketType, protocolType, SenderAddress, port);
+        return CreateSocket(SenderNs, socketType, protocolType, (IPAddress)SenderAddress4, port);
     }
 
     public Socket CreateReceiverSocket(SocketType socketType, ProtocolType protocolType, int port)
     {
-        return CreateSocket(ReceiverNs, socketType, protocolType, ReceiverAddress, port);
+        return CreateSocket(ReceiverNs, socketType, protocolType, (IPAddress)ReceiverAddress4, port);
     }
 
     private static Socket CreateSocket(string name, SocketType socketType, ProtocolType protocolType, IPAddress address, int port)
     {
         using (NetNs.Enter(name))
         {
-            var socket = new Socket(AddressFamily.InterNetwork, socketType, protocolType);
+            var socket = new Socket(address.AddressFamily, socketType, protocolType);
             socket.Bind(new IPEndPoint(address, port));
             return socket;
         }

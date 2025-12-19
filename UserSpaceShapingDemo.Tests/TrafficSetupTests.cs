@@ -25,7 +25,7 @@ public class TrafficSetupTests
         using (trafficSetup.EnterSender())
         {
             using var ping = new Ping();
-            var reply = ping.Send(TrafficSetup.ReceiverAddress, 500, message);
+            var reply = ping.Send(TrafficSetup.ReceiverAddress4, 500, message);
             Assert.IsNotNull(reply);
             Assert.AreEqual(IPStatus.Success, reply.Status);
             CollectionAssert.AreEqual(message, reply.Buffer);
@@ -41,7 +41,7 @@ public class TrafficSetupTests
         using var trafficSetup = new TrafficSetup();
         using var sender = trafficSetup.CreateSenderSocket(SocketType.Dgram, ProtocolType.Udp);
         using var receiver = trafficSetup.CreateReceiverSocket(SocketType.Dgram, ProtocolType.Udp, port);
-        sender.Connect(TrafficSetup.ReceiverAddress, port);
+        sender.Connect(TrafficSetup.ReceiverAddress4, port);
 
         var bytesSent = sender.Send(message);
 
@@ -53,7 +53,7 @@ public class TrafficSetupTests
         var bytesReceived = receiver.ReceiveFrom(receivedMessage, ref endPoint);
 
         var senderEndPoint = Assert.IsInstanceOfType<IPEndPoint>(endPoint);
-        Assert.AreEqual(TrafficSetup.SenderAddress, senderEndPoint.Address);
+        Assert.AreEqual(TrafficSetup.SenderAddress4, senderEndPoint.Address);
         Assert.AreEqual(message.Length, bytesReceived);
         Assert.IsTrue(message.SequenceEqual(receivedMessage));
     }
