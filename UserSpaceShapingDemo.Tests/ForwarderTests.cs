@@ -1,3 +1,4 @@
+#pragma warning disable CS0162 // Unreachable code detected
 using System;
 using System.Collections.Generic;
 using System.Globalization;
@@ -17,11 +18,11 @@ namespace UserSpaceShapingDemo.Tests;
 public sealed class ForwarderTests : IForwardingLogger
 {
     private const bool IsDriverZeroCopySupported = false;
+    private const bool IsDisplayLogging = true;
+
     private static readonly TrafficForwarderType[] Types = [TrafficForwarderType.Simple, TrafficForwarderType.Parallel];
     private static readonly ForwardingMode[] Modes = IsDriverZeroCopySupported
-#pragma warning disable CS0162 // Unreachable code detected
         ? [ForwardingMode.Generic, ForwardingMode.Driver, ForwardingMode.DriverZeroCopy]
-#pragma warning restore CS0162 // Unreachable code detected
         : [ForwardingMode.Generic, ForwardingMode.Driver];
 
     public TestContext TestContext { get; set; } = null!;
@@ -126,7 +127,15 @@ public sealed class ForwarderTests : IForwardingLogger
         }
     }
 
-    private void Log(string message) => TestContext.WriteLine($"{DateTime.UtcNow:O}: {message}");
+    private void Log(string message)
+    {
+        var logMessage = $"{DateTime.UtcNow:O}: {message}";
+        if (IsDisplayLogging)
+            TestContext.DisplayMessage(MessageLevel.Informational, logMessage);
+        else
+            TestContext.WriteLine(logMessage);
+    }
+
     void IForwardingLogger.Log(string ifName, uint queueId, string message) => Log($"{ifName}:{queueId}: {message}");
     void IForwardingLogger.LogPacket(string ifName, uint queueId, string message, Span<byte> packet) => Log($"{ifName}:{queueId}: {message}\n{packet.PacketToString()}");
     void IForwardingLogger.LogError(string ifName, uint queueId, string message, Exception error) => Log($"{ifName}:{queueId}: {message}\n{error}");
