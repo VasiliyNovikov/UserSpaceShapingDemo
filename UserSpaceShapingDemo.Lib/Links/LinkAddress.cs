@@ -6,11 +6,12 @@ using NetworkingPrimitivesCore;
 
 namespace UserSpaceShapingDemo.Lib.Links;
 
-public readonly struct LinkAddress<TAddress>(TAddress address, byte prefixLength)
+public readonly struct LinkAddress<TAddress>(TAddress address, byte prefixLength, bool noDAD = false)
     where TAddress : unmanaged, IIPAddress<TAddress>
 {
     public TAddress Address => address;
     public byte PrefixLength => prefixLength;
+    public bool NoDAD => noDAD;
 
     public override string ToString() => $"{Address}/{PrefixLength}";
 

@@ -43,13 +43,6 @@ public class TrafficSetupTests
         const int port = 12345;
 
         using var trafficSetup = new TrafficSetup();
-
-        using (trafficSetup.EnterSender())
-            Console.Error.WriteLine($"\nSender:\n{Script.Exec("ip", "a", "show")}\n");
-
-        using (trafficSetup.EnterReceiver())
-            Console.Error.WriteLine($"\nReceiver:\n{Script.Exec("ip", "a", "show")}\n");
-
         using var sender = trafficSetup.CreateSenderSocket(version, ProtocolType.Udp);
         using var receiver = trafficSetup.CreateReceiverSocket(version, ProtocolType.Udp, port);
         sender.Connect(TrafficSetup.ReceiverAddress(version), port);
@@ -59,7 +52,7 @@ public class TrafficSetupTests
         Assert.AreEqual(message.Length, bytesSent);
 
         Span<byte> receivedMessage = stackalloc byte[message.Length];
-        EndPoint endPoint = new IPEndPoint(IPAddress.Any, 0);
+        EndPoint endPoint = new IPEndPoint(version == 4 ? IPAddress.Any : IPAddress.IPv6Any, 0);
 
         var bytesReceived = receiver.ReceiveFrom(receivedMessage, ref endPoint);
 

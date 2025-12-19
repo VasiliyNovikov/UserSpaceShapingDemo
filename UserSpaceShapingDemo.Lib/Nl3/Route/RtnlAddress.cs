@@ -29,6 +29,20 @@ public sealed unsafe class RtnlAddress : NativeObject
         }
     }
 
+    public RtnlAddressFlags Flags => (RtnlAddressFlags)LibNlRoute3.rtnl_addr_get_flags(Addr);
+
+    public bool NoDAD
+    {
+        get => (Flags & RtnlAddressFlags.NoDAD) != 0;
+        set
+        {
+            if (value)
+                LibNlRoute3.rtnl_addr_set_flags(Addr, (uint)RtnlAddressFlags.NoDAD);
+            else
+                LibNlRoute3.rtnl_addr_unset_flags(Addr, (uint)RtnlAddressFlags.NoDAD);
+        }
+    }
+
     internal RtnlAddress(LibNlRoute3.rtnl_addr* addr, bool owned)
     {
         Addr = addr;

@@ -31,6 +31,7 @@ public sealed class LinkAddressCollection<TAddress> : IEnumerable<LinkAddress<TA
         addr.PrefixLength = address.PrefixLength;
         linkAddr.IfIndex = _linkIndex;
         linkAddr.Address = addr;
+        linkAddr.NoDAD = address.NoDAD;
         _socket.AddAddress(linkAddr);
     }
 
@@ -55,7 +56,7 @@ public sealed class LinkAddressCollection<TAddress> : IEnumerable<LinkAddress<TA
         using var rtnlAddresses = _socket.GetAddresses();
         foreach (var rtnlAddress in rtnlAddresses)
             if (rtnlAddress.IfIndex == _linkIndex && rtnlAddress.Address is { } nlAddress && nlAddress.Family == Family)
-                yield return new LinkAddress<TAddress>(MemoryMarshal.Read<TAddress>(nlAddress.Bytes), nlAddress.PrefixLength);
+                yield return new LinkAddress<TAddress>(MemoryMarshal.Read<TAddress>(nlAddress.Bytes), nlAddress.PrefixLength, rtnlAddress.NoDAD);
     }
 
     IEnumerator IEnumerable.GetEnumerator() => GetEnumerator();

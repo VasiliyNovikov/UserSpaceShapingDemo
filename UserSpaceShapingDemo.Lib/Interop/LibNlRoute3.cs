@@ -15,31 +15,42 @@ internal static unsafe partial class LibNlRoute3
     public const int NLM_F_APPEND  = 0x800; // Add to end of list
 
     // rtnl_link flags
-    public const int IFF_UP          = 0x00001;       // Interface is up.
-    public const int IFF_BROADCAST   = 0x00002;       // Broadcast address valid.
-    public const int IFF_DEBUG       = 0x00004;       // Turn on debugging
-    public const int IFF_LOOPBACK    = 0x00008;       // Is a loopback net.
-    public const int IFF_POINTOPOINT = 0x00010;       // Interface is point-to-point link.
-    public const int IFF_NOTRAILERS  = 0x00020;       // Avoid use of trailers.
-    public const int IFF_RUNNING     = 0x00040;       // Resources allocated.
-    public const int IFF_NOARP       = 0x00080;       // No address resolution protocol.
-    public const int IFF_PROMISC     = 0x00100;       // Receive all packets.
-    public const int IFF_ALLMULTI    = 0x00200;       // Receive all multicast packets.
-    public const int IFF_MASTER      = 0x00400;       // Master of a load balancer.
-    public const int IFF_SLAVE       = 0x00800;       // Slave of a load balancer.
-    public const int IFF_MULTICAST   = 0x01000;       // Supports multicast.
-    public const int IFF_PORTSEL     = 0x02000;       // Can set media type.
-    public const int IFF_AUTOMEDIA   = 0x04000;       // Auto media select active.
-    public const int IFF_DYNAMIC     = 0x08000;       // Dialup device with changing addresses.
-    public const int IFF_LOWER_UP    = 0x10000;       // Driver signals L1 up
-    public const int IFF_DORMANT     = 0x20000;       // Driver signals dormant
-    public const int IFF_ECHO        = 0x40000;       // Echo sent packets
-
+    public const uint IFF_UP          = 0x00001;       // Interface is up.
+    public const uint IFF_BROADCAST   = 0x00002;       // Broadcast address valid.
+    public const uint IFF_DEBUG       = 0x00004;       // Turn on debugging
+    public const uint IFF_LOOPBACK    = 0x00008;       // Is a loopback net.
+    public const uint IFF_POINTOPOINT = 0x00010;       // Interface is point-to-point link.
+    public const uint IFF_NOTRAILERS  = 0x00020;       // Avoid use of trailers.
+    public const uint IFF_RUNNING     = 0x00040;       // Resources allocated.
+    public const uint IFF_NOARP       = 0x00080;       // No address resolution protocol.
+    public const uint IFF_PROMISC     = 0x00100;       // Receive all packets.
+    public const uint IFF_ALLMULTI    = 0x00200;       // Receive all multicast packets.
+    public const uint IFF_MASTER      = 0x00400;       // Master of a load balancer.
+    public const uint IFF_SLAVE       = 0x00800;       // Slave of a load balancer.
+    public const uint IFF_MULTICAST   = 0x01000;       // Supports multicast.
+    public const uint IFF_PORTSEL     = 0x02000;       // Can set media type.
+    public const uint IFF_AUTOMEDIA   = 0x04000;       // Auto media select active.
+    public const uint IFF_DYNAMIC     = 0x08000;       // Dialup device with changing addresses.
+    public const uint IFF_LOWER_UP    = 0x10000;       // Driver signals L1 up
+    public const uint IFF_DORMANT     = 0x20000;       // Driver signals dormant
+    public const uint IFF_ECHO        = 0x40000;       // Echo sent packets
+    
     public const byte BR_STATE_DISABLED   = 0;
     public const byte BR_STATE_LISTENING  = 1;
     public const byte BR_STATE_LEARNING   = 2;
     public const byte BR_STATE_FORWARDING = 3;
     public const byte BR_STATE_BLOCKING   = 4;
+
+    public const uint IFA_F_SECONDARY      = 0x001;
+    public const uint IFA_F_NODAD          = 0x002;
+    public const uint IFA_F_OPTIMISTIC     = 0x004;
+    public const uint IFA_F_DADFAILED      = 0x008;
+    public const uint IFA_F_HOMEADDRESS    = 0x010;
+    public const uint IFA_F_DEPRECATED     = 0x020;
+    public const uint IFA_F_TENTATIVE      = 0x040;
+    public const uint IFA_F_PERMANENT      = 0x080;
+    public const uint IFA_F_MANAGETEMPADDR = 0x100;
+    public const uint IFA_F_NOPREFIXROUTE  = 0x200;
 
     // struct rtnl_link* rtnl_link_alloc(void)
     [LibraryImport(Lib, EntryPoint = "rtnl_link_alloc")]
@@ -188,6 +199,18 @@ internal static unsafe partial class LibNlRoute3
     // int rtnl_addr_set_local(struct rtnl_addr *addr, struct nl_addr *local)
     [LibraryImport(Lib, EntryPoint = "rtnl_addr_set_local")]
     public static partial int rtnl_addr_set_local(rtnl_addr* addr, LibNl3.nl_addr* local);
+
+    // unsigned int rtnl_addr_get_flags(struct rtnl_addr *addr)
+    [LibraryImport(Lib, EntryPoint = "rtnl_addr_get_flags")]
+    public static partial uint rtnl_addr_get_flags(rtnl_addr* addr);
+
+    // void rtnl_addr_set_flags(struct rtnl_addr *addr, unsigned int flags)
+    [LibraryImport(Lib, EntryPoint = "rtnl_addr_set_flags")]
+    public static partial void rtnl_addr_set_flags(rtnl_addr* addr, uint flags);
+
+    // void rtnl_addr_unset_flags(struct rtnl_addr *addr, unsigned int flags)
+    [LibraryImport(Lib, EntryPoint = "rtnl_addr_unset_flags")]
+    public static partial void rtnl_addr_unset_flags(rtnl_addr* addr, uint flags);
 
     // int rtnl_addr_add(struct nl_sock *sk, struct rtnl_addr *addr, int flags)
     [LibraryImport(Lib, EntryPoint = "rtnl_addr_add")]

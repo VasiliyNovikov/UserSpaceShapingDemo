@@ -95,8 +95,8 @@ public sealed class TrafficSetup : IDisposable
             using var collection = new LinkCollection(ns);
             var link = collection[name];
             link.MacAddress = macAddress;
-            link.Addresses4.Add(new(address4, PrefixLength4));
-            link.Addresses6.Add(new(address6, PrefixLength6));
+            link.Addresses4.Add(new(address4, PrefixLength4, true));
+            link.Addresses6.Add(new(address6, PrefixLength6, true));
             link.Up = true;
         }
     }
