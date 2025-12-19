@@ -52,10 +52,10 @@ public class XdpForwarderBenchmarks
         ForwardingDriverSetup = new(TrafficForwarderType.Simple, ForwardingMode.Driver, ForwarderNs);
         DirectSender = DirectSetup.CreateSenderSocket(4, ProtocolType.Udp, SenderPort);
         DirectReceiver = DirectSetup.CreateReceiverSocket(4, ProtocolType.Udp, ReceiverPort);
-        ForwardingGenericSender = ForwardingGenericSetup.CreateSenderSocket(ProtocolType.Udp, SenderPort);
-        ForwardingGenericReceiver = ForwardingGenericSetup.CreateReceiverSocket(ProtocolType.Udp, ReceiverPort);
-        ForwardingDriverSender = ForwardingDriverSetup.CreateSenderSocket(ProtocolType.Udp, SenderPort);
-        ForwardingDriverReceiver = ForwardingDriverSetup.CreateReceiverSocket(ProtocolType.Udp, ReceiverPort);
+        ForwardingGenericSender = ForwardingGenericSetup.CreateSenderSocket(4, ProtocolType.Udp, SenderPort);
+        ForwardingGenericReceiver = ForwardingGenericSetup.CreateReceiverSocket(4, ProtocolType.Udp, ReceiverPort);
+        ForwardingDriverSender = ForwardingDriverSetup.CreateSenderSocket(4, ProtocolType.Udp, SenderPort);
+        ForwardingDriverReceiver = ForwardingDriverSetup.CreateReceiverSocket(4, ProtocolType.Udp, ReceiverPort);
         RandomNumberGenerator.Fill(Packet);
     }
 

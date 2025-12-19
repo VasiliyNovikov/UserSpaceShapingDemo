@@ -24,6 +24,7 @@ public sealed class ForwarderTests : IForwardingLogger
     private static readonly ForwardingMode[] Modes = IsDriverZeroCopySupported
         ? [ForwardingMode.Generic, ForwardingMode.Driver, ForwardingMode.DriverZeroCopy]
         : [ForwardingMode.Generic, ForwardingMode.Driver];
+    private static readonly int[] Versions = [4, 6];
 
     public TestContext TestContext { get; set; } = null!;
 
@@ -31,13 +32,14 @@ public sealed class ForwarderTests : IForwardingLogger
     {
         foreach (var type in Types)
         foreach (var mode in Modes)
-            yield return [type, mode];
+        foreach (var version in Versions)
+            yield return [type, mode, version];
     }
 
     [TestMethod]
     [Timeout(5000, CooperativeCancellation = true)]
     [DynamicData(nameof(Forward_Request_Reply_Arguments))]
-    public async Task Forward_Request_Reply(TrafficForwarderType type, ForwardingMode mode)
+    public async Task Forward_Request_Reply(TrafficForwarderType type, ForwardingMode mode, int version)
     {
         const string clientMessage = "Hello from XDP client";
         const string serverMessage = "Hello back from XDP server";
@@ -45,25 +47,26 @@ public sealed class ForwarderTests : IForwardingLogger
         var serverMessageBytes = Encoding.ASCII.GetBytes(serverMessage);
         const int clientPort = 54321;
         const int serverPort = 12345;
+        var anyAddress = version == 4 ? IPAddress.Any : IPAddress.IPv6Any;
 
         var cancellationToken = TestContext.CancellationTokenSource.Token;
 
         using var setup = new TrafficForwardingSetup(type, mode, logger: this);
 
-        using var client = setup.CreateSenderSocket(ProtocolType.Udp, clientPort);
-        using var server = setup.CreateReceiverSocket(ProtocolType.Udp, serverPort);
+        using var client = setup.CreateSenderSocket(version, ProtocolType.Udp, clientPort);
+        using var server = setup.CreateReceiverSocket(version, ProtocolType.Udp, serverPort);
 
-        await client.SendToAsync(clientMessageBytes, new IPEndPoint(TrafficSetup.ReceiverAddress(4), serverPort), cancellationToken);
+        await client.SendToAsync(clientMessageBytes, new IPEndPoint(TrafficSetup.ReceiverAddress(version), serverPort), cancellationToken);
 
         var receivedClientMessageBytes = new byte[clientMessage.Length];
-        await server.ReceiveFromAsync(receivedClientMessageBytes, new IPEndPoint(IPAddress.Any, 0), cancellationToken);
+        await server.ReceiveFromAsync(receivedClientMessageBytes, new IPEndPoint(anyAddress, 0), cancellationToken);
         var receivedClientMessage = Encoding.ASCII.GetString(receivedClientMessageBytes);
         Assert.AreEqual(clientMessage, receivedClientMessage);
 
-        await server.SendToAsync(serverMessageBytes, new IPEndPoint(TrafficSetup.SenderAddress(4), clientPort), cancellationToken);
+        await server.SendToAsync(serverMessageBytes, new IPEndPoint(TrafficSetup.SenderAddress(version), clientPort), cancellationToken);
 
         var receivedServerMessageBytes = new byte[serverMessage.Length];
-        await client.ReceiveFromAsync(receivedServerMessageBytes, new IPEndPoint(IPAddress.Any, 0), cancellationToken);
+        await client.ReceiveFromAsync(receivedServerMessageBytes, new IPEndPoint(anyAddress, 0), cancellationToken);
         var receivedServerMessage = Encoding.ASCII.GetString(receivedServerMessageBytes);
         Assert.AreEqual(serverMessage, receivedServerMessage);
     }
@@ -72,16 +75,17 @@ public sealed class ForwarderTests : IForwardingLogger
     {
         foreach (var type in Types)
         foreach (var mode in Modes)
+        foreach (var version in Versions)
         foreach (var batchSize in new[] { 16, 64, 128 })
         {
-            yield return [type, mode, batchSize, 1, 1];
+            yield return [type, mode, batchSize, version, 1, 1];
             if (type == TrafficForwarderType.Parallel)
             {
-                yield return [type, mode, batchSize, 2, 1];
-                yield return [type, mode, batchSize, 2, 2];
-                yield return [type, mode, batchSize, 4, 1];
-                yield return [type, mode, batchSize, 4, 2];
-                yield return [type, mode, batchSize, 4, 4];
+                yield return [type, mode, batchSize, version, 2, 1];
+                yield return [type, mode, batchSize, version, 2, 2];
+                yield return [type, mode, batchSize, version, 4, 1];
+                yield return [type, mode, batchSize, version, 4, 2];
+                yield return [type, mode, batchSize, version, 4, 4];
             }
         }
     }
@@ -89,7 +93,7 @@ public sealed class ForwarderTests : IForwardingLogger
     [TestMethod]
     [Timeout(5000, CooperativeCancellation = true)]
     [DynamicData(nameof(Forward_Batch_Arguments))]
-    public async Task Forward_Batch(TrafficForwarderType type, ForwardingMode mode, int batchSize, int rxQueues, int txQueues)
+    public async Task Forward_Batch(TrafficForwarderType type, ForwardingMode mode, int version, int batchSize, int rxQueues, int txQueues)
     {
         const string clientMessageTemplate = "Hello from XDP client: {0}";
         const int clientPort = 54321;
@@ -101,13 +105,13 @@ public sealed class ForwarderTests : IForwardingLogger
 
         using var setup = new TrafficForwardingSetup(type, mode, rxQueueCount: (byte)rxQueues, txQueueCount: (byte)txQueues, logger: this);
 
-        using var client = setup.CreateSenderSocket(ProtocolType.Udp, clientPort);
-        using var server = setup.CreateReceiverSocket(ProtocolType.Udp, serverPort);
+        using var client = setup.CreateSenderSocket(version, ProtocolType.Udp, clientPort);
+        using var server = setup.CreateReceiverSocket(version, ProtocolType.Udp, serverPort);
 
         var receiveTask = ReceiveBatchAsync();
 
         foreach (var clientMessage in clientMessages)
-            await client.SendToAsync(Encoding.ASCII.GetBytes(clientMessage), new IPEndPoint(TrafficSetup.ReceiverAddress(4), serverPort), cancellationToken);
+            await client.SendToAsync(Encoding.ASCII.GetBytes(clientMessage), new IPEndPoint(TrafficSetup.ReceiverAddress(version), serverPort), cancellationToken);
 
         var receivedClientMessages = await receiveTask;
 
@@ -118,9 +122,10 @@ public sealed class ForwarderTests : IForwardingLogger
         {
             var result = new List<string>(batchSize);
             var receivedClientMessageBytes = new byte[clientMessageTemplate.Length + 8];
+            var remoteEndPoint = new IPEndPoint(version == 4 ? IPAddress.Any : IPAddress.IPv6Any, 0);
             for (var i = 0; i < batchSize; ++i)
             {
-                var res = await server.ReceiveFromAsync(receivedClientMessageBytes, new IPEndPoint(IPAddress.Any, 0), cancellationToken);
+                var res = await server.ReceiveFromAsync(receivedClientMessageBytes, remoteEndPoint, cancellationToken);
                 result.Add(Encoding.ASCII.GetString(receivedClientMessageBytes, 0, res.ReceivedBytes));
             }
             return result;
