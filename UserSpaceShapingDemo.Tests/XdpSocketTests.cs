@@ -127,10 +127,10 @@ public sealed class XdpSocketTests
                 ref var ipv4Header = ref ethernetHeader.Layer2Header<IPv4Header>();
                 ipv4Header.Version = 4;
                 ipv4Header.HeaderLength = (byte)sizeof(IPv4Header);
-                ipv4Header.TypeOfService = 0;
+                ipv4Header.TrafficClass = 0;
                 ipv4Header.TotalLength = (ushort)(sizeof(IPv4Header) + sizeof(UDPHeader) + replyMessageBytes.Length);
-                ipv4Header.Id = default;
-                ipv4Header.FragmentOffset = default;
+                ipv4Header.Identification = 0;
+                ipv4Header.FragmentOffset = 0;
                 ipv4Header.Ttl = 64;
                 ipv4Header.Protocol = IPProtocol.UDP;
                 ipv4Header.SourceAddress = TrafficSetup.ReceiverAddress;
