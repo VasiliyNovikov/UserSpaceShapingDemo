@@ -72,7 +72,7 @@ public sealed class ForwarderTests : IForwardingLogger
     {
         foreach (var type in Types)
         foreach (var mode in Modes)
-        foreach (var batchSize in new[] { 8, 32, 128 })
+        foreach (var batchSize in new[] { 16, 64, 256 })
         {
             yield return [type, mode, batchSize, 1, 1];
             if (type == TrafficForwarderType.Parallel)
