@@ -13,6 +13,7 @@ namespace UserSpaceShapingDemo.Lib.Forwarding;
 public sealed class PipeForwarder : IDisposable
 {
     private const int FillBatchSize = 32;
+    private const int SendBatchSize = 32;
 
     private readonly bool _canReceive;
     private readonly bool _canSend;
@@ -38,9 +39,11 @@ public sealed class PipeForwarder : IDisposable
         _outgoingPackets = pipe.OutgoingPackets;
         if (canReceive)
         {
-            while (FillBatch(_socket.FillRing.Capacity)) ;
-            while (_freeFramesLocal.TryDequeue(out var frame))
-                _freeFrames.Enqueue(frame);
+            var fill = _socket.FillRing.Fill(_socket.FillRing.Capacity);
+            for (var i = 0u; i < fill.Length; i++)
+                fill[i] = _freeFrames.Dequeue();
+            fill.Submit();
+            _logger?.Log(_socket.IfName, _socket.QueueId, $"Initially filled {fill.Length} frames");
         }
         _forwardingWorker = new(Run);
     }
@@ -136,7 +139,7 @@ public sealed class PipeForwarder : IDisposable
     private bool SendBatch()
     {
         if (_incomingPacketsLocal.Count == 0)
-            while (_incomingPackets.TryDequeue(out var packet))
+            for (var i = 0; i < SendBatchSize && _incomingPackets.TryDequeue(out var packet); ++i)
                 _incomingPacketsLocal.Enqueue(packet);
 
         var sendPackets = _socket.TxRing.Send((uint)_incomingPacketsLocal.Count);
@@ -183,10 +186,10 @@ public sealed class PipeForwarder : IDisposable
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    private bool FillBatch(uint batchSize = FillBatchSize)
+    private bool FillBatch()
     {
         if (_freeFramesLocal.Count == 0)
-            for (var i = 0; i < batchSize && _freeFrames.TryDequeue(out var frame); ++i)
+            for (var i = 0; i < FillBatchSize && _freeFrames.TryDequeue(out var frame); ++i)
                 _freeFramesLocal.Enqueue(frame);
 
         var fill = _socket.FillRing.Fill((uint)_freeFramesLocal.Count);
