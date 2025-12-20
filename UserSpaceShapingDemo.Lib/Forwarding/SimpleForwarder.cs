@@ -94,7 +94,7 @@ public sealed class SimpleForwarder : IDisposable
             var packet = receivePackets[i];
             packetsToSend.Enqueue(packet);
             var packetData = sourceSocket.Umem[packet];
-            ForwardingHelpers.UpdateChecksums(packetData);
+            InternetChecksum.Update(packetData);
             _logger?.LogPacket(sourceSocket.IfName, sourceSocket.QueueId, "Received packet", packetData);
         }
         receivePackets.Release();

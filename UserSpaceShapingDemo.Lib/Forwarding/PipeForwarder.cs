@@ -148,7 +148,7 @@ public sealed class PipeForwarder : IDisposable
         {
             var packet = _incomingPacketsLocal.Dequeue();
             var packetData = _socket.Umem[packet];
-            ForwardingHelpers.UpdateChecksums(packetData);
+            InternetChecksum.Update(packetData);
             sendPackets[i] = packet;
             _logger?.LogPacket(_socket.IfName, _socket.QueueId, "Sent packet", packetData);
         }

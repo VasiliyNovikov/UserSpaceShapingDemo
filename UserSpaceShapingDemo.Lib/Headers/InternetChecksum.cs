@@ -39,4 +39,22 @@ public ref struct InternetChecksum
         _sum32 += _sum32 >> 16;
         _checksum = (NetInt<ushort>)(ushort)~_sum32;
     }
+
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public static void Update(Span<byte> packet)
+    {
+        ref var ethernetHeader = ref Unsafe.As<byte, EthernetHeader>(ref packet[0]);
+        if (ethernetHeader.EtherType == EthernetType.IPv4)
+        {
+            ref var ipv4Header = ref ethernetHeader.NextHeader<IPv4Header>();
+            if (ipv4Header.Protocol == IPProtocol.UDP)
+                ipv4Header.NextHeader<UDPHeader>().UpdateChecksum();
+        }
+        else if (ethernetHeader.EtherType == EthernetType.IPv6)
+        {
+            ref var ipv6Header = ref ethernetHeader.NextHeader<IPv6Header>();
+            if (ipv6Header.Protocol == IPProtocol.UDP)
+                ipv6Header.NextHeader<UDPHeader>().UpdateChecksum(ref ipv6Header);
+        }
+    }
 }

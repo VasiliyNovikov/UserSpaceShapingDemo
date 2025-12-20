@@ -141,7 +141,7 @@ public sealed class XdpSocketTests
                 udpHeader.SourcePort = receiverPort;
                 udpHeader.DestinationPort = senderPort;
                 udpHeader.Size = (ushort)(sizeof(UDPHeader) + replyMessageBytes.Length);
-                udpHeader.Checksum = default;
+                udpHeader.UpdateChecksum();
 
                 replyMessageBytes.CopyTo(udpHeader.Payload);
             }
