@@ -111,5 +111,10 @@ public struct IPv4Header : IIPHeader<IPv4Address>
     public ref T NextHeader<T>() where T : unmanaged => ref Unsafe.As<byte, T>(ref Unsafe.Add(ref Unsafe.As<IPv4Header, byte>(ref Unsafe.AsRef(ref this)), HeaderLength));
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public void UpdateChecksum() => InternetChecksum.Update(ref _checksum, MemoryMarshal.CreateReadOnlySpan(ref Unsafe.As<IPv4Header, NetInt<ushort>>(ref this), HeaderLength / 2));
+    public void UpdateChecksum()
+    {
+        var checksum = new InternetChecksum(ref _checksum);
+        checksum.Add(MemoryMarshal.CreateReadOnlySpan(ref Unsafe.As<IPv4Header, byte>(ref this), HeaderLength));
+        checksum.Save();
+    }
 }
