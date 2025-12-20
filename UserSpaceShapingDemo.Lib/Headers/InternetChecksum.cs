@@ -25,6 +25,8 @@ public ref struct InternetChecksum
         var items = MemoryMarshal.Cast<byte, NetInt<ushort>>(data);
         foreach (var item in items)
             _sum32 += (ushort)item;
+        if ((data.Length & 1) != 0)
+            _sum32 += (uint)data[^1] << 8;
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
