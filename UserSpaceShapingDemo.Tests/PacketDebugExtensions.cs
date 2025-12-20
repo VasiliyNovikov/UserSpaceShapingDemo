@@ -71,6 +71,12 @@ public static class PacketDebugExtensions
             case IPProtocol.UDP:
                 WriteUDPHeader(sb, ref header.NextHeader<UDPHeader>(), payloadAsString);
                 break;
+            case IPProtocol.ICMP:
+                WriteICMPHeader(sb, ref header.NextHeader<ICMPHeader>());
+                break;
+            case IPProtocol.ICMPv6:
+                WriteICMPv6Header(sb, ref header.NextHeader<ICMPv6Header>());
+                break;
             case IPProtocol.IPv6HopOpts:
             case IPProtocol.IPv6Route:
             case IPProtocol.IPv6Fragment:
@@ -95,5 +101,19 @@ public static class PacketDebugExtensions
           .Append("    check=").Append((ushort)udpHeader.Checksum).AppendLine();
         if (payloadAsString)
             sb.Append("    payload=").Append(Encoding.UTF8.GetString(udpHeader.Payload)).AppendLine();
+    }
+
+    private static void WriteICMPHeader(StringBuilder sb, ref ICMPHeader icmpHeader)
+    {
+        sb.AppendLine("ICMP:");
+        sb.Append("    type=").Append(icmpHeader.Type).AppendLine()
+          .Append("    code=").Append(icmpHeader.Code).AppendLine();
+    }
+
+    private static void WriteICMPv6Header(StringBuilder sb, ref ICMPv6Header icmpv6Header)
+    {
+        sb.AppendLine("ICMPv6:");
+        sb.Append("    type=").Append(icmpv6Header.Type).AppendLine()
+          .Append("    code=").Append(icmpv6Header.Code).AppendLine();
     }
 }
