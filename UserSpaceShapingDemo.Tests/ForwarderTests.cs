@@ -5,6 +5,7 @@ using System.Globalization;
 using System.Linq;
 using System.Net;
 using System.Net.Sockets;
+using System.Security.Cryptography;
 using System.Text;
 using System.Threading.Tasks;
 
@@ -129,6 +130,67 @@ public sealed class ForwarderTests : IForwardingLogger
                 result.Add(Encoding.ASCII.GetString(receivedClientMessageBytes, 0, res.ReceivedBytes));
             }
             return result;
+        }
+    }
+    
+    public static IEnumerable<object[]> Forward_Stream_Arguments()
+    {
+        yield return [TrafficForwarderType.Simple, ForwardingMode.Generic, 128, 4, 1, 1];
+        /*foreach (var type in Types)
+        foreach (var mode in Modes)
+        foreach (var version in Versions)
+        foreach (var size in new[] { 128, 1024, 1024 * 16 })
+        {
+            yield return [type, mode, size, version, 1, 1];
+            if (type == TrafficForwarderType.Parallel)
+            {
+                yield return [type, mode, size, version, 2, 1];
+                yield return [type, mode, size, version, 2, 2];
+                yield return [type, mode, size, version, 4, 1];
+                yield return [type, mode, size, version, 4, 2];
+                yield return [type, mode, size, version, 4, 4];
+            }
+        }*/
+    }
+
+    [TestMethod]
+    [Timeout(5000, CooperativeCancellation = true)]
+    [DynamicData(nameof(Forward_Stream_Arguments))]
+    public async Task Forward_Stream(TrafficForwarderType type, ForwardingMode mode, int version, int size, int rxQueues, int txQueues)
+    {
+        const int clientPort = 54321;
+        const int serverPort = 12345;
+
+        var clientMessageBytes = new byte[size];
+        RandomNumberGenerator.Fill(clientMessageBytes);
+
+        var cancellationToken = TestContext.CancellationTokenSource.Token;
+
+        using var setup = new TrafficForwardingSetup(type, mode, rxQueueCount: (byte)rxQueues, txQueueCount: (byte)txQueues, logger: this);
+
+        using var client = setup.CreateSenderSocket(version, ProtocolType.Tcp, clientPort);
+        using var server = setup.CreateReceiverSocket(version, ProtocolType.Tcp, serverPort);
+        
+        server.Listen();
+
+        var acceptTask = server.AcceptAsync(cancellationToken);
+        await client.ConnectAsync(new IPEndPoint(TrafficSetup.ReceiverAddress(version), serverPort), cancellationToken);
+        var serverSocket = await acceptTask;
+        using (serverSocket)
+        {
+            var sendTask = client.SendAsync(clientMessageBytes, SocketFlags.None, cancellationToken);
+
+            var receivedClientMessageBytes = new byte[size];
+            var totalReceived = 0;
+            while (totalReceived < size)
+            {
+                var received = await serverSocket.ReceiveAsync(receivedClientMessageBytes.AsMemory(totalReceived), SocketFlags.None, cancellationToken);
+                totalReceived += received;
+            }
+
+            await sendTask;
+
+            CollectionAssert.AreEqual(clientMessageBytes, receivedClientMessageBytes);
         }
     }
 
