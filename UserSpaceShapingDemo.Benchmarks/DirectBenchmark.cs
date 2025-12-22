@@ -25,8 +25,8 @@ public sealed class DirectBenchmark : TrafficBenchmark, IDisposable
     public DirectBenchmark(int version) : base(version)
     {
         _setup = new TrafficSetup();
-        Sender = _setup.CreateSenderSocket(4, ProtocolType.Udp, SenderPort);
-        Receiver = _setup.CreateReceiverSocket(4, ProtocolType.Udp, ReceiverPort);
+        Sender = _setup.CreateSenderSocket(version, ProtocolType.Udp, SenderPort);
+        Receiver = _setup.CreateReceiverSocket(version, ProtocolType.Udp, ReceiverPort);
     }
 
     public void Dispose()

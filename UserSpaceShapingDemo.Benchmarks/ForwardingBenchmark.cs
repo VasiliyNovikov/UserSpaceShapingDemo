@@ -23,12 +23,12 @@ public sealed class ForwardingBenchmark : TrafficBenchmark, IDisposable
         get;
     }
 
-    public ForwardingBenchmark(TrafficForwarderType type, ForwardingMode mode, string? sharedForwarderNs, int version, byte rxQueueCount, byte txQueueCount)
+    public ForwardingBenchmark(int version, TrafficForwarderType type, ForwardingMode mode, string? sharedForwarderNs, byte rxQueueCount, byte txQueueCount)
         : base(version)
     {
         _setup = new TrafficForwardingSetup(type, mode, sharedForwarderNs, rxQueueCount, txQueueCount);
-        Sender = _setup.CreateSenderSocket(4, ProtocolType.Udp, SenderPort);
-        Receiver = _setup.CreateReceiverSocket(4, ProtocolType.Udp, ReceiverPort);
+        Sender = _setup.CreateSenderSocket(version, ProtocolType.Udp, SenderPort);
+        Receiver = _setup.CreateReceiverSocket(version, ProtocolType.Udp, ReceiverPort);
     }
 
     public void Dispose()
