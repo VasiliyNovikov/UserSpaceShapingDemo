@@ -119,6 +119,7 @@ public sealed class ForwarderTests : IForwardingLogger
         CollectionAssert.AreEquivalent(clientMessages, receivedClientMessages); // Order is not guaranteed
 
         return;
+
         async Task<List<string>> ReceiveBatchAsync()
         {
             var result = new List<string>(batchSize);
@@ -132,7 +133,7 @@ public sealed class ForwarderTests : IForwardingLogger
             return result;
         }
     }
-    
+
     public static IEnumerable<object[]> Forward_Stream_Arguments()
     {
         foreach (var type in Types)
@@ -169,7 +170,7 @@ public sealed class ForwarderTests : IForwardingLogger
 
         using var client = setup.CreateSenderSocket(version, ProtocolType.Tcp, clientPort);
         using var server = setup.CreateReceiverSocket(version, ProtocolType.Tcp, serverPort);
-        
+
         server.Listen();
 
         var acceptTask = server.AcceptAsync(cancellationToken);
