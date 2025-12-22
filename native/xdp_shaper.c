@@ -51,6 +51,7 @@
 #include <libnl3/netlink/route/route.h>
 
 #include <linux/hdlc/ioctl.h>
+#include <linux/ethtool.h>
 
 #include <linux/if.h>
 #include <sys/eventfd.h>

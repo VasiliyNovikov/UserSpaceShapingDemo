@@ -7,26 +7,29 @@ namespace UserSpaceShapingDemo.Lib.Std;
 
 public static unsafe class EthernetTool
 {
-    private static uint GetFeature(string ifName, uint cmd)
+    private static void Command<TCommand>(string ifName, ref TCommand cmd) where TCommand : unmanaged
     {
         using var socket = new NativeSocket(NativeAddressFamily.Inet, SocketType.Dgram, ProtocolType.IP);
-        var ifr = new LibC.ifreq();
-        var len = Encoding.ASCII.GetBytes(ifName, ifr.ifr_name);
-        ifr.ifr_name[len] = 0;
-        var eval = new LibC.ethtool_value { cmd = cmd };
-        ifr.ifr_data = &eval;
-        socket.IOCctl(LibC.SIOCETHTOOL, ref ifr);
-        return eval.data;
+        var ifReq = new LibC.ifreq();
+        var len = Encoding.ASCII.GetBytes(ifName, ifReq.ifr_name);
+        ifReq.ifr_name[len] = 0;
+        fixed (void* pCmd = &cmd)
+        {
+            ifReq.ifr_data = pCmd;
+            socket.IOCctl(LibC.SIOCETHTOOL, ref ifReq);
+        }
     }
 
-    private static void SetFeature(string ifName, uint cmd, uint value)
+    public static bool Get(string ifName, EthernetFeature feature)
     {
-        using var socket = new NativeSocket(NativeAddressFamily.Inet, SocketType.Dgram, ProtocolType.IP);
-        var ifr = new LibC.ifreq();
-        var len = Encoding.ASCII.GetBytes(ifName, ifr.ifr_name);
-        ifr.ifr_name[len] = 0;
-        var eval = new LibC.ethtool_value { cmd = cmd, data = value };
-        ifr.ifr_data = &eval;
-        socket.IOCctl(LibC.SIOCETHTOOL, ref ifr);
+        var eval = new LibC.ethtool_value { cmd = (uint)feature };
+        Command(ifName, ref eval);
+        return eval.data != 0;
+    }
+
+    public static void Set(string ifName, EthernetFeature feature, bool value)
+    {
+        var eval = new LibC.ethtool_value { cmd = (uint)feature + 1, data = value ? 1u : 0u };
+        Command(ifName, ref eval);
     }
 }
