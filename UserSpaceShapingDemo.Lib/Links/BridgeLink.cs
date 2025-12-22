@@ -1,4 +1,5 @@
 using UserSpaceShapingDemo.Lib.Nl3.Route;
+using UserSpaceShapingDemo.Lib.Std;
 
 namespace UserSpaceShapingDemo.Lib.Links;
 
@@ -21,8 +22,8 @@ public sealed class BridgeLink : Link
         }
     }
 
-    internal BridgeLink(RtnlSocket socket, RtnlLink nlLink)
-        : base(socket, nlLink)
+    internal BridgeLink(RtnlSocket socket, NetNs ns, RtnlLink nlLink)
+        : base(socket, ns, nlLink)
     {
         _portState = nlLink.PortState;
     }

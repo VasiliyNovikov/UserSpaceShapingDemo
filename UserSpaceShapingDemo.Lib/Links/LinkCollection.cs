@@ -10,13 +10,14 @@ namespace UserSpaceShapingDemo.Lib.Links;
 public sealed class LinkCollection : IEnumerable<Link>, IDisposable
 {
     private readonly RtnlSocket _socket;
+    private readonly NetNs _ns;
 
     public Link this[int index]
     {
         get
         {
             using var nlLink = _socket.GetLink(index);
-            return Link.Create(_socket, nlLink);
+            return Link.Create(_socket, _ns, nlLink);
         }
     }
 
@@ -25,23 +26,28 @@ public sealed class LinkCollection : IEnumerable<Link>, IDisposable
         get
         {
             using var nlLink = _socket.GetLink(name);
-            return Link.Create(_socket, nlLink);
+            return Link.Create(_socket, _ns, nlLink);
         }
     }
 
     public LinkCollection(NetNs? ns = null)
     {
-        using (NetNs.Enter(ns ?? NetNs.OpenCurrent()))
+        _ns = ns ?? NetNs.OpenCurrent();
+        using (NetNs.Enter(_ns))
             _socket = new RtnlSocket();
     }
 
-    public void Dispose() => _socket.Dispose();
+    public void Dispose()
+    {
+        _socket.Dispose();
+        _ns.Dispose();
+    }
 
     public IEnumerator<Link> GetEnumerator()
     {
         using var nlLinks = _socket.GetLinks();
         foreach (var nlLink in nlLinks)
-            yield return Link.Create(_socket, nlLink);
+            yield return Link.Create(_socket, _ns, nlLink);
     }
 
     IEnumerator IEnumerable.GetEnumerator() => GetEnumerator();

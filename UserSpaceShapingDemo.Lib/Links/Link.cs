@@ -13,6 +13,7 @@ public class Link
 {
     [SuppressMessage("Design", "CA1051:Do not declare visible instance fields")]
     protected readonly RtnlSocket Socket;
+    private readonly NetNs _ns;
     private bool _up;
     private MACAddress? _macAddress;
     private int _masterIndex;
@@ -50,7 +51,7 @@ public class Link
             if (field is null)
             {
                 using var nlLink = Socket.GetLink(_masterIndex);
-                field = new BridgeLink(Socket, nlLink);
+                field = new BridgeLink(Socket, _ns, nlLink);
             }
             return field;
         }
@@ -95,9 +96,12 @@ public class Link
 
     public LinkAddressCollection<IPv6Address> Addresses6 => field ??= new(Socket, Index);
 
-    internal Link(RtnlSocket socket, RtnlLink nlLink)
+    public LinkHardwareOffload Offload => field ??= new(_ns, Name);
+
+    internal Link(RtnlSocket socket, NetNs ns, RtnlLink nlLink)
     {
         Socket = socket;
+        _ns = ns;
         Index = nlLink.IfIndex;
         Name = nlLink.Name;
         RXQueueCount = nlLink.RXQueueCount;
@@ -108,13 +112,13 @@ public class Link
         _masterIndex = nlLink.Master;
     }
 
-    internal static Link Create(RtnlSocket socket, RtnlLink nlLink)
+    internal static Link Create(RtnlSocket socket, NetNs ns, RtnlLink nlLink)
     {
         return nlLink.IsVEth
-            ? new VEthLink(socket, nlLink)
+            ? new VEthLink(socket, ns, nlLink)
             : nlLink.IsBridge
-                ? new BridgeLink(socket, nlLink)
-                : new Link(socket, nlLink);
+                ? new BridgeLink(socket, ns, nlLink)
+                : new Link(socket, ns, nlLink);
     }
 
     public void MoveTo(NetNs ns)
