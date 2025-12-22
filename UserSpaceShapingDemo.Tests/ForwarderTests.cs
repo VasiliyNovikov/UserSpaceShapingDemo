@@ -135,22 +135,21 @@ public sealed class ForwarderTests : IForwardingLogger
     
     public static IEnumerable<object[]> Forward_Stream_Arguments()
     {
-        yield return [TrafficForwarderType.Simple, ForwardingMode.Generic, 128, 4, 1, 1];
-        /*foreach (var type in Types)
+        foreach (var type in Types)
         foreach (var mode in Modes)
         foreach (var version in Versions)
-        foreach (var size in new[] { 128, 1024, 1024 * 16 })
+        foreach (var size in new[] { 1024, 1024 * 16, 1024 * 1024 })
         {
-            yield return [type, mode, size, version, 1, 1];
+            yield return [type, mode, version, size, 1, 1];
             if (type == TrafficForwarderType.Parallel)
             {
-                yield return [type, mode, size, version, 2, 1];
-                yield return [type, mode, size, version, 2, 2];
-                yield return [type, mode, size, version, 4, 1];
-                yield return [type, mode, size, version, 4, 2];
-                yield return [type, mode, size, version, 4, 4];
+                yield return [type, mode, version, size, 2, 1];
+                yield return [type, mode, version, size, 2, 2];
+                yield return [type, mode, version, size, 4, 1];
+                yield return [type, mode, version, size, 4, 2];
+                yield return [type, mode, version, size, 4, 4];
             }
-        }*/
+        }
     }
 
     [TestMethod]
