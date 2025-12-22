@@ -33,18 +33,22 @@ public static unsafe class EthernetTool
         Command(ifName, ref eval);
     }
 
+    private static void GetChannels(string ifName, out LibC.ethtool_channels channels)
+    {
+        channels = new LibC.ethtool_channels { cmd = LibC.ETHTOOL_GCHANNELS };
+        Command(ifName, ref channels);
+    }
+
     public static void GetChannels(string ifName, out EthernetChannels max, out EthernetChannels current)
     {
-        var channels = new LibC.ethtool_channels { cmd = LibC.ETHTOOL_GCHANNELS };
-        Command(ifName, ref channels);
+        GetChannels(ifName, out var channels);
         max = new(channels.max_tx, channels.max_rx, channels.max_other, channels.max_combined);
         current = new(channels.tx_count, channels.rx_count, channels.other_count, channels.combined_count);
     }
 
     public static void SetChannels(string ifName, uint? tx = null, uint? rx = null, uint? other = null, uint? combined = null)
     {
-        var channels = new LibC.ethtool_channels { cmd = LibC.ETHTOOL_GCHANNELS };
-        Command(ifName, ref channels);
+        GetChannels(ifName, out var channels);
         if (tx is not null)
             channels.tx_count = tx.Value;
         if (rx is not null)
