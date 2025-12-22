@@ -81,7 +81,7 @@ public sealed class PipeForwarder : IDisposable
                     waitEvents.Add(socketEvents);
                 }
 
-                if (_canSend && _incomingPackets.IsEmpty)
+                if (_canSend)
                 {
                     waitObjects.Add(_incomingPackets);
                     waitEvents.Add(Poll.Event.Readable);
