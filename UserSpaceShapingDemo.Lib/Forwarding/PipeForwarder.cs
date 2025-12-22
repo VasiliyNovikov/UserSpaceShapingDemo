@@ -4,7 +4,6 @@ using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 using System.Threading;
 
-using UserSpaceShapingDemo.Lib.Headers;
 using UserSpaceShapingDemo.Lib.Std;
 using UserSpaceShapingDemo.Lib.Xpd;
 
@@ -65,8 +64,10 @@ public sealed class PipeForwarder : IDisposable
 
             while (true)
             {
-                while (ForwardBatch())
-                    cancellationToken.ThrowIfCancellationRequested();
+
+                using (HangDebugHelper.Measure("PipeForwarder.Run -> ForwardBatch loop"))
+                    while (ForwardBatch())
+                        cancellationToken.ThrowIfCancellationRequested();
 
                 waitObjects.Clear();
                 waitEvents.Clear();
@@ -92,10 +93,12 @@ public sealed class PipeForwarder : IDisposable
                     waitEvents.Add(Poll.Event.Readable);
                 }
 
-                _logger?.Log(_socket.IfName, _socket.QueueId, "Entering the poll");
-                nativeCancellationToken.Wait(CollectionsMarshal.AsSpan(waitObjects),
-                    CollectionsMarshal.AsSpan(waitEvents));
-                _logger?.Log(_socket.IfName, _socket.QueueId, "Woke up from poll");
+                using (HangDebugHelper.Measure("PipeForwarder.Run -> Wait", 1_000_000_000))
+                {
+                    _logger?.Log(_socket.IfName, _socket.QueueId, "Entering the poll");
+                    nativeCancellationToken.Wait(CollectionsMarshal.AsSpan(waitObjects), CollectionsMarshal.AsSpan(waitEvents));
+                    _logger?.Log(_socket.IfName, _socket.QueueId, "Woke up from poll");
+                }
             }
         }
         catch (OperationCanceledException)
@@ -112,6 +115,7 @@ public sealed class PipeForwarder : IDisposable
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     private bool ForwardBatch()
     {
+        using var _ = HangDebugHelper.Measure("PipeForwarder.ForwardBatch");
         var result = false;
         if (_canReceive)
             result = ReceiveBatch() | FillBatch();

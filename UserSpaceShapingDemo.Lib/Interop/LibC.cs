@@ -62,6 +62,8 @@ internal static unsafe partial class LibC
     public const uint ETHTOOL_GCHANNELS = 0x0000003c; // Get number of channels (ethtool_channels)
     public const uint ETHTOOL_SCHANNELS = 0x0000003d; // Set number of channels (ethtool_channels)
 
+    public const int CLOCK_MONOTONIC = 1;
+
     // int * __errno_location(void);
     [LibraryImport(Lib, EntryPoint = "__errno_location")]
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -167,6 +169,12 @@ internal static unsafe partial class LibC
     // int fstat(int fd, struct stat *statbuf);
     [LibraryImport(Lib, EntryPoint = "fstat")]
     public static partial int fstat(FileDescriptor fd, out stat statbuf);
+
+    // int clock_gettime(clockid_t clockid, struct timespec *tp);
+    [LibraryImport(Lib, EntryPoint = "clock_gettime")]
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    [SuppressGCTransition]
+    public static partial int clock_gettime(int clockid, out timespec tp);
 
     [StructLayout(LayoutKind.Sequential)]
     public readonly struct pollfd

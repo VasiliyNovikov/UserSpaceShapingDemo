@@ -1,8 +1,10 @@
 using System;
 using System.Collections.Concurrent;
+using System.Diagnostics;
 using System.Diagnostics.CodeAnalysis;
 using System.Runtime.CompilerServices;
 
+using UserSpaceShapingDemo.Lib.Interop;
 using UserSpaceShapingDemo.Lib.Std;
 
 namespace UserSpaceShapingDemo.Lib.Forwarding;
@@ -29,6 +31,7 @@ public sealed class NativeQueue<T> : IFileObject, IDisposable
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public void Enqueue(T item)
     {
+        using var _ = HangDebugHelper.Measure("NativeQueue.Enqueue");
         _queue.Enqueue(item);
         _counter.Increment();
     }
@@ -36,6 +39,7 @@ public sealed class NativeQueue<T> : IFileObject, IDisposable
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public bool TryDequeue([MaybeNullWhen(false)] out T item)
     {
+        using var _ = HangDebugHelper.Measure("NativeQueue.TryDequeue");
         if (!_queue.TryDequeue(out item))
             return false;
         _counter.Decrement();
@@ -45,6 +49,7 @@ public sealed class NativeQueue<T> : IFileObject, IDisposable
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public T Dequeue()
     {
+        using var _ = HangDebugHelper.Measure("NativeQueue.Dequeue");
         _counter.Decrement();
         return _queue.TryDequeue(out var item) ? item : throw new InvalidOperationException("Queue is empty");
     }
