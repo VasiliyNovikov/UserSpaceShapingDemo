@@ -25,6 +25,12 @@ public sealed unsafe class NetNs : IDisposable, IEquatable<NetNs>, IEqualityOper
 
     public void Dispose() => _nsFile.Dispose();
 
+    public NetNs Clone()
+    {
+        using(Enter(this))
+            return OpenCurrent();
+    }
+
     public override int GetHashCode() => _nsFile.INode.GetHashCode();
 
     public bool Equals(NetNs? other) => other is not null && _nsFile.DeviceId == other._nsFile.DeviceId && _nsFile.INode == other._nsFile.INode;

@@ -32,7 +32,7 @@ public sealed class LinkCollection : IEnumerable<Link>, IDisposable
 
     public LinkCollection(NetNs? ns = null)
     {
-        _ns = ns ?? NetNs.OpenCurrent();
+        _ns = ns is null ? NetNs.OpenCurrent() : ns.Clone();
         using (NetNs.Enter(_ns))
             _socket = new RtnlSocket();
     }
