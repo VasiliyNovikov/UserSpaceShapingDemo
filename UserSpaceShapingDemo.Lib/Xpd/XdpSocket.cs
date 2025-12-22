@@ -1,4 +1,3 @@
-using System;
 using System.Runtime.CompilerServices;
 
 using UserSpaceShapingDemo.Lib.Interop;
@@ -71,7 +70,6 @@ public sealed unsafe class XdpSocket : NativeObject, IFileObject
 
     public NativeErrorNumber WakeUp()
     {
-        using var _ = HangDebugHelper.Measure("XdpSocket.WakeUp");
         if (!LibC.sendto(Descriptor, null, 0, LibC.MSG_DONTWAIT, null, 0).IsError())
             return NativeErrorNumber.OK;
 

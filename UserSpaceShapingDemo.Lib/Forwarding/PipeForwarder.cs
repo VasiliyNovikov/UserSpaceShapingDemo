@@ -65,9 +65,8 @@ public sealed class PipeForwarder : IDisposable
             while (true)
             {
 
-                using (HangDebugHelper.Measure("PipeForwarder.Run -> ForwardBatch loop"))
-                    while (ForwardBatch())
-                        cancellationToken.ThrowIfCancellationRequested();
+                while (ForwardBatch())
+                    cancellationToken.ThrowIfCancellationRequested();
 
                 waitObjects.Clear();
                 waitEvents.Clear();
@@ -93,12 +92,9 @@ public sealed class PipeForwarder : IDisposable
                     waitEvents.Add(Poll.Event.Readable);
                 }
 
-                using (HangDebugHelper.Measure("PipeForwarder.Run -> Wait", 1_000_000_000))
-                {
-                    _logger?.Log(_socket.IfName, _socket.QueueId, "Entering the poll");
-                    nativeCancellationToken.Wait(CollectionsMarshal.AsSpan(waitObjects), CollectionsMarshal.AsSpan(waitEvents));
-                    _logger?.Log(_socket.IfName, _socket.QueueId, "Woke up from poll");
-                }
+                _logger?.Log(_socket.IfName, _socket.QueueId, "Entering the poll");
+                nativeCancellationToken.Wait(CollectionsMarshal.AsSpan(waitObjects), CollectionsMarshal.AsSpan(waitEvents));
+                _logger?.Log(_socket.IfName, _socket.QueueId, "Woke up from poll");
             }
         }
         catch (OperationCanceledException)
@@ -115,7 +111,6 @@ public sealed class PipeForwarder : IDisposable
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     private bool ForwardBatch()
     {
-        using var _ = HangDebugHelper.Measure("PipeForwarder.ForwardBatch");
         var result = false;
         if (_canReceive)
             result = ReceiveBatch() | FillBatch();
