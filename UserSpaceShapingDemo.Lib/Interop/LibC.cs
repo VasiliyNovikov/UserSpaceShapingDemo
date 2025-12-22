@@ -1,4 +1,5 @@
 using System.IO;
+using System.Net.Sockets;
 using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 
@@ -41,6 +42,13 @@ internal static unsafe partial class LibC
 
     public const int RLIMIT_MEMLOCK = 8;
     public const long RLIM_INFINITY = -1;
+    
+    public const int IFNAMSIZ = 16;
+    
+    public const int SIOCETHTOOL = 0x8946;
+
+    public const uint ETHTOOL_GTXCSUM = 0x00000017;
+    public const uint ETHTOOL_STXCSUM = 0x00000018;
 
     // int * __errno_location(void);
     [LibraryImport(Lib, EntryPoint = "__errno_location")]
@@ -75,6 +83,18 @@ internal static unsafe partial class LibC
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     [SuppressGCTransition]
     public static partial nint write(FileDescriptor fd, void* buf, nuint count);
+
+    // int ioctl(int fd, unsigned long operation, ...);
+    [LibraryImport(Lib, EntryPoint = "ioctl")]
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    [SuppressGCTransition]
+    public static partial int ioctl(FileDescriptor fd, ulong operation, void* argp);
+
+    // int socket(int domain, int type, int protocol);
+    [LibraryImport(Lib, EntryPoint = "socket")]
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    [SuppressGCTransition]
+    public static partial FileDescriptor socket(NativeAddressFamily domain, SocketType type, ProtocolType protocol);
 
     // int unshare (int __flags)
     [LibraryImport(Lib, EntryPoint = "unshare")]
@@ -183,5 +203,19 @@ internal static unsafe partial class LibC
         public readonly long __glibc_reserved0;
         public readonly long __glibc_reserved1;
         public readonly long __glibc_reserved2;
+    }
+
+    [StructLayout(LayoutKind.Sequential)]
+    public struct ifreq
+    {
+        public InlineArray16<byte> ifr_name;
+        public void* ifr_data;
+    }
+
+    [StructLayout(LayoutKind.Sequential)]
+    public struct ethtool_value
+    {
+        public uint cmd;
+        public uint data;
     }
 }
