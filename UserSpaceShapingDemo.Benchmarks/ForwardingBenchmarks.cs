@@ -23,6 +23,8 @@ public class ForwardingBenchmarks
     private static readonly ForwardingBenchmark ForwardingSimpleGeneric6;
     private static readonly ForwardingBenchmark ForwardingParallelGeneric4Q1;
     private static readonly ForwardingBenchmark ForwardingParallelGeneric6Q1;
+    private static readonly ForwardingBenchmark ForwardingParallelGeneric4Q2;
+    private static readonly ForwardingBenchmark ForwardingParallelGeneric6Q2;
 
     static ForwardingBenchmarks()
     {
@@ -42,6 +44,10 @@ public class ForwardingBenchmarks
         ForwardingParallelGeneric4Q1 = new(4, TrafficForwarderType.Parallel, ForwardingMode.Generic, ForwarderNs, 1, 1);
         Thread.Sleep(100);
         ForwardingParallelGeneric6Q1 = new(6, TrafficForwarderType.Parallel, ForwardingMode.Generic, ForwarderNs, 1, 1);
+        Thread.Sleep(100);
+        ForwardingParallelGeneric4Q2 = new(4, TrafficForwarderType.Parallel, ForwardingMode.Generic, ForwarderNs, 2, 2);
+        Thread.Sleep(100);
+        ForwardingParallelGeneric6Q2 = new(6, TrafficForwarderType.Parallel, ForwardingMode.Generic, ForwarderNs, 2, 2);
     }
 
     [Benchmark(Baseline = true)]
@@ -62,11 +68,19 @@ public class ForwardingBenchmarks
 
     [Benchmark]
     [BenchmarkCategory("Send", "IPv4")]
-    public void Send_Forwarded_Parallel_Generic4Q4() => ForwardingParallelGeneric4Q1.SendOne();
+    public void Send_Forwarded_Parallel_Generic4Q1() => ForwardingParallelGeneric4Q1.SendOne();
 
     [Benchmark]
     [BenchmarkCategory("Send", "IPv6")]
-    public void Send_Forwarded_Parallel_Generic6Q4() => ForwardingParallelGeneric6Q1.SendOne();
+    public void Send_Forwarded_Parallel_Generic6Q1() => ForwardingParallelGeneric6Q1.SendOne();
+
+    [Benchmark]
+    [BenchmarkCategory("Send", "IPv4")]
+    public void Send_Forwarded_Parallel_Generic4Q2() => ForwardingParallelGeneric4Q2.SendOne();
+
+    [Benchmark]
+    [BenchmarkCategory("Send", "IPv6")]
+    public void Send_Forwarded_Parallel_Generic6Q2() => ForwardingParallelGeneric6Q2.SendOne();
 
 
     [Benchmark(Baseline = true)]
@@ -93,6 +107,14 @@ public class ForwardingBenchmarks
     [BenchmarkCategory("SendBatch", "IPv6")]
     public void SendBatch_Forwarded_Parallel_Generic6Q1() => ForwardingParallelGeneric6Q1.SendBatch();
 
+    [Benchmark]
+    [BenchmarkCategory("SendBatch", "IPv4")]
+    public void SendBatch_Forwarded_Parallel_Generic4Q2() => ForwardingParallelGeneric4Q2.SendBatch();
+
+    [Benchmark]
+    [BenchmarkCategory("SendBatch", "IPv6")]
+    public void SendBatch_Forwarded_Parallel_Generic6Q2() => ForwardingParallelGeneric6Q2.SendBatch();
+
 
     [Benchmark(Baseline = true)]
     [BenchmarkCategory("SendFlow", "IPv4")]
@@ -117,4 +139,12 @@ public class ForwardingBenchmarks
     [Benchmark]
     [BenchmarkCategory("SendFlow", "IPv6")]
     public void SendFlow_Forwarded_Parallel_Generic6Q1() => ForwardingParallelGeneric6Q1.SendFlow();
+
+    [Benchmark]
+    [BenchmarkCategory("SendFlow", "IPv4")]
+    public void SendFlow_Forwarded_Parallel_Generic4Q2() => ForwardingParallelGeneric4Q2.SendFlow();
+
+    [Benchmark]
+    [BenchmarkCategory("SendFlow", "IPv6")]
+    public void SendFlow_Forwarded_Parallel_Generic6Q2() => ForwardingParallelGeneric6Q2.SendFlow();
 }
