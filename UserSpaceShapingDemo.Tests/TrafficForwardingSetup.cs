@@ -14,8 +14,8 @@ public sealed class TrafficForwardingSetup : IDisposable
     public TrafficForwardingSetup(TrafficForwarderType forwarderType = TrafficForwarderType.Simple, ForwardingMode mode = ForwardingMode.Generic,
                                   string? sharedForwarderNs = null, byte rxQueueCount = 1, byte txQueueCount = 1, IForwardingLogger? logger = null)
     {
-        _setup1 = new TrafficSetup(sharedReceiverNs: sharedForwarderNs, rxQueueCount: rxQueueCount, txQueueCount: txQueueCount);
-        _setup2 = new TrafficSetup(sharedSenderNs: _setup1.ReceiverNs, rxQueueCount: rxQueueCount, txQueueCount: txQueueCount);
+        _setup1 = new TrafficSetup(sharedReceiverNs: sharedForwarderNs, rxQueueCount: rxQueueCount, txQueueCount: txQueueCount, checksumOffload: false);
+        _setup2 = new TrafficSetup(sharedSenderNs: _setup1.ReceiverNs, rxQueueCount: rxQueueCount, txQueueCount: txQueueCount, checksumOffload: false);
         using (_setup1.EnterReceiver())
         {
             _forwarder = forwarderType == TrafficForwarderType.Simple

@@ -40,7 +40,7 @@ public sealed class TrafficSetup : IDisposable
     public string ReceiverNs { get; }
     public string ReceiverName { get; }
 
-    public TrafficSetup(string? sharedSenderNs = null, string? sharedReceiverNs = null, byte rxQueueCount = 1, byte txQueueCount = 1)
+    public TrafficSetup(string? sharedSenderNs = null, string? sharedReceiverNs = null, byte rxQueueCount = 1, byte txQueueCount = 1, bool? checksumOffload = null)
     {
         if (!InstanceIds.TryDequeue(out _id))
             throw new InvalidOperationException("Too many instances of TestTrafficSetup");
@@ -85,6 +85,13 @@ public sealed class TrafficSetup : IDisposable
             if (collection.SingleOrDefault(l => l.Name == SenderName) is { } existingLink)
                 collection.Delete(existingLink);
             var (link, peer) = collection.CreateVEth(SenderName, ReceiverName, rxQueueCount, txQueueCount);
+            if (checksumOffload is not null)
+            {
+                link.Offload.RXChecksum = checksumOffload.Value;
+                link.Offload.TXChecksum = checksumOffload.Value;
+                peer.Offload.RXChecksum = checksumOffload.Value;
+                peer.Offload.TXChecksum = checksumOffload.Value;
+            }
             link.MoveTo(senderNs);
             peer.MoveTo(receiverNs);
         }
