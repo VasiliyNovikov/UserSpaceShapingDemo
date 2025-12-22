@@ -12,7 +12,7 @@ public abstract class TrafficBenchmark(int version)
     protected const int SenderPort = 5000;
     protected const int ReceiverPort = 6000;
     private const int BatchSize = 32;
-    private const int FlowSize = 1024;
+    private const int FlowSize = 2048;
     private const int SocketBufferSize = 32;
 
     private static readonly byte[] Packet = new byte[1400];
