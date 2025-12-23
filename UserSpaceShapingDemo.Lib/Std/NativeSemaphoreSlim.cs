@@ -29,7 +29,7 @@ public sealed class NativeSemaphoreSlim(uint initialValue = 0)
     private bool TryDecrement()
     {
         ulong count;
-        while ((count = Interlocked.Read(ref _count)) > 0)
+        while ((count = Volatile.Read(ref _count)) > 0)
         {
             if (Interlocked.CompareExchange(ref _count, count - 1, count) == count)
             {
@@ -47,7 +47,7 @@ public sealed class NativeSemaphoreSlim(uint initialValue = 0)
         if (value == 0)
             return 0;
         ulong count;
-        while ((count = Interlocked.Read(ref _count)) > 0)
+        while ((count = Volatile.Read(ref _count)) > 0)
         {
             var toRemove = (uint)Math.Min(count, value);
             if (Interlocked.CompareExchange(ref _count, count - toRemove, count) == count)
