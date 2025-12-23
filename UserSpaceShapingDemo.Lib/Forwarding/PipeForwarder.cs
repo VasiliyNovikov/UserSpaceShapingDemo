@@ -13,15 +13,15 @@ public sealed class PipeForwarder : IDisposable
 {
     private const int FillBatchSize = 32;
     private const int SendBatchSize = 32;
+    private const int ReceiveBatchSize = 32;
+    private const int CompleteBatchSize = 32;
 
     private readonly bool _canReceive;
     private readonly bool _canSend;
     private readonly IForwardingLogger? _logger;
     private readonly XdpSocket _socket;
-    private readonly NativeQueue<ulong> _freeFrames;
-    private readonly Queue<ulong> _freeFramesLocal = new();
-    private readonly NativeQueue<XdpDescriptor> _incomingPackets;
-    private readonly Queue<XdpDescriptor> _incomingPacketsLocal = new();
+    private readonly NativeQueueBatchReader<ulong> _freeFrames;
+    private readonly NativeQueueBatchReader<XdpDescriptor> _incomingPackets;
     private readonly NativeQueue<XdpDescriptor> _outgoingPackets;
     private readonly Worker _forwardingWorker;
 
@@ -33,14 +33,14 @@ public sealed class PipeForwarder : IDisposable
         var socketMode = channel.Mode is ForwardingMode.Generic ? XdpSocketMode.Default : XdpSocketMode.Driver;
         var bindMode = channel.Mode is ForwardingMode.DriverZeroCopy ? XdpSocketBindMode.ZeroCopy : XdpSocketBindMode.Copy;
         _socket = new XdpSocket(channel.Memory, pipe.IfName, queueId, mode: socketMode, bindMode: bindMode | XdpSocketBindMode.UseNeedWakeup, shared: shared);
-        _freeFrames = channel.FreeFrames;
-        _incomingPackets = pipe.IncomingPackets;
+        _freeFrames = new(channel.FreeFrames, FillBatchSize);
+        _incomingPackets = new(pipe.IncomingPackets, SendBatchSize);
         _outgoingPackets = pipe.OutgoingPackets;
         if (canReceive)
         {
             var fill = _socket.FillRing.Fill(_socket.FillRing.Capacity);
             for (var i = 0u; i < fill.Length; i++)
-                fill[i] = _freeFrames.Dequeue();
+                fill[i] = _freeFrames.Queue.Dequeue();
             fill.Submit();
             _logger?.Log(_socket.IfName, _socket.QueueId, $"Initially filled {fill.Length} frames");
         }
@@ -72,7 +72,7 @@ public sealed class PipeForwarder : IDisposable
                 waitEvents.Clear();
 
                 var socketEvents = _canReceive ? Poll.Event.Readable : Poll.Event.None;
-                if (_canSend && !_incomingPackets.IsEmpty)
+                if (_canSend && !_incomingPackets.Queue.IsEmpty)
                     socketEvents |= Poll.Event.Writable;
                 if (socketEvents != Poll.Event.None)
                 {
@@ -82,13 +82,13 @@ public sealed class PipeForwarder : IDisposable
 
                 if (_canSend)
                 {
-                    waitObjects.Add(_incomingPackets);
+                    waitObjects.Add(_incomingPackets.Queue);
                     waitEvents.Add(Poll.Event.Readable);
                 }
 
-                if (_canReceive && _freeFrames.IsEmpty)
+                if (_canReceive && _freeFrames.Queue.IsEmpty)
                 {
-                    waitObjects.Add(_freeFrames);
+                    waitObjects.Add(_freeFrames.Queue);
                     waitEvents.Add(Poll.Event.Readable);
                 }
 
@@ -120,32 +120,34 @@ public sealed class PipeForwarder : IDisposable
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    [SkipLocalsInit]
     private bool ReceiveBatch()
     {
-        var receivePackets = _socket.RxRing.Receive();
+        var receivePackets = _socket.RxRing.Receive(ReceiveBatchSize);
         _logger?.Log(_socket.IfName, _socket.QueueId, $"Received {receivePackets.Length} packets");
+        Span<XdpDescriptor> packets = stackalloc XdpDescriptor[(int)receivePackets.Length];
         for (var i = 0u; i < receivePackets.Length; ++i)
         {
-            var packet = receivePackets[i];
+            var packet = packets[(int)i] = receivePackets[i];
             _logger?.LogPacket(_socket.IfName, _socket.QueueId, "Received packet", _socket.Umem[packet]);
-            _outgoingPackets.Enqueue(packet);
         }
         receivePackets.Release();
+        _outgoingPackets.Enqueue(packets);
         return receivePackets.Length > 0;
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    [SkipLocalsInit]
     private bool SendBatch()
     {
-        if (_incomingPacketsLocal.Count == 0)
-            for (var i = 0; i < SendBatchSize && _incomingPackets.TryDequeue(out var packet); ++i)
-                _incomingPacketsLocal.Enqueue(packet);
+        if (!_incomingPackets.FetchLocal())
+            return false;
 
-        var sendPackets = _socket.TxRing.Send((uint)_incomingPacketsLocal.Count);
+        var sendPackets = _socket.TxRing.Send((uint)_incomingPackets.LocalCount);
         _logger?.Log(_socket.IfName, _socket.QueueId, $"Will send {sendPackets.Length} packets");
         for (var i = 0u; i < sendPackets.Length; ++i)
         {
-            var packet = _incomingPacketsLocal.Dequeue();
+            var packet = _incomingPackets.DequeueLocal();
             var packetData = _socket.Umem[packet];
             sendPackets[i] = packet;
             _logger?.LogPacket(_socket.IfName, _socket.QueueId, "Sent packet", packetData);
@@ -175,24 +177,25 @@ public sealed class PipeForwarder : IDisposable
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     private bool CompleteBatch()
     {
-        var completed = _socket.CompletionRing.Complete();
+        var completed = _socket.CompletionRing.Complete(CompleteBatchSize);
         _logger?.Log(_socket.IfName, _socket.QueueId, $"Completed {completed.Length} frames");
+        Span<ulong> frames = stackalloc ulong[(int)completed.Length];
         for (var i = 0u; i < completed.Length; ++i)
-            _freeFrames.Enqueue(completed[i]);
+            frames[(int)i] = completed[i];
         completed.Release();
+        _freeFrames.Queue.Enqueue(frames);
         return completed.Length > 0;
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     private bool FillBatch()
     {
-        if (_freeFramesLocal.Count == 0)
-            for (var i = 0; i < FillBatchSize && _freeFrames.TryDequeue(out var frame); ++i)
-                _freeFramesLocal.Enqueue(frame);
+        if (!_freeFrames.FetchLocal())
+            return false;
 
-        var fill = _socket.FillRing.Fill((uint)_freeFramesLocal.Count);
+        var fill = _socket.FillRing.Fill((uint)_freeFrames.LocalCount);
         for (var i = 0u; i < fill.Length; i++)
-            fill[i] = _freeFramesLocal.Dequeue();
+            fill[i] = _freeFrames.DequeueLocal();
 
         _logger?.Log(_socket.IfName, _socket.QueueId, $"Filled {fill.Length} frames");
 

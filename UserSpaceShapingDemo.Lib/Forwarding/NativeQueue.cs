@@ -35,12 +35,30 @@ public sealed class NativeQueue<T> : IFileObject, IDisposable
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public void Enqueue(ReadOnlySpan<T> items)
+    {
+        foreach (var item in items)
+            _queue.Enqueue(item);
+        _counter.Add((uint)items.Length);
+    }
+
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public bool TryDequeue([MaybeNullWhen(false)] out T item)
     {
         if (!_queue.TryDequeue(out item))
             return false;
         _counter.Decrement();
         return true;
+    }
+
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public int TryDequeue(Span<T> items)
+    {
+        var count = 0;
+        while (count < items.Length && _queue.TryDequeue(out var item))
+            items[count++] = item;
+        _counter.Remove((uint)count);
+        return count;
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
