@@ -70,6 +70,30 @@ public sealed class PipeForwarder : IDisposable
                 while (ForwardBatch())
                     cancellationToken.ThrowIfCancellationRequested();
 
+                if (ForwardBatch())
+                    continue;
+
+                if (ForwardBatch())
+                    continue;
+
+                if (ForwardBatch())
+                    continue;
+
+                Thread.SpinWait(1);
+
+                if (ForwardBatch())
+                    continue;
+
+                Thread.SpinWait(10);
+
+                if (ForwardBatch())
+                    continue;
+
+                Thread.SpinWait(100);
+
+                if (ForwardBatch())
+                    continue;
+
                 waitObjects.Clear();
                 waitEvents.Clear();
 
