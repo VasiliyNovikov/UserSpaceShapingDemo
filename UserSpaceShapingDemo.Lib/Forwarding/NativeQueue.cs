@@ -2,6 +2,7 @@ using System;
 using System.Collections.Concurrent;
 using System.Diagnostics.CodeAnalysis;
 using System.Runtime.CompilerServices;
+using System.Threading;
 
 using UserSpaceShapingDemo.Lib.Std;
 
@@ -9,7 +10,7 @@ namespace UserSpaceShapingDemo.Lib.Forwarding;
 
 public sealed class NativeQueue<T> : IFileObject, IDisposable
 {
-    private readonly NativeSemaphore _counter = new();
+    private readonly NativeSemaphoreSlim _counter = new();
     private readonly ConcurrentQueue<T> _queue = new();
 
     public bool IsEmpty
@@ -45,7 +46,9 @@ public sealed class NativeQueue<T> : IFileObject, IDisposable
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public T Dequeue()
     {
-        _counter.Decrement();
-        return _queue.TryDequeue(out var item) ? item : throw new InvalidOperationException("Queue is empty");
+        T? item;
+        while (!TryDequeue(out item))
+            Poll.Wait(_counter.Descriptor, Poll.Event.Readable, Timeout.Infinite);
+        return item;
     }
 }
