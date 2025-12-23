@@ -24,6 +24,8 @@ public sealed class PipeForwarder : IDisposable
     private readonly NativeQueueBatchReader<XdpDescriptor> _incomingPackets;
     private readonly NativeQueue<XdpDescriptor> _outgoingPackets;
     private readonly Worker _forwardingWorker;
+    private readonly XdpDescriptor[] _receiveBuffer = new XdpDescriptor[ReceiveBatchSize];
+    private readonly ulong[] _completeBuffer = new ulong[CompleteBatchSize];
 
     public PipeForwarder(ForwardingChannel channel, ForwardingChannel.Pipe pipe, uint queueId, bool canReceive, bool canSend, bool shared, IForwardingLogger? logger)
     {
@@ -120,24 +122,20 @@ public sealed class PipeForwarder : IDisposable
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    [SkipLocalsInit]
     private bool ReceiveBatch()
     {
-        var receivePackets = _socket.RxRing.Receive(ReceiveBatchSize);
-        _logger?.Log(_socket.IfName, _socket.QueueId, $"Received {receivePackets.Length} packets");
-        Span<XdpDescriptor> packets = stackalloc XdpDescriptor[(int)receivePackets.Length];
-        for (var i = 0u; i < receivePackets.Length; ++i)
+        var packets = _receiveBuffer.AsSpan(0, (int)_socket.RxRing.Receive(_receiveBuffer));
+        if (_logger is { } logger)
         {
-            var packet = packets[(int)i] = receivePackets[i];
-            _logger?.LogPacket(_socket.IfName, _socket.QueueId, "Received packet", _socket.Umem[packet]);
+            logger.Log(_socket.IfName, _socket.QueueId, $"Received {packets.Length} packets");
+            foreach (var packet in packets)
+                logger.LogPacket(_socket.IfName, _socket.QueueId, "Received packet", _socket.Umem[packet]);
         }
-        receivePackets.Release();
         _outgoingPackets.Enqueue(packets);
-        return receivePackets.Length > 0;
+        return packets.Length > 0;
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    [SkipLocalsInit]
     private bool SendBatch()
     {
         if (!_incomingPackets.FetchLocal())
@@ -177,14 +175,10 @@ public sealed class PipeForwarder : IDisposable
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     private bool CompleteBatch()
     {
-        var completed = _socket.CompletionRing.Complete(CompleteBatchSize);
-        _logger?.Log(_socket.IfName, _socket.QueueId, $"Completed {completed.Length} frames");
-        Span<ulong> frames = stackalloc ulong[(int)completed.Length];
-        for (var i = 0u; i < completed.Length; ++i)
-            frames[(int)i] = completed[i];
-        completed.Release();
+        var frames = _completeBuffer.AsSpan(0, (int)_socket.CompletionRing.Complete(_completeBuffer));
+        _logger?.Log(_socket.IfName, _socket.QueueId, $"Completed {frames.Length} frames");
         _freeFrames.Queue.Enqueue(frames);
-        return completed.Length > 0;
+        return !frames.IsEmpty;
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]

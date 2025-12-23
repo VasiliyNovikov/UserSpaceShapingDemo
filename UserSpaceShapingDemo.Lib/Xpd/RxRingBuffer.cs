@@ -1,5 +1,6 @@
 using System;
 using System.Runtime.CompilerServices;
+using System.Runtime.InteropServices;
 
 namespace UserSpaceShapingDemo.Lib.Xpd;
 
@@ -17,6 +18,20 @@ public sealed class RxRingBuffer : ConsumerRingBuffer
     {
         var count = Peek(out var startIdx);
         return count == 0 ? default : new PacketRange(this, startIdx, count);
+    }
+
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public uint Receive(Span<XdpDescriptor> packets)
+    {
+        var count = Peek((uint)packets.Length, out var startIdx);
+        ref var packet = ref MemoryMarshal.GetReference(packets);
+        for (var i = 0u; i < count; ++i)
+        {
+            packet = Descriptor(startIdx++);
+            packet = ref Unsafe.Add(ref packet, 1);
+        }
+        Release(count);
+        return count;
     }
 
     [method: MethodImpl(MethodImplOptions.AggressiveInlining)]
