@@ -2,7 +2,7 @@ using System.Runtime.CompilerServices;
 
 namespace UserSpaceShapingDemo.Lib.Std;
 
-public sealed class NativeEvent(bool isSet)
+public sealed class NativeEvent(bool isSet = false)
     : NativeEventBase(isSet ? 1u : 0u, 0)
 {
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
