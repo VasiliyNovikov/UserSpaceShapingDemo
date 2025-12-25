@@ -15,6 +15,8 @@ public sealed class PipeForwarder : IDisposable
     private const int SendBatchSize = 32;
     private const int ReceiveBatchSize = 32;
     private const int CompleteBatchSize = 32;
+    private const int BusySpinIterations = 10;
+    private const int SpinWaitMax = 100;
 
     private readonly bool _canReceive;
     private readonly bool _canSend;
@@ -66,33 +68,24 @@ public sealed class PipeForwarder : IDisposable
 
             while (true)
             {
-
+                start:
                 while (ForwardBatch())
                     cancellationToken.ThrowIfCancellationRequested();
 
-                if (ForwardBatch())
-                    continue;
+                for (var i = 0; i < BusySpinIterations; ++i)
+                {
+                    if (ForwardBatch())
+                        goto start;
+                    cancellationToken.ThrowIfCancellationRequested();
+                }
 
-                if (ForwardBatch())
-                    continue;
-
-                if (ForwardBatch())
-                    continue;
-
-                Thread.SpinWait(1);
-
-                if (ForwardBatch())
-                    continue;
-
-                Thread.SpinWait(10);
-
-                if (ForwardBatch())
-                    continue;
-
-                Thread.SpinWait(100);
-
-                if (ForwardBatch())
-                    continue;
+                for (var spinCount = 1; spinCount < SpinWaitMax; spinCount *= 2)
+                {
+                    Thread.SpinWait(spinCount);
+                    if (ForwardBatch())
+                        goto start;
+                    cancellationToken.ThrowIfCancellationRequested();
+                }
 
                 waitObjects.Clear();
                 waitEvents.Clear();
