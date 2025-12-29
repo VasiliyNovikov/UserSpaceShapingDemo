@@ -1,6 +1,8 @@
 using System.Diagnostics.CodeAnalysis;
 using System.Runtime.InteropServices;
 
+using LinuxCore;
+
 using NetworkingPrimitivesCore;
 
 using UserSpaceShapingDemo.Lib.Nl3;
@@ -84,7 +86,7 @@ public class Link
                 change.Address = null;
             else
             {
-                using var nlMac = new NlAddress(value!.Value.Bytes, NativeAddressFamily.LLC);
+                using var nlMac = new NlAddress(value!.Value.Bytes, LinuxAddressFamily.LLC);
                 change.Address = nlMac;
             }
             Socket.UpdateLink(change);

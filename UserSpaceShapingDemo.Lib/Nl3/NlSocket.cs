@@ -1,5 +1,7 @@
 using System;
 
+using LinuxCore;
+
 using UserSpaceShapingDemo.Lib.Interop;
 
 namespace UserSpaceShapingDemo.Lib.Nl3;

@@ -3,6 +3,8 @@ using System.Threading;
 using BenchmarkDotNet.Attributes;
 using BenchmarkDotNet.Configs;
 
+using LinuxCore;
+
 using UserSpaceShapingDemo.Lib.Std;
 
 namespace UserSpaceShapingDemo.Benchmarks;
@@ -12,7 +14,7 @@ namespace UserSpaceShapingDemo.Benchmarks;
 [GroupBenchmarksBy(BenchmarkLogicalGroupRule.ByCategory)]
 public class NativeEventBenchmarks
 {
-    private static readonly NativeEvent Event = new(false);
+    private static readonly LinuxEvent Event = new(false);
 
     [Benchmark]
     public void Set()
@@ -31,7 +33,7 @@ public class NativeEventBenchmarks
     public void Set_Poll_Wait()
     {
         Event.Set();
-        Poll.Wait(Event.Descriptor, Poll.Event.Readable, Timeout.InfiniteTimeSpan);
+        LinuxPoll.Wait(Event.Descriptor, LinuxPoll.Event.Readable, Timeout.InfiniteTimeSpan);
         Event.Wait();
     }
 }

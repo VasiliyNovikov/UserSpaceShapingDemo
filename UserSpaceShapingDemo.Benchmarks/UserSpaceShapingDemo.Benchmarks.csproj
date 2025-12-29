@@ -5,6 +5,7 @@
   </PropertyGroup>
   <ItemGroup>
     <PackageReference Include="BenchmarkDotNet" />
+    <PackageReference Include="LinuxCore" />
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\UserSpaceShapingDemo.Tests\UserSpaceShapingDemo.Tests.csproj" />

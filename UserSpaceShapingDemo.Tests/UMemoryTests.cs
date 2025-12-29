@@ -1,5 +1,7 @@
 ﻿using System;
 
+using LinuxCore;
+
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 
 using UserSpaceShapingDemo.Lib.Std;
@@ -36,6 +38,6 @@ public sealed class UMemoryTests
         using var fillRing = new FillRingBuffer();
         using var completionRing = new CompletionRingBuffer();
         var exception = Assert.ThrowsExactly<XdpException>(() => new UMemory(0));
-        Assert.AreEqual(NativeErrorNumber.InvalidArgument, exception.ErrorNumber);
+        Assert.AreEqual(LinuxErrorNumber.InvalidArgument, exception.ErrorNumber);
     }
 }

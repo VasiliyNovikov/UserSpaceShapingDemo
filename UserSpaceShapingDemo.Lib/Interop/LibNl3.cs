@@ -1,6 +1,6 @@
 using System.Runtime.InteropServices;
 
-using UserSpaceShapingDemo.Lib.Std;
+using LinuxCore;
 
 namespace UserSpaceShapingDemo.Lib.Interop;
 
@@ -16,7 +16,7 @@ internal static unsafe partial class LibNl3
     
     // int nl_syserr2nlerr(int);
     [LibraryImport(Lib, EntryPoint = "syserr2nlerr")]
-    public static partial int nl_syserr2nlerr(NativeErrorNumber error);
+    public static partial int nl_syserr2nlerr(LinuxErrorNumber error);
 
     // struct nl_sock *nl_socket_alloc(void);
     [LibraryImport(Lib, EntryPoint = "nl_socket_alloc")]

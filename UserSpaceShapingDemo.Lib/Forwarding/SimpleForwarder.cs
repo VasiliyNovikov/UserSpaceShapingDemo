@@ -3,7 +3,8 @@ using System.Collections.Generic;
 using System.Runtime.CompilerServices;
 using System.Threading;
 
-using UserSpaceShapingDemo.Lib.Std;
+using LinuxCore;
+
 using UserSpaceShapingDemo.Lib.Xpd;
 
 namespace UserSpaceShapingDemo.Lib.Forwarding;
@@ -44,18 +45,18 @@ public sealed class SimpleForwarder : IDisposable
             FillOnce(_socket1, freeAddresses);
             FillOnce(_socket2, freeAddresses);
 
-            using var nativeCancellationToken = new NativeCancellationToken(cancellationToken);
+            using var nativeCancellationToken = new LinuxCancellationToken(cancellationToken);
             while (true)
             {
                 while (ForwardOnce(_socket1, _socket2, packetsToSend2, freeAddresses) |
                        ForwardOnce(_socket2, _socket1, packetsToSend1, freeAddresses)) ;
 
-                var events1 = Poll.Event.Readable;
+                var events1 = LinuxPoll.Event.Readable;
                 if (packetsToSend1.Count > 0)
-                    events1 |= Poll.Event.Writable;
-                var events2 = Poll.Event.Readable;
+                    events1 |= LinuxPoll.Event.Writable;
+                var events2 = LinuxPoll.Event.Readable;
                 if (packetsToSend2.Count > 0)
-                    events2 |= Poll.Event.Writable;
+                    events2 |= LinuxPoll.Event.Writable;
                 nativeCancellationToken.Wait([_socket1, _socket2], [events1, events2]);
             }
         }

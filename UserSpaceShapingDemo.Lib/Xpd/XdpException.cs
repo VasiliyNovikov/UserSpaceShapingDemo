@@ -1,9 +1,10 @@
+using LinuxCore;
+
 using UserSpaceShapingDemo.Lib.Interop;
-using UserSpaceShapingDemo.Lib.Std;
 
 namespace UserSpaceShapingDemo.Lib.Xpd;
 
-public sealed class XdpException(int error) : NativeException((NativeErrorNumber)(-error));
+public sealed class XdpException(int error) : LinuxException((LinuxErrorNumber)(-error));
 
 internal static class XdpExceptionExtensions
 {

@@ -3,7 +3,7 @@ using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 using System.Threading;
 
-using UserSpaceShapingDemo.Lib.Std;
+using LinuxCore;
 
 namespace UserSpaceShapingDemo.Lib.Interop;
 

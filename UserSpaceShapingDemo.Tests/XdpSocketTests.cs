@@ -4,11 +4,11 @@ using System.Net.Sockets;
 using System.Runtime.CompilerServices;
 using System.Text;
 
+using LinuxCore;
+
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 
-using UserSpaceShapingDemo.Lib;
 using UserSpaceShapingDemo.Lib.Headers;
-using UserSpaceShapingDemo.Lib.Std;
 using UserSpaceShapingDemo.Lib.Xpd;
 
 namespace UserSpaceShapingDemo.Tests;
@@ -71,9 +71,9 @@ public sealed class XdpSocketTests
 
             sender.Send(messageBytes);
 
-            using var nativeCancellationToken = new NativeCancellationToken(TestContext.CancellationTokenSource.Token);
+            using var nativeCancellationToken = new LinuxCancellationToken(TestContext.CancellationTokenSource.Token);
 
-            Assert.IsTrue(socket.WaitFor(Poll.Event.Readable, nativeCancellationToken));
+            Assert.IsTrue(socket.WaitFor(LinuxPoll.Event.Readable, nativeCancellationToken));
 
             ulong receivedAddress;
 

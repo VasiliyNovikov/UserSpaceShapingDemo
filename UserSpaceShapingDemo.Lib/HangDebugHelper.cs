@@ -1,7 +1,7 @@
 using System;
 using System.Runtime.CompilerServices;
 
-using UserSpaceShapingDemo.Lib.Std;
+using LinuxCore;
 
 namespace UserSpaceShapingDemo.Lib;
 
@@ -11,7 +11,7 @@ public static class HangDebugHelper
 
     public readonly struct Scope : IDisposable
     {
-        private readonly long _start = NativeTime.MonotonicNs;
+        private readonly long _start = LinuxClock.MonotonicNanoseconds;
         private readonly string _message;
         private readonly long _timeoutNs;
 
@@ -25,7 +25,7 @@ public static class HangDebugHelper
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public void Dispose()
         {
-            var duration = NativeTime.MonotonicNs - _start;
+            var duration = LinuxClock.MonotonicNanoseconds - _start;
             if (duration > _timeoutNs)
                 Console.Error.WriteLine($"[HANG DEBUG] Operation '{_message}' took {duration / 1_000_000} ms");
         }

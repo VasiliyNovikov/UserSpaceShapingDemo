@@ -1,6 +1,6 @@
 using System.Runtime.InteropServices;
 
-using UserSpaceShapingDemo.Lib.Std;
+using LinuxCore;
 
 namespace UserSpaceShapingDemo.Lib.Interop;
 

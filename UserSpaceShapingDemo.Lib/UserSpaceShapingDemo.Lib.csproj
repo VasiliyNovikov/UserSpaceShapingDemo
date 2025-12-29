@@ -4,6 +4,7 @@
     <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
   </PropertyGroup>
   <ItemGroup>
+    <PackageReference Include="LinuxCore" />
     <PackageReference Include="NetworkingPrimitivesCore" />
   </ItemGroup>
 </Project>

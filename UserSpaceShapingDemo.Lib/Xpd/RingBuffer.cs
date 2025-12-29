@@ -2,6 +2,8 @@ using System;
 using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 
+using LinuxCore;
+
 using UserSpaceShapingDemo.Lib.Interop;
 
 namespace UserSpaceShapingDemo.Lib.Xpd;

@@ -4,7 +4,8 @@ using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 using System.Threading;
 
-using UserSpaceShapingDemo.Lib.Std;
+using LinuxCore;
+
 using UserSpaceShapingDemo.Lib.Xpd;
 
 namespace UserSpaceShapingDemo.Lib.Forwarding;
@@ -62,9 +63,9 @@ public sealed class PipeForwarder : IDisposable
         try
         {
             List<IFileObject> waitObjects = [];
-            List<Poll.Event> waitEvents = [];
+            List<LinuxPoll.Event> waitEvents = [];
 
-            using var nativeCancellationToken = new NativeCancellationToken(cancellationToken);
+            using var nativeCancellationToken = new LinuxCancellationToken(cancellationToken);
 
             while (true)
             {
@@ -90,10 +91,10 @@ public sealed class PipeForwarder : IDisposable
                 waitObjects.Clear();
                 waitEvents.Clear();
 
-                var socketEvents = _canReceive ? Poll.Event.Readable : Poll.Event.None;
+                var socketEvents = _canReceive ? LinuxPoll.Event.Readable : LinuxPoll.Event.None;
                 if (_canSend && !_incomingPackets.Queue.IsEmpty)
-                    socketEvents |= Poll.Event.Writable;
-                if (socketEvents != Poll.Event.None)
+                    socketEvents |= LinuxPoll.Event.Writable;
+                if (socketEvents != LinuxPoll.Event.None)
                 {
                     waitObjects.Add(_socket);
                     waitEvents.Add(socketEvents);
@@ -102,13 +103,13 @@ public sealed class PipeForwarder : IDisposable
                 if (_canSend)
                 {
                     waitObjects.Add(_incomingPackets.Queue);
-                    waitEvents.Add(Poll.Event.Readable);
+                    waitEvents.Add(LinuxPoll.Event.Readable);
                 }
 
                 if (_canReceive && _freeFrames.Queue.IsEmpty)
                 {
                     waitObjects.Add(_freeFrames.Queue);
-                    waitEvents.Add(Poll.Event.Readable);
+                    waitEvents.Add(LinuxPoll.Event.Readable);
                 }
 
                 _logger?.Log(_socket.IfName, _socket.QueueId, "Entering the poll");

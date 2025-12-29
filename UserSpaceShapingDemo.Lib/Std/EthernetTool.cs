@@ -1,6 +1,8 @@
 using System.Net.Sockets;
 using System.Text;
 
+using LinuxCore;
+
 using UserSpaceShapingDemo.Lib.Interop;
 
 namespace UserSpaceShapingDemo.Lib.Std;
@@ -9,7 +11,7 @@ public static unsafe class EthernetTool
 {
     private static void Command<TCommand>(string ifName, ref TCommand cmd) where TCommand : unmanaged
     {
-        using var socket = new NativeSocket(NativeAddressFamily.Inet, SocketType.Dgram, ProtocolType.IP);
+        using var socket = new Socket();
         var ifReq = new LibC.ifreq();
         var len = Encoding.ASCII.GetBytes(ifName, ifReq.ifr_name);
         ifReq.ifr_name[len] = 0;
@@ -60,4 +62,6 @@ public static unsafe class EthernetTool
         channels.cmd = LibC.ETHTOOL_SCHANNELS;
         Command(ifName, ref channels);
     }
+
+    private class Socket() : LinuxSocketBase(LinuxAddressFamily.Inet, LinuxSocketType.Datagram, ProtocolType.IP);
 }

@@ -1,7 +1,8 @@
 using System;
 
+using LinuxCore;
+
 using UserSpaceShapingDemo.Lib.Interop;
-using UserSpaceShapingDemo.Lib.Std;
 
 namespace UserSpaceShapingDemo.Lib.Xpd;
 
@@ -13,7 +14,7 @@ public static class XdpLogger
     {
         _nativeLogger = (level, format, args) =>
         {
-            logger((XdpLogLevel)level, NativeString.Format(format, args, 128).TrimEnd('\n'));
+            logger((XdpLogLevel)level, LinuxString.Format(format, args, 128).TrimEnd('\n'));
             return 0;
         };
         LibBpf.libbpf_set_print(_nativeLogger);

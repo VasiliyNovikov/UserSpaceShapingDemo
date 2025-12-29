@@ -3,11 +3,11 @@ using System.Collections.Generic;
 using System.Threading;
 using System.Threading.Tasks;
 
+using LinuxCore;
+
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 
-using UserSpaceShapingDemo.Lib;
 using UserSpaceShapingDemo.Lib.Forwarding;
-using UserSpaceShapingDemo.Lib.Std;
 
 namespace UserSpaceShapingDemo.Tests;
 
@@ -38,13 +38,13 @@ public class NativeQueueTests
         var dequeueCancellation = new CancellationTokenSource(); 
         var dequeueTask = Task.Run(() =>
         {
-            using var nativeCancellationToken = new NativeCancellationToken(dequeueCancellation.Token);
+            using var nativeCancellationToken = new LinuxCancellationToken(dequeueCancellation.Token);
             try
             {
                 while (true)
                 {
                     Assert.IsFalse(queue.TryDequeue(out _));
-                    nativeCancellationToken.Wait(queue, Poll.Event.Readable);
+                    nativeCancellationToken.Wait(queue, LinuxPoll.Event.Readable);
                     Assert.IsTrue(queue.TryDequeue(out var item));
                     dequeuedItems.Add(item);
                 }

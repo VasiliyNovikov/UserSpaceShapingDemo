@@ -2,6 +2,8 @@ using System;
 using System.IO;
 using System.Numerics;
 
+using LinuxCore;
+
 using UserSpaceShapingDemo.Lib.Interop;
 
 namespace UserSpaceShapingDemo.Lib.Std;
@@ -15,13 +17,13 @@ public sealed unsafe class NetNs : IDisposable, IEquatable<NetNs>, IEqualityOper
     private const string SelfThreadFdPath = "/proc/thread-self/fd";
     private const string RootNsNetPath = "/proc/1/ns/net";
 
-    private readonly NativeFile _nsFile;
+    private readonly LinuxFile _nsFile;
 
     public UInt128 Id => new(_nsFile.DeviceId, _nsFile.INode);
 
     public FileDescriptor Descriptor => _nsFile.Descriptor;
 
-    private NetNs(string path) => _nsFile = new NativeFile(path, NativeFileFlags.ReadOnly);
+    private NetNs(string path) => _nsFile = new LinuxFile(path, LinuxFileFlags.ReadOnly);
 
     public void Dispose() => _nsFile.Dispose();
 
@@ -53,7 +55,7 @@ public sealed unsafe class NetNs : IDisposable, IEquatable<NetNs>, IEqualityOper
         try
         {
             // Create the target file (regular file is fine) that we'll bind-mount onto
-            using (new NativeFile(target, NativeFileFlags.Create | NativeFileFlags.Exclusive | NativeFileFlags.ReadWrite, NetNsFileMode)) { }
+            using (new LinuxFile(target, LinuxFileFlags.Create | LinuxFileFlags.Exclusive |LinuxFileFlags.ReadWrite, NetNsFileMode)) { }
 
             // Create a new network namespace for *this thread*
             LibC.unshare(LibC.CLONE_NEWNET).ThrowIfError();

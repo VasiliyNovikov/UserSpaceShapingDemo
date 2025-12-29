@@ -2,18 +2,19 @@ using System.Collections;
 using System.Collections.Generic;
 using System.Runtime.InteropServices;
 
+using LinuxCore;
+
 using NetworkingPrimitivesCore;
 
 using UserSpaceShapingDemo.Lib.Nl3;
 using UserSpaceShapingDemo.Lib.Nl3.Route;
-using UserSpaceShapingDemo.Lib.Std;
 
 namespace UserSpaceShapingDemo.Lib.Links;
 
 public sealed class LinkAddressCollection<TAddress> : IEnumerable<LinkAddress<TAddress>>
     where TAddress : unmanaged, IIPAddress<TAddress>
 {
-    private static NativeAddressFamily Family => TAddress.Version == 4 ? NativeAddressFamily.Inet : NativeAddressFamily.Inet6;
+    private static LinuxAddressFamily Family => TAddress.Version == 4 ? LinuxAddressFamily.Inet : LinuxAddressFamily.Inet6;
 
     private readonly RtnlSocket _socket;
     private readonly int _linkIndex;

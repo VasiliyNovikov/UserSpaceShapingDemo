@@ -1,9 +1,11 @@
 ﻿using BenchmarkDotNet.Running;
 
+using LinuxCore;
+
 using UserSpaceShapingDemo.Benchmarks;
 using UserSpaceShapingDemo.Lib;
 
-LinuxScheduler.SetScheduler(LinuxScheduler.Policy.RoundRobin, 60);
+LinuxScheduler.Set(LinuxScheduler.Policy.RoundRobin, 60);
 MemoryLockLimit.SetInfinity();
 
 BenchmarkRunner.Run<ForwardingBenchmarks>();

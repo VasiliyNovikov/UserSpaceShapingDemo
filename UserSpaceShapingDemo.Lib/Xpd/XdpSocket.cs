@@ -1,5 +1,7 @@
 using System.Runtime.CompilerServices;
 
+using LinuxCore;
+
 using UserSpaceShapingDemo.Lib.Interop;
 using UserSpaceShapingDemo.Lib.Std;
 
@@ -66,17 +68,17 @@ public sealed unsafe class XdpSocket : NativeObject, IFileObject
         LibXdp.xsk_socket__update_xskmap(_xsk, mapDescriptor).ThrowIfError();
     }
 
-    public bool WaitFor(Poll.Event events, NativeCancellationToken cancellationToken) => cancellationToken.Wait(this, events);
+    public bool WaitFor(LinuxPoll.Event events, LinuxCancellationToken cancellationToken) => cancellationToken.Wait(this, events);
 
-    public NativeErrorNumber WakeUp()
+    public LinuxErrorNumber WakeUp()
     {
-        if (!LibC.sendto(Descriptor, null, 0, LibC.MSG_DONTWAIT, null, 0).IsError())
-            return NativeErrorNumber.OK;
+        if (!LibC.sendto(Descriptor, null, 0, LibC.MSG_DONTWAIT, null, 0).IsError)
+            return LinuxErrorNumber.OK;
 
-        var error = NativeErrorNumber.Last;
-        return error is NativeErrorNumber.TryAgain or NativeErrorNumber.DeviceOrResourceBusy or NativeErrorNumber.InterruptedSystemCall
+        var error = LinuxErrorNumber.Last;
+        return error is LinuxErrorNumber.TryAgain or LinuxErrorNumber.DeviceOrResourceBusy or LinuxErrorNumber.InterruptedSystemCall
             ? error
-            : throw new NativeException(error);
+            : throw new LinuxException(error);
     }
 
     protected override void ReleaseUnmanagedResources()
