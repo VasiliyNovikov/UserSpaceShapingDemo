@@ -10,9 +10,9 @@ namespace UserSpaceShapingDemo.Lib.Std;
 
 public sealed unsafe class NetNs : IDisposable, IEquatable<NetNs>, IEqualityOperators<NetNs, NetNs, bool>
 {
+    private const LinuxFileMode NetNsBasePathMode = (LinuxFileMode)0755;
+    private const LinuxFileMode NetNsFileMode = (LinuxFileMode)0644;
     private const string NetNsBasePath = "/run/netns";
-    private const UnixFileMode NetNsBasePathMode = (UnixFileMode)0755;
-    private const UnixFileMode NetNsFileMode = (UnixFileMode)0644;
     private const string SelfThreadNsNetPath = "/proc/thread-self/ns/net";
     private const string SelfThreadFdPath = "/proc/thread-self/fd";
     private const string RootNsNetPath = "/proc/1/ns/net";
@@ -46,7 +46,7 @@ public sealed unsafe class NetNs : IDisposable, IEquatable<NetNs>, IEqualityOper
     public static void Create(string name)
     {
         // Ensure the base path exists
-        Directory.CreateDirectory(NetNsBasePath, NetNsBasePathMode);
+        Directory.CreateDirectory(NetNsBasePath, (UnixFileMode)NetNsBasePathMode);
 
         // Keep a handle to the original netns so we can switch back later
         using var oldNs = OpenCurrent();
@@ -55,7 +55,7 @@ public sealed unsafe class NetNs : IDisposable, IEquatable<NetNs>, IEqualityOper
         try
         {
             // Create the target file (regular file is fine) that we'll bind-mount onto
-            using (new LinuxFile(target, LinuxFileFlags.Create | LinuxFileFlags.Exclusive |LinuxFileFlags.ReadWrite, NetNsFileMode)) { }
+            using (new LinuxFile(target, LinuxFileFlags.Create | LinuxFileFlags.Exclusive | LinuxFileFlags.ReadWrite, NetNsFileMode)) { }
 
             // Create a new network namespace for *this thread*
             LibC.unshare(LibC.CLONE_NEWNET).ThrowIfError();
