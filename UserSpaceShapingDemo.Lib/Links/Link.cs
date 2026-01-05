@@ -3,6 +3,8 @@ using System.Runtime.InteropServices;
 
 using LinuxCore;
 
+using NetNsCore;
+
 using NetworkingPrimitivesCore;
 
 using UserSpaceShapingDemo.Lib.Nl3;

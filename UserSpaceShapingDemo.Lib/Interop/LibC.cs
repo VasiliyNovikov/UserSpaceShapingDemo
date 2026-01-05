@@ -7,17 +7,6 @@ namespace UserSpaceShapingDemo.Lib.Interop;
 
 internal static unsafe partial class LibC
 {
-    private const string Lib = "libc";
-
-    public const int CLONE_NEWNET = 0x40000000;
-
-    public const ulong MS_BIND = 4096;
-
-    public const int MNT_FORCE = 1; // Force unmounting
-    public const int MNT_DETACH = 2; // Just detach from the tree
-    public const int MNT_EXPIRE = 4; // Mark for expiry
-    public const int UMOUNT_NOFOLLOW = 8; // Don't follow symlink on umount
-
     public const int MSG_DONTWAIT = 0x40;
 
     public const int RLIMIT_MEMLOCK = 8;
@@ -42,42 +31,20 @@ internal static unsafe partial class LibC
     public const uint ETHTOOL_GCHANNELS = 0x0000003c; // Get number of channels (ethtool_channels)
     public const uint ETHTOOL_SCHANNELS = 0x0000003d; // Set number of channels (ethtool_channels)
 
-    // int unshare (int __flags)
-    [LibraryImport(Lib, EntryPoint = "unshare")]
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    [SuppressGCTransition]
-    public static partial LinuxResult unshare(int flags);
-
-    // int setns (int __fd, int __nstype)
-    [LibraryImport(Lib, EntryPoint = "setns")]
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    [SuppressGCTransition]
-    public static partial LinuxResult setns(FileDescriptor fd, int nstype);
-
-    // int mount (const char *__special_file, const char *__dir, const char *__fstype, unsigned long int __rwflag, const void *__data)
-    [LibraryImport(Lib, EntryPoint = "mount", StringMarshalling = StringMarshalling.Utf8)]
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public static partial LinuxResult mount(string specialFile, string dir, string? fstype, ulong rwflag, void* data);
-
-    // int umount2 (const char *__special_file, int __flags)
-    [LibraryImport(Lib, EntryPoint = "umount2", StringMarshalling = StringMarshalling.Utf8)]
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public static partial LinuxResult umount2(string specialFile, int flags);
-
     // unsigned int if_nametoindex(const char *ifname);
-    [LibraryImport(Lib, EntryPoint = "if_nametoindex", StringMarshalling = StringMarshalling.Utf8)]
+    [LibraryImport(LinuxLibraries.LibC, EntryPoint = "if_nametoindex", StringMarshalling = StringMarshalling.Utf8)]
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     [SuppressGCTransition]
     public static partial uint if_nametoindex(string ifname);
 
     // ssize_t sendto(int socket, const void *message, size_t length, int flags, const struct sockaddr *dest_addr, socklen_t dest_len);
-    [LibraryImport(Lib, EntryPoint = "sendto")]
+    [LibraryImport(LinuxLibraries.LibC, EntryPoint = "sendto")]
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     [SuppressGCTransition]
     public static partial LinuxResult<nint> sendto(FileDescriptor socket, void* message, nuint length, int flags, void* dest_addr, uint dest_len);
 
     // int setrlimit(int resource, const struct rlimit *rlim);
-    [LibraryImport(Lib, EntryPoint = "setrlimit")]
+    [LibraryImport(LinuxLibraries.LibC, EntryPoint = "setrlimit")]
     public static partial LinuxResult setrlimit(int resource, in rlimit rlim);
 
     [StructLayout(LayoutKind.Sequential)]

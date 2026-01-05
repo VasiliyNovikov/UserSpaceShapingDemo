@@ -4,10 +4,11 @@ using System.Linq;
 using System.Net;
 using System.Net.Sockets;
 
+using NetNsCore;
+
 using NetworkingPrimitivesCore;
 
 using UserSpaceShapingDemo.Lib.Links;
-using UserSpaceShapingDemo.Lib.Std;
 
 namespace UserSpaceShapingDemo.Tests;
 
