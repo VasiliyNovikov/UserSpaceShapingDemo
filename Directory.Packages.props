@@ -5,7 +5,7 @@
   </PropertyGroup>
   <ItemGroup>
     <PackageVersion Include="BenchmarkDotNet" Version="0.15.8" />
-    <PackageVersion Include="LinuxCore" Version="0.1.5" />
+    <PackageVersion Include="LinuxCore" Version="0.1.6" />
     <PackageVersion Include="MSTest" Version="4.0.2" />
     <PackageVersion Include="NetNsCore" Version="0.1.1" />
     <PackageVersion Include="NetworkingPrimitivesCore" Version="0.1.16" />
