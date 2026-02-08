@@ -6,8 +6,8 @@
   <ItemGroup>
     <PackageVersion Include="BenchmarkDotNet" Version="0.15.8" />
     <PackageVersion Include="LinuxCore" Version="0.1.6" />
-    <PackageVersion Include="MSTest" Version="4.0.2" />
-    <PackageVersion Include="NetNsCore" Version="0.1.1" />
+    <PackageVersion Include="MSTest" Version="4.1.0" />
+    <PackageVersion Include="NetNsCore" Version="0.1.3" />
     <PackageVersion Include="NetworkingPrimitivesCore" Version="0.1.16" />
   </ItemGroup>
 </Project>

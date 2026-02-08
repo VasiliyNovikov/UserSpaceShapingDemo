@@ -10,7 +10,7 @@
     <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
   </PropertyGroup>
   <ItemGroup>
-    <Compile Include="..\LinuxOnly.cs">
+    <Compile Include="$(MSBuildThisFileDirectory)LinuxOnly.cs">
       <Link>LinuxOnly.cs</Link>
     </Compile>
   </ItemGroup>
