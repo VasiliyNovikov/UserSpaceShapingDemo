@@ -177,8 +177,8 @@ public sealed class PipeForwarder : IDisposable
             _logger?.Log(_socket.IfName, _socket.QueueId, "Waking up socket for TX");
             try
             {
-                var error = _socket.WakeUp();
-                _logger?.Log(_socket.IfName, _socket.QueueId, $"Woke up socket for TX: {error}");
+                _socket.WakeUp();
+                _logger?.Log(_socket.IfName, _socket.QueueId, $"Woke up socket for TX");
             }
             catch (Exception e)
             {

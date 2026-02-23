@@ -13,6 +13,12 @@ public sealed unsafe class XdpSocket : NativeObject, IFileObject
     private readonly LibXdp.xsk_socket* _xsk;
     private FileDescriptor? _descriptor;
 
+    private RawSocket Socket
+    {
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        get => field ??= new(Descriptor);
+    }
+
     public UMemory Umem { get; }
     public string IfName { get; }
     public uint QueueId { get; }
@@ -69,20 +75,14 @@ public sealed unsafe class XdpSocket : NativeObject, IFileObject
 
     public bool WaitFor(LinuxPoll.Event events, LinuxCancellationToken cancellationToken) => cancellationToken.Wait(this, events);
 
-    public LinuxErrorNumber WakeUp()
-    {
-        if (!LibC.sendto(Descriptor, null, 0, LibC.MSG_DONTWAIT, null, 0).IsError)
-            return LinuxErrorNumber.OK;
-
-        var error = LinuxErrorNumber.Last;
-        return error is LinuxErrorNumber.TryAgain or LinuxErrorNumber.DeviceOrResourceBusy or LinuxErrorNumber.InterruptedSystemCall
-            ? error
-            : throw new LinuxException(error);
-    }
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public void WakeUp() => Socket.TrySendTo(Unsafe.NullRef<byte>(), default, out _, LinuxSocketMessageFlags.DontWait);
 
     protected override void ReleaseUnmanagedResources()
     {
         if (_xsk is not null)
             LibXdp.xsk_socket__delete(_xsk);
     }
+
+    private class RawSocket(FileDescriptor descriptor) : LinuxSocketBase(descriptor, false);
 }
