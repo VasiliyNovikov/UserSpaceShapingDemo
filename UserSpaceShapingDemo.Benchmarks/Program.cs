@@ -3,10 +3,9 @@
 using LinuxCore;
 
 using UserSpaceShapingDemo.Benchmarks;
-using UserSpaceShapingDemo.Lib;
 
 LinuxScheduler.Set(LinuxScheduler.Policy.RoundRobin, 60);
-MemoryLockLimit.SetInfinity();
+LinuxResourceLimit.Set(LinuxResourceLimit.Resource.MemoryLock, LinuxResourceLimit.Infinity, LinuxResourceLimit.Infinity);
 
 BenchmarkRunner.Run<ForwardingBenchmarks>();
 //BenchmarkRunner.Run<NativeQueueBenchmarks>();

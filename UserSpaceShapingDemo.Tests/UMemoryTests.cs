@@ -4,7 +4,6 @@ using LinuxCore;
 
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 
-using UserSpaceShapingDemo.Lib.Std;
 using UserSpaceShapingDemo.Lib.Xpd;
 
 namespace UserSpaceShapingDemo.Tests;
