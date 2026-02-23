@@ -5,7 +5,6 @@
   <ItemGroup>
     <PackageReference Include="LibNlCore" />
     <PackageReference Include="LinuxCore" />
-    <PackageReference Include="NetNsCore" />
     <PackageReference Include="NetworkingPrimitivesCore" />
   </ItemGroup>
 </Project>
