@@ -1,7 +1,8 @@
 using System;
 using System.Runtime.CompilerServices;
 
-using UserSpaceShapingDemo.Lib.Links;
+using LibNlCore.Links;
+
 using UserSpaceShapingDemo.Lib.Xpd;
 
 namespace UserSpaceShapingDemo.Lib.Forwarding;
@@ -25,7 +26,7 @@ public sealed class ForwardingChannel : IDisposable
     {
         Mode = mode;
         using var collection = new LinkCollection();
-        Memory = new UMemory(UMemory.DefaultFillRingSize * (1 + collection[ifName1].RXQueueCount + collection[ifName2].RXQueueCount));
+        Memory = new UMemory((uint)(UMemory.DefaultFillRingSize * (1 + collection[ifName1].RXQueueCount + collection[ifName2].RXQueueCount)));
         Pipe1 = new Pipe(ifName1, _packetQueue1, _packetQueue2);
         Pipe2 = new Pipe(ifName2, _packetQueue2, _packetQueue1);
         FreeFrames = new NativeQueue<ulong>();

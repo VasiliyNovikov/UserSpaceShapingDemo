@@ -14,8 +14,6 @@ apt-get install -y \
   libbpf-dev \
   libelf-dev \
   zlib1g-dev \
-  libnl-3-dev \
-  libnl-route-3-dev \
   pkg-config \
   linux-headers-$(uname -r) \
   linux-tools-$(uname -r) \

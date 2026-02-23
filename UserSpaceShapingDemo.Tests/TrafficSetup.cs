@@ -4,11 +4,12 @@ using System.Linq;
 using System.Net;
 using System.Net.Sockets;
 
+using LibNlCore.Generic.EthTool;
+using LibNlCore.Links;
+
 using NetNsCore;
 
 using NetworkingPrimitivesCore;
-
-using UserSpaceShapingDemo.Lib.Links;
 
 namespace UserSpaceShapingDemo.Tests;
 
@@ -86,13 +87,16 @@ public sealed class TrafficSetup : IDisposable
             if (collection.SingleOrDefault(l => l.Name == SenderName) is { } existingLink)
                 collection.Delete(existingLink);
             var (link, peer) = collection.CreateVEth(SenderName, ReceiverName, rxQueueCount, txQueueCount);
-            if (checksumOffload is not null)
-            {
-                link.Offload.RXChecksum = checksumOffload.Value;
-                link.Offload.TXChecksum = checksumOffload.Value;
-                peer.Offload.RXChecksum = checksumOffload.Value;
-                peer.Offload.TXChecksum = checksumOffload.Value;
-            }
+            if (checksumOffload is { } checksumOffloadValue)
+                foreach (var l in new[] { link, peer })
+                {
+                    l.Features[EthernetFeature.RxChecksum] = checksumOffloadValue;
+                    l.Features[EthernetFeature.TxChecksumIpGeneric] = checksumOffloadValue;
+                    l.Features[EthernetFeature.TxChecksumIPv4] = checksumOffloadValue;
+                    l.Features[EthernetFeature.TxChecksumIPv6] = checksumOffloadValue;
+                    l.Features[EthernetFeature.TxChecksumSctp] = checksumOffloadValue;
+                    l.Features[EthernetFeature.TxChecksumFcoeCrc] = checksumOffloadValue;
+                }
             link.MoveTo(senderNs);
             peer.MoveTo(receiverNs);
         }
@@ -103,8 +107,8 @@ public sealed class TrafficSetup : IDisposable
             using var collection = new LinkCollection(ns);
             var link = collection[name];
             link.MacAddress = macAddress;
-            link.Addresses4.Add(new(address4, PrefixLength4, true));
-            link.Addresses6.Add(new(address6, PrefixLength6, true));
+            link.Addresses.Add(new(address4, PrefixLength4, true));
+            link.Addresses.Add(new(address6, PrefixLength6, true));
             link.Up = true;
         }
     }

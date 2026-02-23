@@ -1,7 +1,7 @@
 using System;
 using System.Collections.Generic;
 
-using UserSpaceShapingDemo.Lib.Links;
+using LibNlCore.Links;
 
 namespace UserSpaceShapingDemo.Lib.Forwarding;
 
