@@ -76,7 +76,7 @@ public sealed unsafe class XdpSocket : NativeObject, IFileObject
     public bool WaitFor(LinuxPoll.Event events, LinuxCancellationToken cancellationToken) => cancellationToken.Wait(this, events);
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public void WakeUp() => Socket.TrySendTo(Unsafe.NullRef<byte>(), default, out _, LinuxSocketMessageFlags.DontWait);
+    public void WakeUp() => Socket.TrySendTo(Unsafe.NullRef<byte>(), default, out _);
 
     protected override void ReleaseUnmanagedResources()
     {
