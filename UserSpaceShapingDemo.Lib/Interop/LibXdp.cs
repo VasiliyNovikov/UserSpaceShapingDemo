@@ -91,7 +91,6 @@ internal static unsafe partial class LibXdp
     // int xsk_umem__delete(struct xsk_umem *umem);
     // Returns 0 on success, -EBUSY if the UMEM is still in use (per xsk.h).
     [LibraryImport(Lib, EntryPoint = "xsk_umem__delete")]
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static partial xsk_api_result xsk_umem__delete(xsk_umem* umem);
 
     // int xsk_umem__fd(const struct xsk_umem *umem)
@@ -149,7 +148,6 @@ internal static unsafe partial class LibXdp
 
     // int xsk_socket__update_xskmap(struct xsk_socket *xsk, int xsks_map_fd);
     [LibraryImport(Lib, EntryPoint = "xsk_socket__update_xskmap")]
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static partial xsk_api_result xsk_socket__update_xskmap(xsk_socket* xsk, FileDescriptor xsks_map_fd);
 
     // int xsk_socket__fd(const struct xsk_socket *xsk)
