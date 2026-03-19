@@ -73,40 +73,56 @@ public sealed class XdpSocketTests
 
             using var nativeCancellationToken = new LinuxCancellationToken(TestContext.CancellationTokenSource.Token);
 
-            Assert.IsTrue(socket.WaitFor(LinuxPoll.Event.Readable, nativeCancellationToken));
-
-            ulong receivedAddress;
-
-            var receivePackets = socket.RxRing.Receive();
+            ulong receivedAddress = 0;
+            Span<ulong> refillAddresses = stackalloc ulong[(int)umem.FillRingSize];
             {
-                Assert.AreEqual(1u, receivePackets.Length);
-                var packet = receivePackets[0];
-                receivePackets.Release();
+                var received = false;
+                while (!received)
+                {
+                    Assert.IsTrue(socket.WaitFor(LinuxPoll.Event.Readable, nativeCancellationToken));
 
-                receivedAddress = packet.Address;
+                    var receivePackets = socket.RxRing.Receive();
+                    var refillCount = 0;
 
-                var packetData = umem[packet];
+                    for (var i = 0u; i < receivePackets.Length; ++i)
+                    {
+                        var packet = receivePackets[i];
+                        var packetData = umem[packet];
+                        if (!received && IsExpectedPacket(packetData))
+                        {
+                            receivedAddress = packet.Address;
+                            received = true;
 
-                ref var ethernetHeader = ref Unsafe.As<byte, EthernetHeader>(ref packetData[0]);
-                Assert.AreEqual(EthernetType.IPv4, ethernetHeader.EtherType);
-                Assert.AreEqual(TrafficSetup.SenderMacAddress, ethernetHeader.SourceAddress);
-                Assert.AreEqual(TrafficSetup.ReceiverMacAddress, ethernetHeader.DestinationAddress);
+                            ref var ethernetHeader = ref Unsafe.As<byte, EthernetHeader>(ref packetData[0]);
+                            Assert.AreEqual(EthernetType.IPv4, ethernetHeader.EtherType);
+                            Assert.AreEqual(TrafficSetup.SenderMacAddress, ethernetHeader.SourceAddress);
+                            Assert.AreEqual(TrafficSetup.ReceiverMacAddress, ethernetHeader.DestinationAddress);
 
-                ref var ipv4Header = ref ethernetHeader.NextHeader<IPv4Header>();
-                Assert.AreEqual(4, ipv4Header.Version);
-                Assert.AreEqual(sizeof(IPv4Header), ipv4Header.HeaderLength);
-                Assert.AreEqual(IPProtocol.UDP, ipv4Header.Protocol);
-                Assert.AreEqual(TrafficSetup.SenderAddress(4), ipv4Header.SourceAddress);
-                Assert.AreEqual(TrafficSetup.ReceiverAddress(4), ipv4Header.DestinationAddress);
+                            ref var ipv4Header = ref ethernetHeader.NextHeader<IPv4Header>();
+                            Assert.AreEqual(4, ipv4Header.Version);
+                            Assert.AreEqual(sizeof(IPv4Header), ipv4Header.HeaderLength);
+                            Assert.AreEqual(IPProtocol.UDP, ipv4Header.Protocol);
+                            Assert.AreEqual(TrafficSetup.SenderAddress(4), ipv4Header.SourceAddress);
+                            Assert.AreEqual(TrafficSetup.ReceiverAddress(4), ipv4Header.DestinationAddress);
 
-                ref var udpHeader = ref ipv4Header.NextHeader<UDPHeader>();
-                Assert.AreEqual(receiverPort, udpHeader.DestinationPort);
-                Assert.AreEqual(senderPort, udpHeader.SourcePort);
+                            ref var udpHeader = ref ipv4Header.NextHeader<UDPHeader>();
+                            Assert.AreEqual(receiverPort, udpHeader.DestinationPort);
+                            Assert.AreEqual(senderPort, udpHeader.SourcePort);
 
-                var payload = udpHeader.Payload;
-                Assert.AreEqual(message.Length, payload.Length);
-                var payloadString = Encoding.ASCII.GetString(payload);
-                Assert.AreEqual(message, payloadString);
+                            var payload = udpHeader.Payload;
+                            Assert.AreEqual(message.Length, payload.Length);
+                            var payloadString = Encoding.ASCII.GetString(payload);
+                            Assert.AreEqual(message, payloadString);
+                            continue;
+                        }
+
+                        refillAddresses[refillCount++] = packet.Address;
+                        TestContext.WriteLine($"Ignoring unexpected packet {i + 1}/{receivePackets.Length} while waiting for the UDP test payload.\n{packetData.PacketToString()}");
+                    }
+
+                    receivePackets.Release();
+                    RefillFrames(socket, refillAddresses[..refillCount]);
+                }
             }
 
             var sendPackets = socket.TxRing.Send(1);
@@ -115,8 +131,7 @@ public sealed class XdpSocketTests
 
                 ref var packet = ref sendPackets[0];
                 packet.Address = receivedAddress;
-                packet.Length = (uint)(sizeof(EthernetHeader) + sizeof(IPv4Header) + sizeof(UDPHeader) +
-                                       replyMessageBytes.Length);
+                packet.Length = (uint)(sizeof(EthernetHeader) + sizeof(IPv4Header) + sizeof(UDPHeader) + replyMessageBytes.Length);
                 var packetData = umem[packet];
 
                 ref var ethernetHeader = ref Unsafe.As<byte, EthernetHeader>(ref packetData[0]);
@@ -166,5 +181,28 @@ public sealed class XdpSocketTests
             fill.Submit();
             completed.Release();
         }
+    }
+
+    private static unsafe bool IsExpectedPacket(Span<byte> packetData)
+    {
+        if (packetData.Length < sizeof(EthernetHeader) + sizeof(IPv4Header) + sizeof(UDPHeader))
+            return false;
+        ref var ethernetHeader = ref Unsafe.As<byte, EthernetHeader>(ref packetData[0]);
+        return ethernetHeader.EtherType == EthernetType.IPv4 && ethernetHeader.NextHeader<IPv4Header>() is { Version: 4, Protocol: IPProtocol.UDP };
+    }
+
+    private static void RefillFrames(XdpSocket socket, ReadOnlySpan<ulong> addresses)
+    {
+        if (addresses.IsEmpty)
+            return;
+
+        var fill = socket.FillRing.Fill((uint)addresses.Length);
+        Assert.AreEqual((uint)addresses.Length, fill.Length);
+        for (var i = 0; i < addresses.Length; ++i)
+            fill[(uint)i] = addresses[i];
+        fill.Submit();
+
+        if (socket.FillRing.NeedsWakeup)
+            socket.WakeUp();
     }
 }
