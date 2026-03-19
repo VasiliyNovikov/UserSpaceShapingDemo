@@ -54,7 +54,7 @@ sudo -E --preserve-env=PATH dotnet run --project UserSpaceShapingDemo.Benchmarks
 sudo bash install_deps_ubuntu.sh
 ```
 
-- Installs the Linux packages still relevant to the managed code path: `libxdp-dev`, `libbpf-dev`, `libelf-dev`, and `zlib1g-dev`.
+- Installs the Linux packages still relevant to the managed code path: `libbpf-dev`, `libelf-dev`, and `zlib1g-dev`, plus `libxdp-dev` when that package is available in the current Ubuntu release.
 - It does not install the `.NET 10` SDK/runtime; provision that separately.
 
 ## Architecture
@@ -87,6 +87,8 @@ sudo bash install_deps_ubuntu.sh
 - Workflow: `.github/workflows/pipeline.yml`
 - Trigger: pushes and pull requests targeting `master`
 - Matrix:
+  - `ubuntu-22.04`
+  - `ubuntu-22.04-arm`
   - `ubuntu-24.04`
   - `ubuntu-24.04-arm`
 - Steps:
@@ -132,6 +134,7 @@ sudo bash install_deps_ubuntu.sh
 - Managed builds require Linux plus the `.NET 10` SDK.
 - Tests and benchmarks also need the matching `.NET 10` shared runtime available locally (`Microsoft.NETCore.App 10.0.0`).
 - The managed interop layer depends on system `libxdp` / `libbpf`; `install_deps_ubuntu.sh` installs the Ubuntu packages currently needed for that managed path.
+- `UserSpaceShapingDemo.Lib/Interop/LibXdp.cs` falls back to legacy `libbpf` entry points when `libxdp` is unavailable, so Ubuntu 22.04 can still run without a separate `libxdp` install.
 - Root (or equivalent capabilities such as `CAP_NET_ADMIN`) is required for the integration tests and most real AF_XDP runs.
 - `ForwarderTests` currently exercises `Generic` and `Driver` modes; driver zero-copy is not enabled in the checked-in test matrix.
 - For cleaner packet behavior during manual experiments, be prepared to disable GRO/LRO on the test interface.
