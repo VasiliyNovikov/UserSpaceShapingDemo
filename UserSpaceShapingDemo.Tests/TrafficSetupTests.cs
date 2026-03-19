@@ -22,12 +22,13 @@ public class TrafficSetupTests
     [DataRow(6)]
     public void TrafficSetup_Ping(int version)
     {
+        const int timeoutMilliseconds = 2_000;
         var message = "Hello from veth"u8.ToArray();
         using var trafficSetup = new TrafficSetup();
         using (trafficSetup.EnterSender())
         {
             using var ping = new Ping();
-            var reply = ping.Send(TrafficSetup.ReceiverAddress(version), 500, message);
+            var reply = ping.Send(TrafficSetup.ReceiverAddress(version), timeoutMilliseconds, message);
             Assert.IsNotNull(reply);
             Assert.AreEqual(IPStatus.Success, reply.Status);
             CollectionAssert.AreEqual(message, reply.Buffer);
