@@ -405,7 +405,3 @@ FodyWeavers.xsd
 # JetBrains
 *.sln.iml
 .idea
-
-# This demo
-*.o
-xdp_shaper
