@@ -1,0 +1,42 @@
+name: Validate & Publish
+on:
+  push:
+    branches:
+      - master
+  pull_request:
+    branches:
+      - master
+
+jobs:
+  validate:
+    strategy:
+      matrix:
+        os:
+          - ubuntu-22.04
+          - ubuntu-22.04-arm
+          - ubuntu-24.04
+          - ubuntu-24.04-arm
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup .NET SDK
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 10.0.x
+
+      - name: Install Linux dependencies
+        run: sudo bash ./install_deps_ubuntu.sh
+
+      - name: Build
+        run: dotnet build
+
+      - name: Test
+        run: sudo -E --preserve-env=PATH dotnet test --no-build --logger trx --results-directory "TestResults-${{ matrix.os }}"
+
+      - name: Upload Test Results
+        uses: actions/upload-artifact@v4
+        with:
+          name: test-results-${{ matrix.os }}
+          path: TestResults-${{ matrix.os }}
+        if: ${{ always() }}
