@@ -23,8 +23,8 @@ public sealed class PipeForwarder : IDisposable
     private readonly bool _canSend;
     private readonly IForwardingLogger? _logger;
     private readonly XdpSocket _socket;
-    private readonly NativeQueueBatchReader<ulong> _freeFrames;
-    private readonly NativeQueueBatchReader<XdpDescriptor> _incomingPackets;
+    private readonly BatchReadingQueueProxy<ulong> _freeFrames;
+    private readonly BatchReadingQueueProxy<XdpDescriptor> _incomingPackets;
     private readonly NativeQueue<XdpDescriptor> _outgoingPackets;
     private readonly Worker _forwardingWorker;
     private readonly XdpDescriptor[] _receiveBuffer = new XdpDescriptor[ReceiveBatchSize];
@@ -45,7 +45,7 @@ public sealed class PipeForwarder : IDisposable
         {
             var fill = _socket.FillRing.Fill(_socket.FillRing.Capacity);
             for (var i = 0u; i < fill.Length; i++)
-                fill[i] = _freeFrames.Queue.Dequeue();
+                fill[i] = _freeFrames.Dequeue();
             fill.Submit();
             _logger?.Log(_socket.IfName, _socket.QueueId, $"Initially filled {fill.Length} frames");
         }
@@ -92,7 +92,7 @@ public sealed class PipeForwarder : IDisposable
                 waitEvents.Clear();
 
                 var socketEvents = _canReceive ? LinuxPoll.Event.Readable : LinuxPoll.Event.None;
-                if (_canSend && !_incomingPackets.Queue.IsEmpty)
+                if (_canSend && !_incomingPackets.IsEmpty)
                     socketEvents |= LinuxPoll.Event.Writable;
                 if (socketEvents != LinuxPoll.Event.None)
                 {
@@ -102,13 +102,13 @@ public sealed class PipeForwarder : IDisposable
 
                 if (_canSend)
                 {
-                    waitObjects.Add(_incomingPackets.Queue);
+                    waitObjects.Add(_incomingPackets);
                     waitEvents.Add(LinuxPoll.Event.Readable);
                 }
 
-                if (_canReceive && _freeFrames.Queue.IsEmpty)
+                if (_canReceive && _freeFrames.IsEmpty)
                 {
-                    waitObjects.Add(_freeFrames.Queue);
+                    waitObjects.Add(_freeFrames);
                     waitEvents.Add(LinuxPoll.Event.Readable);
                 }
 
@@ -195,7 +195,7 @@ public sealed class PipeForwarder : IDisposable
     {
         var frames = _completeBuffer.AsSpan(0, (int)_socket.CompletionRing.Complete(_completeBuffer));
         _logger?.Log(_socket.IfName, _socket.QueueId, $"Completed {frames.Length} frames");
-        _freeFrames.Queue.Enqueue(frames);
+        _freeFrames.Enqueue(frames);
         return !frames.IsEmpty;
     }
 

@@ -217,7 +217,7 @@ internal static unsafe partial class LibXdp
     private static uint xsk_prod_nb_free_relaxed(ref xsk_ring r, uint nb)
     {
         var free_entries = xsk_prod_nb_free_cached(ref r);
-        return Math.Min(free_entries >= 0 ? free_entries : xsk_prod_nb_free_aggressive(ref r), nb);
+        return Math.Min(free_entries > 0 ? free_entries : xsk_prod_nb_free_aggressive(ref r), nb);
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]

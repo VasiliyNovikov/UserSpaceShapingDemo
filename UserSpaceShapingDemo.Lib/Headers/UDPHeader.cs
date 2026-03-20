@@ -54,10 +54,10 @@ public struct UDPHeader
     public void UpdateChecksum() => _checksum = default;
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public void UpdateChecksum(ref IPv6Header ipv6Header)
+    public void UpdateChecksum(ref IPv6Header ipv6Header, ushort extensionHeadersLength = 0)
     {
         var checksum = new InternetChecksum(ref _checksum);
-        var ipv6PseudoHeader = new IPv6PseudoHeader(ref ipv6Header);
+        var ipv6PseudoHeader = new IPv6PseudoHeader(ref ipv6Header, IPProtocol.UDP, (ushort)(ipv6Header.PayloadLength - extensionHeadersLength));
         checksum.Add(ref ipv6PseudoHeader);
         checksum.Add(ref this);
         checksum.Add(Payload);

@@ -53,8 +53,9 @@ public ref struct InternetChecksum
         else if (ethernetHeader.EtherType == EthernetType.IPv6)
         {
             ref var ipv6Header = ref ethernetHeader.NextHeader<IPv6Header>();
-            if (ipv6Header.Protocol == IPProtocol.UDP)
-                ipv6Header.NextHeader<UDPHeader>().UpdateChecksum(ref ipv6Header);
+            ref var udpHeader = ref ipv6Header.ResolveTransportHeader<UDPHeader>(out var transportProtocol, out var extensionHeadersLength);
+            if (transportProtocol == IPProtocol.UDP)
+                udpHeader.UpdateChecksum(ref ipv6Header, extensionHeadersLength);
         }
     }
 }

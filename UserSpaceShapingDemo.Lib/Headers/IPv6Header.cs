@@ -98,6 +98,26 @@ public struct IPv6Header : IIPHeader<IPv6Address>
     public ref T NextHeader<T>() where T : unmanaged => ref Unsafe.As<IPv6Header, T>(ref Unsafe.Add(ref Unsafe.AsRef(ref this), 1));
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public unsafe ref T ResolveTransportHeader<T>(out IPProtocol transportProtocol, out ushort extensionHeadersLength) where T : unmanaged
+    {
+        var protocol = Protocol;
+        var cursor = (byte*)Unsafe.AsPointer(ref Unsafe.Add(ref Unsafe.AsRef(ref this), 1));
+        extensionHeadersLength = 0;
+
+        while (protocol is IPProtocol.IPv6HopOpts or IPProtocol.IPv6Route or IPProtocol.IPv6DestOpts or IPProtocol.IPv6Fragment)
+        {
+            ref var ext = ref Unsafe.AsRef<IPv6ExtensionHeader>(cursor);
+            var extLen = ext.HeaderLength;
+            protocol = ext.Protocol;
+            cursor += extLen;
+            extensionHeadersLength += extLen;
+        }
+
+        transportProtocol = protocol;
+        return ref Unsafe.AsRef<T>(cursor);
+    }
+
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public void UpdateChecksum()
     {
     }
