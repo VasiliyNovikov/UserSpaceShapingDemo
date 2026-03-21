@@ -98,6 +98,8 @@ public sealed unsafe class UMemory : NativeObject, IFileObject
 
     protected override void ReleaseUnmanagedResources()
     {
+        FillRing.Dispose();
+        CompletionRing.Dispose();
         try
         {
             if (_umem is not null)

@@ -10,13 +10,15 @@ public sealed unsafe class XdpSocket : NativeObject, IFileObject
 {
     public static bool IsLegacyApi => LibXdp.IsLegacyLib;
 
+    private readonly bool _shared;
     private readonly LibXdp.xsk_socket* _xsk;
     private FileDescriptor? _descriptor;
+    private RawSocket? _socket;
 
     private RawSocket Socket
     {
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        get => field ??= new(Descriptor);
+        get => _socket ??= new(Descriptor);
     }
 
     public UMemory Umem { get; }
@@ -60,6 +62,7 @@ public sealed unsafe class XdpSocket : NativeObject, IFileObject
             config.bind_flags |= LibXdp.XDP_SHARED_UMEM;
             FillRing = new();
             CompletionRing = new();
+            _shared = true;
             LibXdp.xsk_socket__create_shared(out _xsk, ifName, queueId, umem.UMem, out RxRing.Ring, out TxRing.Ring, out FillRing.Ring, out CompletionRing.Ring, config).ThrowIfError();
         }
         else
@@ -80,8 +83,14 @@ public sealed unsafe class XdpSocket : NativeObject, IFileObject
 
     protected override void ReleaseUnmanagedResources()
     {
+        _socket?.Dispose();
         if (_xsk is not null)
             LibXdp.xsk_socket__delete(_xsk);
+        if (_shared)
+        {
+            FillRing.Dispose();
+            CompletionRing.Dispose();
+        }
     }
 
     private class RawSocket(FileDescriptor descriptor) : LinuxSocketBase(descriptor, false);

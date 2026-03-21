@@ -27,16 +27,28 @@ public sealed class Worker : IDisposable, IAsyncDisposable
     public void Dispose()
     {
         _workerCancellation.Cancel();
-        _workerTask.Wait();
-        _workerCancellation.Dispose();
-        _workerTask.Dispose();
+        try
+        {
+            _workerTask.Wait();
+        }
+        finally
+        {
+            _workerCancellation.Dispose();
+            _workerTask.Dispose();
+        }
     }
 
     public async ValueTask DisposeAsync()
     {
         await _workerCancellation.CancelAsync();
-        await _workerTask.ConfigureAwait(false);
-        _workerCancellation.Dispose();
-        _workerTask.Dispose();
+        try
+        {
+            await _workerTask.ConfigureAwait(false);
+        }
+        finally
+        {
+            _workerCancellation.Dispose();
+            _workerTask.Dispose();
+        }
     }
 }

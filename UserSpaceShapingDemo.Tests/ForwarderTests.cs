@@ -79,14 +79,14 @@ public sealed class ForwarderTests : IForwardingLogger
         foreach (var version in Versions)
         foreach (var batchSize in new[] { 16, 64, 128 })
         {
-            yield return [type, mode, batchSize, version, 1, 1];
+            yield return [type, mode, version, batchSize, 1, 1];
             if (type == TrafficForwarderType.Parallel)
             {
-                yield return [type, mode, batchSize, version, 2, 1];
-                yield return [type, mode, batchSize, version, 2, 2];
-                yield return [type, mode, batchSize, version, 4, 1];
-                yield return [type, mode, batchSize, version, 4, 2];
-                yield return [type, mode, batchSize, version, 4, 4];
+                yield return [type, mode, version, batchSize, 2, 1];
+                yield return [type, mode, version, batchSize, 2, 2];
+                yield return [type, mode, version, batchSize, 4, 1];
+                yield return [type, mode, version, batchSize, 4, 2];
+                yield return [type, mode, version, batchSize, 4, 4];
             }
         }
     }

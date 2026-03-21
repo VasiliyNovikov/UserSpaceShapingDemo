@@ -42,6 +42,7 @@ public sealed class ForwardingChannel : IDisposable
         _packetQueue1.Dispose();
         _packetQueue2.Dispose();
         FreeFrames.Dispose();
+        Memory.Dispose();
     }
 
     public sealed class Pipe

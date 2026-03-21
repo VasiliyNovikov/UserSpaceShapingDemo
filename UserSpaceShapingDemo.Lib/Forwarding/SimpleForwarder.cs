@@ -49,7 +49,8 @@ public sealed class SimpleForwarder : IDisposable
             while (true)
             {
                 while (ForwardOnce(_socket1, _socket2, packetsToSend2, freeAddresses) |
-                       ForwardOnce(_socket2, _socket1, packetsToSend1, freeAddresses)) ;
+                       ForwardOnce(_socket2, _socket1, packetsToSend1, freeAddresses))
+                    cancellationToken.ThrowIfCancellationRequested();
 
                 var events1 = LinuxPoll.Event.Readable;
                 if (packetsToSend1.Count > 0)
