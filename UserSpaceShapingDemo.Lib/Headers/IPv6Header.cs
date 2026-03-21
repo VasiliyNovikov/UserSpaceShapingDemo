@@ -106,6 +106,21 @@ public struct IPv6Header : IIPHeader<IPv6Address>
 
         while (protocol is IPProtocol.IPv6HopOpts or IPProtocol.IPv6Route or IPProtocol.IPv6DestOpts or IPProtocol.IPv6Fragment)
         {
+            if (protocol == IPProtocol.IPv6Fragment)
+            {
+                // Fragment header is fixed 8 bytes: NextHeader(1) + Reserved(1) + FragOffsetFlags(2) + Id(4)
+                // FragOffsetFlags upper 13 bits = fragment offset; non-zero means no transport header follows
+                var fragOffsetFlags = (ushort)(cursor[2] << 8 | cursor[3]);
+                if ((fragOffsetFlags & 0xFFF8) != 0)
+                {
+                    transportProtocol = IPProtocol.IPv6Fragment;
+                    return ref Unsafe.AsRef<T>(cursor);
+                }
+                protocol = (IPProtocol)cursor[0];
+                cursor += 8;
+                extensionHeadersLength += 8;
+                continue;
+            }
             ref var ext = ref Unsafe.AsRef<IPv6ExtensionHeader>(cursor);
             var extLen = ext.HeaderLength;
             protocol = ext.Protocol;
